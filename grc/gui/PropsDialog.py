@@ -20,7 +20,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 import pygtk
 pygtk.require('2.0')
 import gtk
-
+import webbrowser
+from os.path import expanduser
+import urllib2
+import httplib
+import urlparse
+import Platform
 from Dialogs import TextDisplay
 from Constants import MIN_DIALOG_WIDTH, MIN_DIALOG_HEIGHT
 
@@ -87,11 +92,171 @@ class PropsDialog(gtk.Dialog):
 		vbox.pack_start(self._params_box, False)
 		vbox.pack_start(self._error_box, False)
 		vbox.pack_start(self._docs_box, False)
+		#Add the button to fetch the document
+		button = gtk.Button("Fetch documentation")
+		self.action_area.pack_end(button)
+		button.connect("clicked", self.doc_button_on_clicked)
+		button.show()
 		#connect events
 		self.connect('key-press-event', self._handle_key_press)
 		self.connect('show', self._update_gui)
 		#show all (performs initial gui update)
 		self.show_all()
+
+	#button to get documentation
+	def doc_button_on_clicked(self,widget):
+		
+		get_webpage = webbrowser.get() 
+		#get gnuradio version
+		version=self._block.get_parent().get_parent().get_version()
+		#find class name
+		block_info=self._block.get_make()
+		block_info_part=block_info.split('.')
+		class_name=block_info_part[0]
+		#find block name
+		block_name=""
+		if block_info_part[1]=="qam" or block_info_part[1]=="psk":
+			for i in range(0,len(block_info_part[2])):
+				if block_info_part[2][i] is not '(':
+					block_name=block_name+block_info_part[2][i]
+				else:
+					break
+		else:
+			for i in range(0,len(block_info_part[1])):
+				if block_info_part[1][i] is not '(':
+					block_name=block_name+block_info_part[1][i]
+				else:
+					break
+		#get web address for documentation of python blocks
+		python_blocks_class_list=("blks2","uhd")		
+		if class_name in python_blocks_class_list:
+			if class_name=="uhd":
+				complete_web_address="http://gnuradio.org/doc/sphinx/uhd.html"
+			if class_name=="blks2":
+				complete_web_address="http://gnuradio.org/doc/sphinx/blks2/blks.html#gnuradio.blks2."+block_name
+		#get web address for documentation of non-python blocks
+		else:
+			#get tha part of web address in format "classgr_1_1blocks_1_1.....__.....__...." from class name and block name
+			block_name_parts=block_name.split('_')
+			lst_not_classgr=('audio','vocoder','qtgui','fcd','noaa','pager','trellis','wavelet','digital','gr')
+			if class_name in lst_not_classgr:
+				web_address=class_name+"__"
+			else:
+				web_address="gr_1_1"+class_name+"_1_1"
+			#for blocks that belong to firdes class
+			if block_name=="fir_filter_ccf":
+				web_address="gr__firdes"
+			else:
+
+				for i in range(0,len(block_name_parts)):
+					if i==len(block_name_parts)-1:
+						web_address=web_address+block_name_parts[i]
+					else:
+						web_address=web_address+block_name_parts[i]+'__'
+			#blocks in digital class have different web addresses for their documentations; deals them separately 
+			if class_name=="digital" or class_name=="grc_blks2":
+				complete_web_address=self.digital_class(block_name_parts,block_name)
+			else:
+				complete_web_address="http://gnuradio.org/doc/doxygen/class"+web_address+".html"
+		#opens remote copy
+		if self.network_connection() is True:
+			get_webpage.open(complete_web_address)
+		#opens local copy
+		else:
+			#for python blocks
+			if class_name in python_blocks_class_list:
+				if class_name=="uhd":
+					complete_local_address="file://"+expanduser("~")+"/gnuradio/build/docs/sphinx/sphinx_out/uhd.html"
+				if class_name=="blks2":
+					complete_local_address="file://"+expanduser("~")+"/gnuradio/build/docs/sphinx/sphinx_out/blks2/blks.html#gnuradio.blks2."+block_name
+			#for non-python blocks
+			else:				
+				if class_name=="digital" or class_name=="grc_blks2":
+					l=address_parts=complete_web_address.split('/')
+					if "sphinx" in address_parts:
+						complete_local_address="file://"+expanduser("~")+"/gnuradio/build/docs/sphinx/sphinx_out/"+l[len(l)-2]+"/"+l[len(l)-1]
+					else:					
+						complete_local_address="/usr/local/share/doc/gnuradio-"+version+"/html/class"+web_address+".html"
+				else:
+					complete_local_address="/usr/local/share/doc/gnuradio-"+version+"/html/class"+web_address+".html"
+			get_webpage.open(complete_local_address)
+			
+			
+	#checks internet connection
+   	def network_connection(self):
+		network=False
+		try:
+		    response = urllib2.urlopen("http://google.com", None, 2.5)
+		    network=True
+	
+		except urllib2.URLError, e:
+		    pass
+		return network
+	
+	
+	def get_server_status_code(self,url):
+
+	    host, path = urlparse.urlparse(url)[1:3]    
+	    try:
+		conn = httplib.HTTPConnection(host)
+		conn.request('HEAD', path)
+		return conn.getresponse().status
+	    except StandardError:
+		return None
+	
+
+	#checks valid url 
+	def check_url(self,url):
+	    
+	    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
+	    return self.get_server_status_code(url) in good_codes
+
+
+	def digital_class(self,block_lst,block):
+		address=""
+		for i in range(0,len(block_lst)):
+			if i==len(block_lst)-1:
+				address=address+block_lst[i]			
+			else:
+				address=address+block_lst[i]+'__'	
+		#blocks of digital class have two different formats for web address of doxygen documentation				
+		address1="http://gnuradio.org/doc/doxygen/classdigital__"+address+".html"
+		address2="http://gnuradio.org/doc/doxygen/classgr_1_1digital_1_1"+address+".html"
+		#checks which format is a valid url
+		if self.check_url(address1) is True:
+			return address1
+		else:
+			if self.check_url(address2) is True:
+				return address2
+			else:
+				#for python blocks of digital class. each block has different format for web address of sphinx documetation. write their web addresses individually
+				if block=="packet_mod_f":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.ofdm_mod"
+				if block=="ofdm_sync_pn":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.ofdm_sync_pn"
+				if block=="packet_demod_f":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.ofdm_demod"
+				if block=="ofdm_rx":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.ofdm_receiver"
+				if block=="qam_mod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.qam.qam_mod"
+				if block=="qam_demod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.qam.qam_demod"
+				if block=="psk_mod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.psk.psk_mod"
+				if block=="psk_demod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.psk.psk_demod"
+				if block=="gmsk_mod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.gmsk.gmsk_mod"
+				if block=="gmsk_demod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.gmsk.gmsk_demod"
+				if block=="dbpsk_mod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.bpsk.dbpsk_mod"
+				if block=="dbpsk_demod":
+					return "http://gnuradio.org/doc/sphinx/digital/blocks.html#gnuradio.digital.bpsk.dbpsk_demod"
+				else:
+					return ""
+							
 
 	def _params_changed(self):
 		"""

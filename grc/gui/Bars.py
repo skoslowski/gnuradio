@@ -40,6 +40,8 @@ TOOLBAR_LIST = (
 	Actions.FLOW_GRAPH_REDO,
 	None,
 	Actions.ERRORS_WINDOW_DISPLAY,
+	#for source code
+	Actions.SOURCE_CODE_WINDOW_DISPLAY,
 	Actions.FLOW_GRAPH_GEN,
 	Actions.FLOW_GRAPH_EXEC,
 	Actions.FLOW_GRAPH_KILL,
@@ -95,6 +97,7 @@ MENU_BAR_LIST = (
 	]),
 	(gtk.Action('Help', '_Help', None, None), [
 		Actions.HELP_WINDOW_DISPLAY,
+		Actions.SOURCE_CODE_WINDOW_DISPLAY,
 		Actions.TYPES_WINDOW_DISPLAY,
 		None,
 		Actions.ABOUT_WINDOW_DISPLAY,

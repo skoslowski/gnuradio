@@ -233,6 +233,11 @@ ERRORS_WINDOW_DISPLAY = Action(
 	tooltip='View flow graph errors',
 	stock_id=gtk.STOCK_DIALOG_ERROR,
 )
+SOURCE_CODE_WINDOW_DISPLAY = Action(
+	label='_Source Code',
+	tooltip='View source code',
+	stock_id=gtk.STOCK_FIND,
+)
 ABOUT_WINDOW_DISPLAY = Action(
 	label='_About',
 	tooltip='About this program',
