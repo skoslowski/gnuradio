@@ -95,64 +95,6 @@ class AboutDialog(gtk.AboutDialog):
 		self.set_website(platform.get_website())
 		self.run()
 		self.destroy()
-#Add a function in tool bar to open the online source code of each GRC block	
-class get_source_code():
-	def __init__(self,block):
-		self._block=block
-		get_webpage = webbrowser.get() 
-		web_address=""
-		#find class name
-		block_info=block.get_make()
-		block_info_part=block_info.split('.')
-		class_name=block_info_part[0]
-		#find block name
-		block_name=""
-		for i in range(0,len(block_info_part[1])):
-			if block_info_part[1][i] is not '(':
-				block_name=block_name+block_info_part[1][i]
-			else:
-				break
-		block_name_parts=block_name.split('_')
-		for i in range(0,len(block_name_parts)):
-				if i==len(block_name_parts)-1:
-					web_address=web_address+block_name_parts[i]
-				else:
-					web_address=web_address+block_name_parts[i]+'__'
-		class_lst=('pager','trellis','digital','vocoder','wavelet','volk','noaa','qtgui','fcd')
-		#for source code of blocks that belong to above class list
-		if class_name in class_lst:
-			url="http://gnuradio.org/doc/doxygen/"+class_name+"__"+web_address+"_8h_source.html"
-			get_webpage.open(url)
-		else:
-			#for source code of blocks that belong to digital class
-			if block_name=="fir_filter_ccf":
-				get_webpage.open("http://gnuradio.org/doc/doxygen/firdes_8h_source.html")
-			#for source code of rest of the blocks
-			else:
-				url_1="http://gnuradio.org/doc/doxygen/gr__"+web_address+"_8h_source.html"			
-				url_2="http://gnuradio.org/doc/doxygen/"+web_address+"_8h_source.html"
-				valid_url_1=self.check_url(url_1)
-				valid_url_2=self.check_url(url_2)
-				if valid_url_1 is True:
-					get_webpage.open(url_1)		
-				if valid_url_2 is True:
-					get_webpage.open(url_2)
-
-	def get_server_status_code(self,url):
-
-	    host, path = urlparse.urlparse(url)[1:3]    
-	    try:
-		conn = httplib.HTTPConnection(host)
-		conn.request('HEAD', path)
-		return conn.getresponse().status
-	    except StandardError:
-		return None
-	 
-	#checks valid url
-	def check_url(self,url):
-	    
-	    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
-	    return self.get_server_status_code(url) in good_codes
 		
 
 def HelpDialog(): MessageDialogHelper(

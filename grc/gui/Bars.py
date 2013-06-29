@@ -40,8 +40,6 @@ TOOLBAR_LIST = (
 	Actions.FLOW_GRAPH_REDO,
 	None,
 	Actions.ERRORS_WINDOW_DISPLAY,
-	#for source code
-	Actions.SOURCE_CODE_WINDOW_DISPLAY,
 	Actions.FLOW_GRAPH_GEN,
 	Actions.FLOW_GRAPH_EXEC,
 	Actions.FLOW_GRAPH_KILL,
@@ -51,9 +49,11 @@ TOOLBAR_LIST = (
 	None,
 	Actions.BLOCK_ENABLE,
 	Actions.BLOCK_DISABLE,
-    None,
-    Actions.RELOAD_BLOCKS,
-    Actions.OPEN_HIER,
+	None,
+    	Actions.DOC_WINDOW_DISPLAY,
+	None,
+	Actions.RELOAD_BLOCKS,
+	Actions.OPEN_HIER,
 )
 
 ##The list of actions and categories for the menu bar.
@@ -81,10 +81,13 @@ MENU_BAR_LIST = (
 		None,
 		Actions.BLOCK_ROTATE_CCW,
 		Actions.BLOCK_ROTATE_CW,
-		None,
 		Actions.BLOCK_ENABLE,
 		Actions.BLOCK_DISABLE,
 		None,
+		Actions.BLOCK_CREATE_HIER,
+		Actions.OPEN_HIER,
+		None,
+		Actions.DOC_WINDOW_DISPLAY,
 		Actions.BLOCK_PARAM_MODIFY,
 	]),
 	(gtk.Action('View', '_View', None, None), [
@@ -97,7 +100,6 @@ MENU_BAR_LIST = (
 	]),
 	(gtk.Action('Help', '_Help', None, None), [
 		Actions.HELP_WINDOW_DISPLAY,
-		Actions.SOURCE_CODE_WINDOW_DISPLAY,
 		Actions.TYPES_WINDOW_DISPLAY,
 		None,
 		Actions.ABOUT_WINDOW_DISPLAY,
