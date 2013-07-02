@@ -1,0 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from qtgui.ActionHandler import ActionHandler
+
+ActionHandler(None, None)
