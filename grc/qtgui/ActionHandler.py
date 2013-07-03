@@ -4,7 +4,7 @@ from threading import Thread
 from PyQt4.QtGui import QApplication
 
 import Messages
-from MainWindow import MainWindow
+from . MainWindow import MainWindow
 
 class ActionHandler:
     """
@@ -23,15 +23,15 @@ class ActionHandler:
         platform: platform module
         """
         self.clipboard = None
-        #setup the main window
         self.platform = platform
 
+        #setup the main window
         app = QApplication([])
         self.main_window = MainWindow(platform)
 
         #setup the messages
-        Messages.register_messenger(self.main_window.add_report_line)
-        Messages.send_init(platform)
+        #Messages.register_messenger(self.main_window.add_report_line)
+        #Messages.send_init(platform)
 
         self.init_file_paths = file_paths
 

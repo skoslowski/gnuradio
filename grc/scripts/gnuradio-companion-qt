@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from qtgui.ActionHandler import ActionHandler
+from grc.qtgui.ActionHandler import ActionHandler
+#from grc.python.Platform import Platform
 
+#ActionHandler(None, Platform())
 ActionHandler(None, None)
