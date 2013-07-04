@@ -23,7 +23,6 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import webbrowser
-from os.path import expanduser
 import urllib2
 import httplib
 import urlparse
@@ -31,7 +30,8 @@ from sgmllib import SGMLParser
 import urllib
 from Dialogs import MessageDialogHelper
 from gnuradio import gr
-
+import re
+import os
 
 
 class FetchDocument():
@@ -40,98 +40,99 @@ class FetchDocument():
 	def __init__(self,block):
 		self._block=block
 		get_webpage = webbrowser.get() 
-		version=self._block.get_parent().get_parent().get_version()
 		block_info=self._block.get_make()
+		print block_info
 		block_info_part=block_info.split('.')
+		class_name=block_info_part[0]
 		#block name as in sphinx docs
-		block_name=block_info_part[1].split('(')[0]
-		#block name as in doxygen docs
-		block_name_d=""
-		block_name_parts=block_name.split('_')
-		for i in range(0,len(block_name_parts)):
-			if i==len(block_name_parts)-1:
-				block_name_d=block_name_d+block_name_parts[i]
-			else:
-				block_name_d=block_name_d+block_name_parts[i]+'__'
-#Below addresses and locations are stored in grc.conf file using gedit ~/.gnuradio/config.conf
-'''
-sphinx_base_uri=http://gnuradio.org/doc/sphinx/
-sphinx_index_page_local=/gnuradio/build/docs/sphinx/sphinx_out/genindex.html
-sphinx_index_page_net=http://gnuradio.org/doc/sphinx/genindex.html
-sphinx_local_base_uri=/gnuradio/build/docs/sphinx/sphinx_out/
-doxygen_base_uri=http://gnuradio.org/doc/doxygen/
-doxygen_index_page_local=/gnuradio/build/docs/doxygen/html/annotated.html
-doxygen_index_page_net=http://gnuradio.org/doc/doxygen/annotated.html
-doxygen_local_base_uri=/usr/local/share/doc/gnuradio-'''
+		try:
+			block_name=block_info_part[1].split('(')[0]
 
-		#location and address of genindex.html
-		sph_index_local="file://"+expanduser("~")+gr.prefs().get_string('grc', 'sphinx_index_page_local', '')
-		sph_index_net=gr.prefs().get_string('grc', 'sphinx_index_page_net', '')
-		#sphinx base uri for web address and local address
-		sph_base_uri=gr.prefs().get_string('grc', 'sphinx_base_uri', '')
-		sph_local_base_uri=expanduser("~")+gr.prefs().get_string('grc', 'sphinx_local_base_uri', '')
-		#location and address of annotated.html
-		dox_index_local="file://"+expanduser("~")+gr.prefs().get_string('grc', 'doxygen_index_page_local', '')
-		dox_index_net=gr.prefs().get_string('grc', 'doxygen_index_page_net', '')
-		#doxygen base uri for web address and local address
-		dox_base_uri=gr.prefs().get_string('grc', 'doxygen_base_uri', '')
-		dox_local_base_uri=gr.prefs().get_string('grc', 'doxygen_local_base_uri', '')+version+"/html/"
-
-		#doxygen doc
-		url_lst=self.index(dox_index_local,dox_index_net)
-		complete_url=self.get_valid_uri(block_name_d,url_lst,dox_base_uri,dox_local_base_uri)
-		if complete_url is not None:
-			get_webpage.open(complete_url)
-		#sphinx doc
-		else:	
-			url_lst=self.index(sph_index_local,sph_index_net)
-			complete_url=self.get_valid_uri(block_name,url_lst,sph_base_uri,sph_local_base_uri)
-			if complete_url is not None:
-				get_webpage.open(complete_url)
-		#file does not exist
-			else:
-				self.Errorbox()
-		
-		
-	#makes complete uri and checks if uri exists or file at this location exits		
-	def get_valid_uri(self,name,lst,base_uri,local_uri):
-		uri=""
-		for url in lst.urls: 
-			if name in url.lower():
-				uri=url
-				break
-		if uri is not "":
-			complete_uri=base_uri+uri
-			#for remote copy of doc
-			if self.network_connection() is True:
-				if self.check_url(complete_uri) is True:
-					return complete_uri
+			#block name as in doxygen docs
+			block_name_d=""
+			block_name_parts=block_name.split('_')
+			for i in range(0,len(block_name_parts)):
+				if i==len(block_name_parts)-1:
+					block_name_d=block_name_d+block_name_parts[i]
 				else:
-					return None
-			#for local copy of doc
+					block_name_d=block_name_d+block_name_parts[i]+'__'
+
+			sph=gr.prefs().get_string('grc', 'sphinx_address', '')
+			dox=gr.prefs().get_string('grc', 'doxygen_address', '')
+			
+			#doxygen doc
+			url_lst_d=self.index(dox,'annotated.html')
+			url_lst_s=self.index(sph,'genindex.html')
+			if not url_lst_s and not url_lst_d:
+				self.Errorbox("""<b>annotated.html and genindex.html are not found</b>""")
 			else:
-				complete_uri=local_uri+uri
-				try:
-					if "sphinx" in complete_uri.lower():
-						uri_check=complete_uri.split("#")[0]
+				complete_url=self.get_valid_uri(block_name_d,class_name,url_lst_d,dox)
+				if complete_url is not None:
+					get_webpage.open(complete_url)
+				#sphinx doc
+				else:	
+					complete_url=self.get_valid_uri(block_name,class_name,url_lst_s,sph)
+					if complete_url is not None:
+						get_webpage.open(complete_url)
+				#file does not exist
 					else:
-						uri_check=complete_uri
-					with open(uri_check): 
-						return "file://"+complete_uri
-				except IOError:
-					return None
+						if url_lst_s and url_lst_d:
+							self.Errorbox("""<b>Document not found</b>""")
+						if not url_lst_s and url_lst_d:
+							self.Errorbox("""<b>genindex.html is not found</b>""")
+						if not url_lst_d and url_lst_s:
+							self.Errorbox("""<b>annotated.html is not found</b>""")
+		except IndexError as e:
+			self.Errorbox("""<b>Document not found</b>""")
+		
+
+	#makes complete uri and checks if uri exists or file at this location exits		
+	def get_valid_uri(self,name,class_n,lst,base_uri):
+		uri=""
+		if lst:
+			for url in lst.urls: 
+				if name in url.lower(): 
+					if "doxygen" in base_uri:
+						if class_n in url.lower() and re.search(name+".html"+"\Z", url):
+							uri=url
+							break
+					elif re.search(name+"\Z", url):
+						uri=url
+						break
+			if uri is not "":
+				complete_uri=base_uri.split(',')[1]+uri
+				#for remote copy of doc
+				if self.network_connection() is True:
+					if self.check_url(complete_uri) is True:
+						return complete_uri
+					else:
+						return None
+				#for local copy of doc
+				else:
+					try:
+						if "sphinx" in base_uri.lower():
+							complete_uri=base_uri.split(',')[0]+uri
+							uri_check=complete_uri.split("#")[0]
+						else:
+							complete_uri=base_uri.split(',')[0]+uri
+							uri_check=complete_uri
+						with open(uri_check): 
+							return "file://"+complete_uri
+					except IOError:
+						return None
+			else:
+				return None
 		else:
 			return None
-
 	#returns a list of url's in html file
-	def index(self,url1,url2):
+	def index(self,index_page,html_file):
 		try:
-			open_index = urllib.urlopen(url2)
+			open_index = urllib.urlopen(index_page.split(',')[1]+html_file)
 		except IOError as e:
 			try:
-				open_index = urllib.urlopen(url1)
+				open_index = urllib.urlopen("file://"+index_page.split(',')[0]+html_file)
 			except IOError as e:
-				self.Errorbox()
+				return []
 		url_list = URLLister()
 		url_list.feed(open_index.read())
 		url_list.close()
@@ -168,11 +169,11 @@ doxygen_local_base_uri=/usr/local/share/doc/gnuradio-'''
 	    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
 	    return self.get_server_status_code(url) in good_codes
 
-	def Errorbox(self): MessageDialogHelper(
+	def Errorbox(self,err_msg): MessageDialogHelper(
 	type=gtk.MESSAGE_ERROR,
 	buttons=gtk.BUTTONS_CLOSE,
 	title='Error',
-	markup="""<b>File not found</b>""")
+	markup=err_msg)
 
 class URLLister(SGMLParser):
 	def reset(self):
@@ -184,14 +185,4 @@ class URLLister(SGMLParser):
 		if href:
 			self.urls.extend(href)
 
-'''
-		sphinx_base_uri="http://gnuradio.org/doc/sphinx/"
-		sphinx_index_page1="file://"+expanduser("~")+"/gnuradio/build/docs/sphinx/sphinx_out/genindex.html"
-		sphinx_index_page2="http://gnuradio.org/doc/sphinx/genindex.html"
-		sphinx_local_base_uri=expanduser("~")+"/gnuradio/build/docs/sphinx/sphinx_out/"
 
-		doxygen_base_uri="http://gnuradio.org/doc/doxygen/"
-		doxygen_index_page1="file://"+expanduser("~")+"/gnuradio/build/docs/doxygen/html/annotated.html"
-		doxygen_index_page2="http://gnuradio.org/doc/doxygen/annotated.html"
-		doxygen_local_base_uri="/usr/local/share/doc/gnuradio-"+version+"/html/"
-'''
