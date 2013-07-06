@@ -32,6 +32,7 @@ from Dialogs import MessageDialogHelper
 from gnuradio import gr
 import re
 import os
+from os.path import expanduser
 
 
 class FetchDocument():
@@ -44,10 +45,8 @@ class FetchDocument():
 		print block_info
 		block_info_part=block_info.split('.')
 		class_name=block_info_part[0]
-		#block name as in sphinx docs
 		try:
 			block_name=block_info_part[1].split('(')[0]
-
 			#block name as in doxygen docs
 			block_name_d=""
 			block_name_parts=block_name.split('_')
@@ -59,32 +58,100 @@ class FetchDocument():
 
 			sph=gr.prefs().get_string('grc', 'sphinx_address', '')
 			dox=gr.prefs().get_string('grc', 'doxygen_address', '')
-			
+			print gr.prefs().get_string(class_name, 'base_path', 'yes')
+			print dox
+			print sph
+			temp_path = os.path.expanduser('~/.gnuradio/docs/') + class_name
+			check_oot=False
+			try:
+				module_path=open(temp_path, 'r')
+				module_base_path=module_path.read().split('\n')[1].split('=')[1]
+				check_oot=True
+			except IOError as e:
+				check_oot=False
 			#doxygen doc
-			url_lst_d=self.index(dox,'annotated.html')
-			url_lst_s=self.index(sph,'genindex.html')
-			if not url_lst_s and not url_lst_d:
-				self.Errorbox("""<b>annotated.html and genindex.html are not found</b>""")
-			else:
-				complete_url=self.get_valid_uri(block_name_d,class_name,url_lst_d,dox)
-				if complete_url is not None:
-					get_webpage.open(complete_url)
-				#sphinx doc
-				else:	
-					complete_url=self.get_valid_uri(block_name,class_name,url_lst_s,sph)
+			if check_oot is False:
+				url_lst_d=self.index(dox,'annotated.html')
+				url_lst_s=self.index(sph,'genindex.html')
+				if not url_lst_s and not url_lst_d:
+					self.Errorbox("""<b>annotated.html and genindex.html are not found</b>""")
+				else:
+					complete_url=self.get_valid_uri(block_name_d,class_name,url_lst_d,dox)
 					if complete_url is not None:
 						get_webpage.open(complete_url)
-				#file does not exist
-					else:
-						if url_lst_s and url_lst_d:
-							self.Errorbox("""<b>Document not found</b>""")
-						if not url_lst_s and url_lst_d:
-							self.Errorbox("""<b>genindex.html is not found</b>""")
-						if not url_lst_d and url_lst_s:
-							self.Errorbox("""<b>annotated.html is not found</b>""")
+					#sphinx doc
+					else:	
+						complete_url=self.get_valid_uri(block_name,class_name,url_lst_s,sph)
+						if complete_url is not None:
+							get_webpage.open(complete_url)
+					#file does not exist
+						else:
+							if url_lst_s and url_lst_d:
+								self.Errorbox("""<b>Document not found</b>""")
+							if not url_lst_s and url_lst_d:
+								self.Errorbox("""<b>genindex.html is not found</b>""")
+							if not url_lst_d and url_lst_s:
+								self.Errorbox("""<b>annotated.html is not found</b>""")
+			else:
+				complete_url=self.out_of_tree_module(module_base_path,block_name,block_name_d)
+				if complete_url is not None:
+					print complete_url
+					get_webpage.open(complete_url)
+				else:
+					self.Errorbox("""<b>Document not found</b>""")						
 		except IndexError as e:
 			self.Errorbox("""<b>Document not found</b>""")
-		
+	
+	
+	def out_of_tree_module(self,address,name,name_d):
+		path_d=address.split(',')[0]
+		path_s=address.split(',')[1]
+		uri=""
+		python_block=False
+		cpp_block=False
+		try: 
+			open_index = urllib.urlopen("file://"+path_d+'annotated.html')
+			cpp_block=True
+		except IOError as e:
+			try:
+				open_index = urllib.urlopen("file://"+path_s+'genindex.html')
+				python_block=True
+			except IOError as e:
+				open_index = []
+		if not open_index:
+			return None
+		else:
+			url_list = URLLister()
+			url_list.feed(open_index.read())
+			url_list.close()
+			open_index.close()
+			for url in url_list.urls: 
+				if cpp_block is True:
+					if name_d in url.lower(): 
+						if re.search(name_d+".html"+"\Z", url):
+							uri=url
+							break
+				else:
+					if name in url.lower(): 
+						if re.search(name+"\Z", url):
+							uri=url
+							break
+			if uri is not "":
+				if cpp_block is True:
+					complete_uri=path_d+uri
+				else:
+					complete_uri=path_s+uri
+				try:	
+					with open(complete_uri): 
+						return "file://"+complete_uri
+				except IOError:
+					return None
+			else:
+				return None
+				
+
+
+	
 
 	#makes complete uri and checks if uri exists or file at this location exits		
 	def get_valid_uri(self,name,class_n,lst,base_uri):

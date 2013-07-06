@@ -89,6 +89,16 @@ namespace gr {
     if(fs::exists(homedir)) {
       fnames.push_back(homedir.string());
     }
+   fs::path mydir = fs::path(gr::appdata_path());
+   mydir = mydir/".gnuradio/docs";
+   if(!fs::is_directory(mydir))
+     return fnames;
+
+   fs::directory_iterator diritr_oot(mydir);
+   while(diritr_oot != fs::directory_iterator()) {
+     fs::path p = *diritr_oot++;
+     fnames.push_back(p.string());
+   }
 
     return fnames;
   }

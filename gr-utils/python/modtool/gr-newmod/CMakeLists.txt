@@ -129,6 +129,12 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
 @ONLY)
 
+set(base_path ${CMAKE_CURRENT_SOURCE_DIR}/build/docs/doxygen/html/,${CMAKE_CURRENT_SOURCE_DIR}/build/docs/sphinx/sphinx_out/)
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/howto.in
+    ~/.gnuradio/docs/howto
+@ONLY)
+
 add_custom_target(uninstall
     ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
 )
