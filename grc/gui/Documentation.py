@@ -58,19 +58,8 @@ class FetchDocument():
 
 			sph=gr.prefs().get_string('grc', 'sphinx_address', '')
 			dox=gr.prefs().get_string('grc', 'doxygen_address', '')
-			print gr.prefs().get_string(class_name, 'base_path', 'yes')
-			print dox
-			print sph
-			temp_path = os.path.expanduser('~/.gnuradio/docs/') + class_name
-			check_oot=False
-			try:
-				module_path=open(temp_path, 'r')
-				module_base_path=module_path.read().split('\n')[1].split('=')[1]
-				check_oot=True
-			except IOError as e:
-				check_oot=False
-			#doxygen doc
-			if check_oot is False:
+			module_base_path=gr.prefs().get_string(class_name, 'base_path', '')
+			if module_base_path is '':
 				url_lst_d=self.index(dox,'annotated.html')
 				url_lst_s=self.index(sph,'genindex.html')
 				if not url_lst_s and not url_lst_d:
@@ -92,8 +81,9 @@ class FetchDocument():
 								self.Errorbox("""<b>genindex.html is not found</b>""")
 							if not url_lst_d and url_lst_s:
 								self.Errorbox("""<b>annotated.html is not found</b>""")
+			#blocks from out of tree modules
 			else:
-				complete_url=self.out_of_tree_module(module_base_path,block_name,block_name_d)
+				complete_url=self.out_of_tree_module(module_base_path,block_name_d)
 				if complete_url is not None:
 					print complete_url
 					get_webpage.open(complete_url)
@@ -103,21 +93,12 @@ class FetchDocument():
 			self.Errorbox("""<b>Document not found</b>""")
 	
 	
-	def out_of_tree_module(self,address,name,name_d):
-		path_d=address.split(',')[0]
-		path_s=address.split(',')[1]
+	def out_of_tree_module(self,address,name_d):
 		uri=""
-		python_block=False
-		cpp_block=False
 		try: 
-			open_index = urllib.urlopen("file://"+path_d+'annotated.html')
-			cpp_block=True
+			open_index = urllib.urlopen("file://"+address+'annotated.html')
 		except IOError as e:
-			try:
-				open_index = urllib.urlopen("file://"+path_s+'genindex.html')
-				python_block=True
-			except IOError as e:
-				open_index = []
+			open_index = []
 		if not open_index:
 			return None
 		else:
@@ -126,21 +107,12 @@ class FetchDocument():
 			url_list.close()
 			open_index.close()
 			for url in url_list.urls: 
-				if cpp_block is True:
 					if name_d in url.lower(): 
 						if re.search(name_d+".html"+"\Z", url):
 							uri=url
 							break
-				else:
-					if name in url.lower(): 
-						if re.search(name+"\Z", url):
-							uri=url
-							break
 			if uri is not "":
-				if cpp_block is True:
-					complete_uri=path_d+uri
-				else:
-					complete_uri=path_s+uri
+				complete_uri=address+uri
 				try:	
 					with open(complete_uri): 
 						return "file://"+complete_uri
