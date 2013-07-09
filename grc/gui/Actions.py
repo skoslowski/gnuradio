@@ -237,6 +237,12 @@ DOC_WINDOW_DISPLAY = Action(
 	label='_Documentation',
 	tooltip='Open documentation',
 	stock_id=gtk.STOCK_FILE,
+	keypresses=(gtk.keysyms.d, gtk.gdk.CONTROL_MASK),
+)
+CODE_WINDOW_DISPLAY = Action(
+	label='_Source code',
+	tooltip='Find source code',
+	stock_id=gtk.STOCK_FIND,
 )
 ABOUT_WINDOW_DISPLAY = Action(
 	label='_About',

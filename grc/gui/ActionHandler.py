@@ -33,7 +33,7 @@ from MainWindow import MainWindow
 from PropsDialog import PropsDialog
 import Dialogs
 from FileDialogs import OpenFlowGraphFileDialog, SaveFlowGraphFileDialog, SaveImageFileDialog
-from Documentation import FetchDocument
+from Documentation import FetchDocument, find_source_code
 gobject.threads_init()
 
 class ActionHandler:
@@ -111,7 +111,7 @@ class ActionHandler:
 				Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS,
 				Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY,
 				Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY,
-				Actions.TYPES_WINDOW_DISPLAY, Actions.DOC_WINDOW_DISPLAY,
+				Actions.TYPES_WINDOW_DISPLAY, Actions.DOC_WINDOW_DISPLAY, Actions.CODE_WINDOW_DISPLAY,
 			): action.set_sensitive(True)
 			if not self.init_file_paths:
 				self.init_file_paths = Preferences.files_open()
@@ -347,6 +347,8 @@ class ActionHandler:
 			Dialogs.ErrorsDialog(self.get_flow_graph())
 		elif action == Actions.DOC_WINDOW_DISPLAY:
 			FetchDocument(self.get_flow_graph().get_selected_block())
+		elif action == Actions.CODE_WINDOW_DISPLAY:
+			find_source_code(self.get_flow_graph().get_selected_block())
 		##################################################
 		# Param Modifications
 		##################################################
@@ -456,6 +458,7 @@ class ActionHandler:
 		#update general buttons
 		Actions.ERRORS_WINDOW_DISPLAY.set_sensitive(not self.get_flow_graph().is_valid())
 		Actions.DOC_WINDOW_DISPLAY.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
+		Actions.CODE_WINDOW_DISPLAY.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
 		Actions.ELEMENT_DELETE.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
 		Actions.BLOCK_PARAM_MODIFY.set_sensitive(bool(self.get_flow_graph().get_selected_block()))
 		Actions.BLOCK_ROTATE_CCW.set_sensitive(bool(self.get_flow_graph().get_selected_blocks()))

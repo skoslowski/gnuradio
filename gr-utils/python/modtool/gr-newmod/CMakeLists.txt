@@ -132,8 +132,13 @@ configure_file(
 set(base_path ${CMAKE_CURRENT_SOURCE_DIR}/build/docs/doxygen/html/)
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/howto.conf.in
-    ~/.gnuradio/docs/howto.conf
+    ${CMAKE_CURRENT_BINARY_DIR}/howto.conf
 @ONLY)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/howto.conf
+    DESTINATION /usr/local/etc/gnuradio/conf.d
+)
 
 add_custom_target(uninstall
     ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake

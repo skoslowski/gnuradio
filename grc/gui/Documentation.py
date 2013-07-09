@@ -33,6 +33,8 @@ from gnuradio import gr
 import re
 import os
 from os.path import expanduser
+from os.path import walk
+
 
 
 class FetchDocument():
@@ -43,10 +45,14 @@ class FetchDocument():
 		get_webpage = webbrowser.get() 
 		block_info=self._block.get_make()
 		print block_info
-		block_info_part=block_info.split('.')
-		class_name=block_info_part[0]
 		try:
-			block_name=block_info_part[1].split('(')[0]
+			block_info_part=block_info.split('(')[0].split('.')
+	 		class_name=block_info_part[0]
+			if len(block_info_part)==3:
+				block_name=block_info_part[2]
+			else:
+				block_name=block_info_part[1]
+			print class_name+" "+block_name
 			#block name as in doxygen docs
 			block_name_d=""
 			block_name_parts=block_name.split('_')
@@ -58,7 +64,9 @@ class FetchDocument():
 
 			sph=gr.prefs().get_string('grc', 'sphinx_address', '')
 			dox=gr.prefs().get_string('grc', 'doxygen_address', '')
+			
 			module_base_path=gr.prefs().get_string(class_name, 'base_path', '')
+
 			if module_base_path is '':
 				url_lst_d=self.index(dox,'annotated.html')
 				url_lst_s=self.index(sph,'genindex.html')
@@ -208,6 +216,47 @@ class FetchDocument():
 	    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
 	    return self.get_server_status_code(url) in good_codes
 
+	def Errorbox(self,err_msg): MessageDialogHelper(
+	type=gtk.MESSAGE_ERROR,
+	buttons=gtk.BUTTONS_CLOSE,
+	title='Error',
+	markup=err_msg)
+
+class find_source_code():
+
+	def __init__(self,block):
+		self._block=block
+		block_info=self._block.get_make()
+		check_find=False
+		try:
+			block_info_part=block_info.split('(')[0].split('.')
+			if len(block_info_part)==3:
+				block_name=block_info_part[2]+"_impl.cc"
+				block_p=block_info_part[2]+".py"
+			else:
+				block_name=block_info_part[1]+"_impl.cc"
+				block_p=block_info_part[1]+".py"
+
+			path=gr.prefs().get_string('grc', 'source_path', '')
+			if os.path.isdir(path):
+				for dirs, subdirs, files in os.walk(path):
+					for f in files:
+						if os.path.isfile(os.path.join(dirs, block_name)) is True:
+							check_find=True
+							os.system("gedit "+os.path.join(dirs, block_name))
+							break
+						if os.path.isfile(os.path.join(dirs, block_p)) is True:
+							check_find=True
+							os.system("gedit "+os.path.join(dirs, block_p))
+							break
+				
+				if check_find is False:
+					self.Errorbox("""<b>Document not found</b>""")
+				
+			else:
+				self.Errorbox("""<b>Document not found</b>""")
+		except IndexError as e:
+			self.Errorbox("""<b>Document not found</b>""")
 	def Errorbox(self,err_msg): MessageDialogHelper(
 	type=gtk.MESSAGE_ERROR,
 	buttons=gtk.BUTTONS_CLOSE,
