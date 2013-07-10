@@ -1,4 +1,5 @@
 import os
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt
 
@@ -7,9 +8,9 @@ from . Constants import NEW_FLOGRAPH_TITLE
 from . EditorPage import EditorPage
 from . BlockLibrary import BlockLibrary
 import Messages
+import Preferences
 
 from ui_MainWindow import Ui_MainWindow
-
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -28,21 +29,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.editorTabs.tabCloseRequested.connect(self.close_page)
         self.actionPaste.triggered.connect(self.new_block)
 
-        # self.btwin = BlockTreeWindow(platform, self.get_flow_graph)
-
         self.reportDock.close()
 
-        self.new_page()
-
-        self.new_block()
-
-        # ToDo: Load UI Prefs
         #load preferences and show the main window
-		#Preferences.load(platform)
-		#self.resize(*Preferences.main_window_size())
-		#self.flow_graph_vpaned.set_position(Preferences.reports_window_position())
-		#self.hpaned.set_position(Preferences.blocks_window_position())
-		#self.show_all()
+        Preferences.load(platform)
+        # ToDo: use QSettings?
+        state = Preferences.main_window_state()
+        if state is not None: self.restoreState(state)
+        geometry = Preferences.main_window_geometry()
+        if geometry is not None: self.restoreGeometry(geometry)
+
+    ############################################################
+    # Report Window
+    ############################################################
+
+    def add_report_line(self, line):
+        """
+        Place line at the end of the text buffer, then scroll its window all the way down.
+
+        Args:
+            line: the new text
+        """
+        self.reportText.append(line)
+
+        #ToDo: fix scroll down
+        scrollbar = self.reportText.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+        #scrollbar.triggerAction(QAbstractSlider.SliderToMaximum)
+
+    ############################################################
+    # Pages: create and close
+    ############################################################
 
     def new_page(self, file_path='', show=False):
         """
@@ -54,10 +71,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         show: true if the page should be shown after loading
         """
         #if the file is already open, show the open page and return
-        if file_path and file_path in self._get_files(): #already open
-            page = self.editorTabs.children()[self._get_files().index(file_path)]
-            self._set_page(page)
-            return
+        if file_path:
+            for page in self._iter_pages():
+                if page.file_path == file_path:
+                    self.editorTabs.setCurrentWidget(page)
+                    return
 
         try: #try to load from file
             if file_path:
@@ -90,6 +108,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if not file_path or show:
                 self.editorTabs.setCurrentWidget(page)
 
+
+        self.new_block()
+
     def close_pages(self):
         """
         Close all the pages in this notebook.
@@ -97,24 +118,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Returns:
             true if all closed
         """
-        open_files = filter(lambda f: f, self._get_files()) #filter blank files
+        open_files = (page.get_file_path() for page in self._iter_pages())
+        open_files = filter(lambda f: f, open_files) #filter blank files
         open_file = self.get_page().get_file_path()
+
         #close each page
         for page in self._iter_pages():
             self.close_page(page)
-        if self.notebook.count():
+        if self.editorTabs.count():
             return False
+
         #save state before closing
-        # Todo: Save state
-        #Preferences.files_open(open_files)
-        #Preferences.file_open(open_file)
-        #Preferences.main_window_size(self.get_size())
-        #Preferences.reports_window_position(self.flow_graph_vpaned.get_position())
-        #Preferences.blocks_window_position(self.hpaned.get_position())
-        #Preferences.save()
+        Preferences.files_open(open_files)
+        Preferences.file_open(open_file)
         return True
 
-    def close_page(self, index=None):
+    def close_page(self, page=None):
         """
         Close the current page.
         If the notebook becomes empty, and ensure is true,
@@ -123,23 +142,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Args:
             index: int
         """
-        if index is None:
-            index = self.editorTabs.currentIndex()
-        page_to_be_closed = self.editorTabs.widget(index)
+        page = page or self.get_page()
         #show the page if it has an executing flow graph or is unsaved
-        if page_to_be_closed.get_proc() or not page_to_be_closed.get_saved():
-            self._set_page(self.page_to_be_closed)
+        if page.get_proc() or not page.get_saved():
+            self.editorTabs.setCurrentWidget(page)
 
         #unsaved? ask the user
-        if not page_to_be_closed.get_saved() and self._save_changes():
+        if not page.get_saved() and self._save_changes():
             #Actions.FLOW_GRAPH_SAVE() #try to save
-            if not page_to_be_closed.get_saved(): #still unsaved?
+            if not page.get_saved(): #still unsaved?
                 return
         #stop the flow graph if executing
-        #if self.page_to_be_closed.get_proc():
+        #if page.get_proc():
         #    Actions.FLOW_GRAPH_KILL()
+
         #remove the page
-        self.editorTabs.removeTab(index)
+        self.editorTabs.removeTab(self.editorTabs.indexOf(page))
 
 
     def new_block(self):
@@ -151,6 +169,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ############################################################
     # Misc
     ############################################################
+
+    def closeEvent(self, event):
+        Preferences.main_window_state(self.saveState())
+        Preferences.main_window_geometry(self.saveGeometry())
+        Preferences.save()
+        if self.close_pages():
+            event.accept()
 
     def update(self):
         """
@@ -189,29 +214,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         return self.get_page().get_flow_graph()
 
-    def get_focus_flag(self):
-        """
-        Get the focus flag from the current page.
-
-        Returns:
-            the focus flag
-        """
-        raise NotImplementedError
-
-
     ############################################################
     # Helpers
     ############################################################
-
-    def _set_page(self, page):
-        """
-        Set the current page.
-
-        Args:
-            page: the page widget
-        """
-        self.current_page = page
-        self.editorTabs.setCurrentWidget(page)
 
     def _save_changes(self):
         """
@@ -223,15 +228,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return QMessageBox.question(self, 'Unsaved Changes!',
                              'Would you like to save changes before closing?',
                              QMessageBox.Yes, QMessageBox.No) == QMessageBox.Yes
-
-    def _get_files(self):
-        """
-        Get the file names for all the pages, in order.
-
-        Returns:
-            list of file paths
-        """
-        return map(lambda page: page.get_file_path(), self._get_pages())
 
     def _iter_pages(self):
         """

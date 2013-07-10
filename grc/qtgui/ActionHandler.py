@@ -3,6 +3,7 @@ from threading import Thread
 
 from PyQt4.QtGui import QApplication
 
+import Preferences
 import Messages
 from . MainWindow import MainWindow
 
@@ -28,17 +29,38 @@ class ActionHandler:
         #setup the main window
         app = QApplication([])
         self.main_window = MainWindow(platform)
+
+        self.get_page = self.main_window.get_page
+        self.get_flow_graph = self.main_window.get_flow_graph
+
         self.main_window.actionRotateLeft.triggered.connect(self._rotate_left_action)
         self.main_window.actionRotateRight.triggered.connect(self._rotate_right_action)
 
         #setup the messages
-        #Messages.register_messenger(self.main_window.add_report_line)
+        Messages.register_messenger(self.main_window.add_report_line)
         #Messages.send_init(platform)
 
-        self.init_file_paths = file_paths
+        self._open_saved_pages(file_paths)
 
         self.main_window.show()
         sys.exit(app.exec_())
+
+    def _open_saved_pages(self, file_paths):
+        file_paths = file_paths or Preferences.files_open() or ['']
+        #load pages from file paths
+        for file_path in file_paths:
+            if file_path:
+                self.main_window.new_page(file_path)
+        # select last selected page
+        if Preferences.file_open() in file_paths:
+            self.main_window.new_page(Preferences.file_open(), show=True)
+        # ensure that at least a blank page exists
+        if not self.get_page():
+            self.main_window.new_page()
+
+
+
+
 
 
     def _handle_key_press(self, widget, event):

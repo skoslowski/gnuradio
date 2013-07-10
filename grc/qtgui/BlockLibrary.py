@@ -3,7 +3,7 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt, QMimeData
 
-from . ui_BlockLibrary import Ui_BlockLibraryWidget
+from . ui_BlockLibrary import Ui_blockLibraryDock
 
 NAME_INDEX = 0
 KEY_INDEX = 1
@@ -21,7 +21,7 @@ class Block(object):
         return self.key
 
 
-class BlockLibrary(QDockWidget, Ui_BlockLibraryWidget):
+class BlockLibrary(QDockWidget, Ui_blockLibraryDock):
 
     def __init__(self, parent, platform, get_flow_graph):
         QDockWidget.__init__(self, parent)

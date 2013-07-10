@@ -1,3 +1,5 @@
+from __future__ import division
+
 from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt
 
@@ -17,21 +19,52 @@ class Block(QGraphicsRectItem, Element):
         Block contructor.
         Add graphics related params to the block.
         """
-        QGraphicsRectItem.__init__(self, 10, 10, 200, 200, parent, scence)
+        x, y, w, h = 50, -40, 200, 150
+        PORT_H, PORT_W = 10, 10
 
-        self.setFlag(QGraphicsItem.ItemIsMovable)
-        self.setFlag(QGraphicsItem.ItemIsFocusable)
-        self.setFlag(QGraphicsItem.ItemIsSelectable)
-        self.setFlag(QGraphicsItem.ItemIsPanel)
+        QGraphicsRectItem.__init__(self, parent, scence)
+        self.setRect(0, 0, w, h)
+        self.setPos(x, y)
+
+        self.setFlags(QGraphicsItem.ItemIsMovable |
+                      QGraphicsItem.ItemIsFocusable |
+                      QGraphicsItem.ItemIsSelectable |
+                      QGraphicsItem.ItemIsPanel)
         self.setBrush(QBrush(QColor(200,200,200)))
 
         text = QGraphicsTextItem(self)
         text.setHtml('<b>Block Name</b><br />Dies ist ein Test, Dies ist ein Test, Dies ist ein Test')
-        text.setTextWidth(200)
-        text.setPos(10,10)
+        text.setTextWidth(w)
 
-        #self.setContextMenuPolicy(Qt.ActionsContextMenu)
-        #self.addActions(parent.main_window.menuEdit.actions())
+        # source port(s)
+        num_sink_ports = 3
+        self.souce_ports = []
+        for i in range(num_sink_ports):
+            y_port = (i + 0.5) * h / num_sink_ports - PORT_H / 2
+            port = QGraphicsRectItem(self)
+            port.setBrush(QColor(255,255,255))
+            port.setRect(-PORT_W, y_port, PORT_W, PORT_H)
+            port.setFlag(QGraphicsItem.ItemIsFocusable)
+            self.souce_ports.append(port)
+
+        # sink port(s)
+        num_source_ports = 4
+        self.sink_ports = []
+        for i in range(num_source_ports):
+            y_port = (i + 0.5) * h / num_source_ports - PORT_H / 2
+            port = QGraphicsRectItem(self)
+            port.setBrush(QColor(255,255,255))
+            port.setPos(w, 0)
+            port.setRect(0, y_port, PORT_W, PORT_H)
+            port.setFlag(QGraphicsItem.ItemIsFocusable)
+
+            self.sink_ports.append(port)
+
+
+        print port.parentItem()
+
+        #self.setG (Qt.ActionsContextMenu)
+        #self.addActions((parent.main_window.menuEdit.actions()))
 
         Element.__init__(self)
         #self.init_extra()
@@ -58,6 +91,19 @@ class Block(QGraphicsRectItem, Element):
                 'hide': 'all',
             })
         ))
+
+
+    def contextMenuEvent(self, event):
+        print event
+        menu = QMenu()
+        menu.addActions(self.parentWidget().main_window.menuEdit.actions())
+        menu.show()
+        event.accept()
+
+
+
+
+
 
     def get_coordinate(self):
         """
