@@ -13,8 +13,8 @@ class DrawingArea(QGraphicsView):
         self.setScene(QGraphicsScene())
 
         #ToDo: Better put this in Block()
-        self.setContextMenuPolicy(Qt.ActionsContextMenu)
-        self.addActions(parent.main_window.menuEdit.actions())
+        #self.setContextMenuPolicy(Qt.ActionsContextMenu)
+        #self.addActions(parent.main_window.menuEdit.actions())
 
     def get_focus_flag(self):
         #ToDo: Why do we need this?
