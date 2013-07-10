@@ -28,6 +28,8 @@ class ActionHandler:
         #setup the main window
         app = QApplication([])
         self.main_window = MainWindow(platform)
+        self.main_window.actionRotateLeft.triggered.connect(self._rotate_left_action)
+        self.main_window.actionRotateRight.triggered.connect(self._rotate_right_action)
 
         #setup the messages
         #Messages.register_messenger(self.main_window.add_report_line)
@@ -45,8 +47,14 @@ class ActionHandler:
     def _quit(self, window, event):
         pass
 
-    def _handle_action(self, action):
-        pass
+    def _rotate_left_action(self, ccw=True):
+        current_page = self.main_window.get_page()
+        if current_page:
+            for item in current_page.get_drawing_area().scene().selectedItems():
+                item.rotate(90 if ccw else -90)
+
+    def _rotate_right_action(self):
+        self._rotate_left_action(False)
 
 
 class ExecFlowGraphThread(Thread):

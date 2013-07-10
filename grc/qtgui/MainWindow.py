@@ -3,6 +3,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt
 
 from . Block import Block
+from . Constants import NEW_FLOGRAPH_TITLE
 from . EditorPage import EditorPage
 from . BlockLibrary import BlockLibrary
 import Messages
@@ -31,15 +32,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         self.reportDock.close()
 
-        new = QTreeWidgetItem()
-        new.setText(0, "Test")
-        #self.blockTree.insertTopLevelItem(0, new)
-
-        new2 = QTreeWidgetItem()
-        new2.setText(0, "Test2")
-        #new.addChild(new2)
-
         self.new_page()
+
         self.new_block()
 
         # ToDo: Load UI Prefs
@@ -90,12 +84,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         else:
             #add this page to the notebook
-            self.editorTabs.addTab(page, "New*")
+            self.editorTabs.addTab(page, NEW_FLOGRAPH_TITLE)
 
-            #self.notebook.set_tab_label_packing(page, False, False, gtk.PACK_START)
             #only show if blank or manual
             if not file_path or show:
-                self.editorTabs.setCurrentWidget(self)
+                self.editorTabs.setCurrentWidget(page)
 
     def close_pages(self):
         """
@@ -112,6 +105,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.notebook.count():
             return False
         #save state before closing
+        # Todo: Save state
         #Preferences.files_open(open_files)
         #Preferences.file_open(open_file)
         #Preferences.main_window_size(self.get_size())
@@ -150,7 +144,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def new_block(self):
         graphicScene = self.get_page().get_drawing_area().scene()
-        graphicScene.addItem(Block())
+        block = Block()
+        graphicScene.addItem(block)
 
 
     ############################################################
@@ -201,7 +196,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Returns:
             the focus flag
         """
-        return self.get_page().get_drawing_area().get_focus_flag()
+        raise NotImplementedError
 
 
     ############################################################
