@@ -85,6 +85,12 @@
     <addaction name="actionPaste"/>
     <addaction name="actionDelete"/>
     <addaction name="separator"/>
+    <addaction name="actionRotateLeft"/>
+    <addaction name="actionRotateRight"/>
+    <addaction name="actionEnable"/>
+    <addaction name="actionDisable"/>
+    <addaction name="separator"/>
+    <addaction name="actionProperties"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -154,7 +160,11 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTextBrowser" name="reportText"/>
+      <widget class="QTextBrowser" name="reportText">
+       <property name="contextMenuPolicy">
+        <enum>Qt::NoContextMenu</enum>
+       </property>
+      </widget>
      </item>
     </layout>
    </widget>
@@ -344,6 +354,31 @@
   <action name="actionReport">
    <property name="text">
     <string>Report</string>
+   </property>
+  </action>
+  <action name="actionRotateLeft">
+   <property name="text">
+    <string>Rotate Left</string>
+   </property>
+  </action>
+  <action name="actionRotateRight">
+   <property name="text">
+    <string>Rotate Right</string>
+   </property>
+  </action>
+  <action name="actionEnable">
+   <property name="text">
+    <string>Enable</string>
+   </property>
+  </action>
+  <action name="actionDisable">
+   <property name="text">
+    <string>Disable</string>
+   </property>
+  </action>
+  <action name="actionProperties">
+   <property name="text">
+    <string>Properties</string>
    </property>
   </action>
  </widget>

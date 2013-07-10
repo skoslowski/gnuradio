@@ -12,6 +12,14 @@ class DrawingArea(QGraphicsView):
         self.setAcceptDrops(True)
         self.setScene(QGraphicsScene())
 
+        #ToDo: Better put this in Block()
+        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+        self.addActions(parent.main_window.menuEdit.actions())
+
+    def get_focus_flag(self):
+        #ToDo: Why do we need this?
+        return False
+
     def wheelEvent(self, event):
         if event.modifiers() == Qt.ControlModifier:
             factor = 1.2
