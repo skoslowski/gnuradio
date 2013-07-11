@@ -77,12 +77,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                     self.editorTabs.setCurrentWidget(page)
                     return
 
-        try: #try to load from file
+        try:  # try to load from file
             if file_path:
                 Messages.send_start_load(file_path)
 
-            flow_graph = FlowGraph() # self._platform.get_new_flow_graph()
-            #flow_graph.grc_file_path = file_path
+            flow_graph = self._platform.get_new_flow_graph()
+            flow_graph.grc_file_path = file_path
 
             page = EditorPage(
                 self,
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if file_path:
                 Messages.send_end_load()
 
-        except Exception as e: #return on failure
+        except Exception as e:  # return on failure
             Messages.send_fail_load(e)
             if isinstance(e, KeyError) and str(e) == "'options'":
                 # This error is unrecoverable, so crash gracefully
@@ -115,13 +115,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Returns:
             true if all closed
         """
-        open_files = (page.get_file_path() for page in self._iter_pages())
-        open_files = filter(lambda f: f, open_files) #filter blank files
+        open_files = []
         open_file = self.get_page().get_file_path()
 
         #close each page
-        for page in self._iter_pages():
-            self.close_page(page)
+        for index in range(self.editorTabs.count()):
+            file_path = self.editorTabs.widget(index).get_file_path()
+            if file_path:
+                open_files.append(file_path)
+            self.close_page(index)
+
         if self.editorTabs.count():
             return False
 
@@ -130,7 +133,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Preferences.file_open(open_file)
         return True
 
-    def close_page(self, page=None):
+    def close_page(self, index=None):
         """
         Close the current page.
         If the notebook becomes empty, and ensure is true,
@@ -139,7 +142,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         Args:
             index: int
         """
-        page = page or self.get_page()
+        page = self.editorTabs.widget(index) \
+            if index is not None else self.get_page()
         #show the page if it has an executing flow graph or is unsaved
         if page.get_proc() or not page.get_saved():
             self.editorTabs.setCurrentWidget(page)
@@ -218,13 +222,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return QMessageBox.question(self, 'Unsaved Changes!',
                              'Would you like to save changes before closing?',
                              QMessageBox.Yes, QMessageBox.No) == QMessageBox.Yes
-
-    def _iter_pages(self):
-        """
-        Iterate over all pages in the notebook.
-        """
-        for i in range(self.editorTabs.count()):
-            yield self.editorTabs.widget(i)
 
 
 

@@ -6,12 +6,12 @@ from PyQt4.QtCore import Qt
 from . Element import Element
 from .. base import odict
 from Constants import \
-	BLOCK_LABEL_PADDING, \
-	PORT_SEPARATION, LABEL_SEPARATION, \
-	PORT_BORDER_SEPARATION, POSSIBLE_ROTATIONS
+    BLOCK_LABEL_PADDING, \
+    PORT_SEPARATION, LABEL_SEPARATION, \
+    PORT_BORDER_SEPARATION, POSSIBLE_ROTATIONS
 
 
-class Block(QGraphicsRectItem, Element):
+class Block(Element, QGraphicsRectItem):
     """The graphical signal block."""
 
     def __init__(self, parent=None, scence=None):
@@ -19,12 +19,35 @@ class Block(QGraphicsRectItem, Element):
         Block contructor.
         Add graphics related params to the block.
         """
+
+        #add the position param
+        self.get_params().append(self.get_parent().get_parent().Param(
+            block=self,
+            n=odict({
+                'name': 'GUI Coordinate',
+                'key': '_coordinate',
+                'type': 'raw',
+                'value': '(0, 0)',
+                'hide': 'all',
+            })
+        ))
+        self.get_params().append(self.get_parent().get_parent().Param(
+            block=self,
+            n=odict({
+                'name': 'GUI Rotation',
+                'key': '_rotation',
+                'type': 'raw',
+                'value': '0',
+                'hide': 'all',
+            })
+        ))
+        Element.__init__(self)
+
         x, y, w, h = 50, -40, 200, 150
-        PORT_H, PORT_W = 10, 10
 
         QGraphicsRectItem.__init__(self, parent, scence)
+        self.setPos(0, 0)
         self.setRect(0, 0, w, h)
-        self.setPos(x, y)
 
         self.setFlags(QGraphicsItem.ItemIsMovable |
                       QGraphicsItem.ItemIsFocusable |
@@ -33,8 +56,35 @@ class Block(QGraphicsRectItem, Element):
         self.setBrush(QBrush(QColor(200,200,200)))
 
         text = QGraphicsTextItem(self)
-        text.setHtml('<b>Block Name</b><br />Dies ist ein Test, Dies ist ein Test, Dies ist ein Test')
-        text.setTextWidth(w)
+        #text.setHtml('<b>Block Name</b><br />Dies ist ein Test, Dies ist ein Test, Dies ist ein Test')
+        #text.setTextWidth(w)
+
+        #self.setG (Qt.ActionsContextMenu)
+        #self.addActions((parent.main_window.menuEdit.actions()))
+
+    def contextMenuEvent(self, event):
+        print event
+        menu = QMenu()
+        menu.addActions(self.parentWidget().main_window.menuEdit.actions())
+        menu.show()
+        event.accept()
+
+    def setPos(self, *args):
+        args = args[0] if len(args) == 1 else args
+        QGraphicsRectItem.setPos(self, *args)
+        self.get_param('_coordinate').set_value(str(args))
+
+    def rotate(self, rotation):
+        QGraphicsRectItem.rotate(self, rotation)
+        self.get_param('_rotation').set_value(str(self.rotation()))
+
+    def setRotation(self, rot):
+        QGraphicsRectItem.setRotation(self, rot)
+        self.get_param('_rotation').set_value(str(rot))
+
+    def testPorts(self):
+        x, y, w, h = 50, -40, 200, 150
+        PORT_H, PORT_W = 10, 10
 
         # source port(s)
         num_sink_ports = 3
@@ -62,70 +112,3 @@ class Block(QGraphicsRectItem, Element):
 
 
         print port.parentItem()
-
-        #self.setG (Qt.ActionsContextMenu)
-        #self.addActions((parent.main_window.menuEdit.actions()))
-
-        Element.__init__(self)
-        #self.init_extra()
-
-    def init_extra(self):
-        #add the position param
-        self.get_params().append(self.get_parent().get_parent().Param(
-            block=self,
-            n=odict({
-                'name': 'GUI Coordinate',
-                'key': '_coordinate',
-                'type': 'raw',
-                'value': '(0, 0)',
-                'hide': 'all',
-            })
-        ))
-        self.get_params().append(self.get_parent().get_parent().Param(
-            block=self,
-            n=odict({
-                'name': 'GUI Rotation',
-                'key': '_rotation',
-                'type': 'raw',
-                'value': '0',
-                'hide': 'all',
-            })
-        ))
-
-
-    def contextMenuEvent(self, event):
-        print event
-        menu = QMenu()
-        menu.addActions(self.parentWidget().main_window.menuEdit.actions())
-        menu.show()
-        event.accept()
-
-    def setPos(self, coor):
-        QGraphicsRectItem.setPos(self, *coor)
-        #self.get_param('_coordinate').set_value(str(coor))
-
-    def rotate(self, rotation):
-        QGraphicsRectItem.rotate(self, rotation)
-        #self.get_param('_rotation').set_value(str(self.rotation()))
-
-    def setRotation(self, rot):
-        QGraphicsRectItem.setRotation(self, rot)
-        #self.get_param('_rotation').set_value(str(rot))
-
-    def create_shapes(self):
-        """Update the block, parameters, and ports when a change occurs."""
-        raise NotImplementedError
-
-    def create_labels(self):
-        """Create the labels for the signal block."""
-        raise NotImplementedError
-
-    def draw(self, gc, window):
-        """
-        Draw the signal block with label and inputs/outputs.
-
-        Args:
-            gc: the graphics context
-            window: the gtk window to draw on
-        """
-        raise NotImplementedError
