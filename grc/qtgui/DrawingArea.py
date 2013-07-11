@@ -10,7 +10,7 @@ class DrawingArea(QGraphicsView):
         self.setFrameShape(QFrame.NoFrame)
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setAcceptDrops(True)
-        self.setScene(QGraphicsScene())
+        self.setScene(flow_graph)
 
         #ToDo: Better put this in Block()
         #self.setContextMenuPolicy(Qt.ActionsContextMenu)

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from grc.qtgui.ActionHandler import ActionHandler
-#from grc.python.Platform import Platform
+from grc.python.Platform import Platform
 
-#ActionHandler(None, Platform())
-ActionHandler(None, None)
+ActionHandler(None, Platform())
+#ActionHandler(None, None)

@@ -100,52 +100,17 @@ class Block(QGraphicsRectItem, Element):
         menu.show()
         event.accept()
 
-
-
-
-
-
-    def get_coordinate(self):
-        """
-        Get the coordinate from the position param.
-
-        Returns:
-            the coordinate tuple (x, y) or (0, 0) if failure
-        """
-        #coor = eval(self.get_param('_coordinate').get_value())
-        #x, y = map(int, coor)
-        x, y = self.pos()
-        return x, y
-
-
-    def set_coordinate(self, coor):
-        """
-        Set the coordinate into the position param.
-
-        Args:
-            coor: the coordinate tuple (x, y)
-        """
+    def setPos(self, coor):
+        QGraphicsRectItem.setPos(self, *coor)
         #self.get_param('_coordinate').set_value(str(coor))
-        self.setPos(*coor)
 
-    def get_rotation(self):
-        """
-        Get the rotation from the position param.
+    def rotate(self, rotation):
+        QGraphicsRectItem.rotate(self, rotation)
+        #self.get_param('_rotation').set_value(str(self.rotation()))
 
-        Returns:
-            the rotation in degrees
-        """
-        return int(self.rotation())
-
-    def set_rotation(self, rot):
-        """
-        Set the rotation into the position param.
-
-        Args:
-            rot: the rotation in degrees
-        """
+    def setRotation(self, rot):
+        QGraphicsRectItem.setRotation(self, rot)
         #self.get_param('_rotation').set_value(str(rot))
-        self.setRotation(rot)
 
     def create_shapes(self):
         """Update the block, parameters, and ports when a change occurs."""
