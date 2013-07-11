@@ -7,6 +7,7 @@ from . Block import Block
 from . Constants import NEW_FLOGRAPH_TITLE
 from . EditorPage import EditorPage
 from . BlockLibrary import BlockLibrary
+from . FlowGraph import FlowGraph
 import Messages
 import Preferences
 
@@ -27,7 +28,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.actionNew.triggered.connect(self.new_page)
         self.actionClose.triggered.connect(self.close_page)
         self.editorTabs.tabCloseRequested.connect(self.close_page)
-        self.actionPaste.triggered.connect(self.new_block)
 
         self.reportDock.close()
 
@@ -52,7 +52,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         """
         self.reportText.append(line)
 
-        #ToDo: fix scroll down
+        #FixMe: scroll down
         scrollbar = self.reportText.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
         #scrollbar.triggerAction(QAbstractSlider.SliderToMaximum)
@@ -81,7 +81,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             if file_path:
                 Messages.send_start_load(file_path)
 
-            flow_graph = None # self._platform.get_new_flow_graph()
+            flow_graph = FlowGraph() # self._platform.get_new_flow_graph()
             #flow_graph.grc_file_path = file_path
 
             page = EditorPage(
@@ -107,9 +107,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             #only show if blank or manual
             if not file_path or show:
                 self.editorTabs.setCurrentWidget(page)
-
-
-        self.new_block()
 
     def close_pages(self):
         """
@@ -158,13 +155,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         #remove the page
         self.editorTabs.removeTab(self.editorTabs.indexOf(page))
-
-
-    def new_block(self):
-        graphicScene = self.get_page().get_drawing_area().scene()
-        block = Block()
-        graphicScene.addItem(block)
-
 
     ############################################################
     # Misc
