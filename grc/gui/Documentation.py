@@ -34,6 +34,7 @@ import re
 import os
 from os.path import expanduser
 from os.path import walk
+from Messages import open_doc_and_code_message
 
 
 
@@ -44,9 +45,11 @@ class FetchDocument():
 		self._block=block
 		get_webpage = webbrowser.get() 
 		block_info=self._block.get_make()
-		print block_info
+		python_block=True
+		print block_info.split('(')[0]
 		try:
 			block_info_part=block_info.split('(')[0].split('.')
+			
 	 		class_name=block_info_part[0]
 			if len(block_info_part)==3:
 				block_name=block_info_part[2]
@@ -71,34 +74,50 @@ class FetchDocument():
 				url_lst_d=self.index(dox,'annotated.html')
 				url_lst_s=self.index(sph,'genindex.html')
 				if not url_lst_s and not url_lst_d:
-					self.Errorbox("""<b>annotated.html and genindex.html are not found</b>""")
+					msg('',3)
+					Errorbox("""<b>annotated.html and genindex.html are not found</b>""")
 				else:
+					if url_lst_s: 	
+						for url in url_lst_s.urls:
+							if block_name+"_sptr" in url:
+								python_block=False
 					complete_url=self.get_valid_uri(block_name_d,class_name,url_lst_d,dox)
 					if complete_url is not None:
+						msg(complete_url,0)
 						get_webpage.open(complete_url)
 					#sphinx doc
 					else:	
 						complete_url=self.get_valid_uri(block_name,class_name,url_lst_s,sph)
 						if complete_url is not None:
+							#check=0
+							msg(complete_url,0)
 							get_webpage.open(complete_url)
 					#file does not exist
 						else:
 							if url_lst_s and url_lst_d:
-								self.Errorbox("""<b>Document not found</b>""")
+								msg('',1)
+								Errorbox("""<b>Document not found</b>""")
+							if not url_lst_d and url_lst_s and python_block is False:
+								msg('',4)
+								Errorbox("""<b>annotated.html is not found</b>""")
+							if not url_lst_d and url_lst_s and python_block is True:
+								msg('',1)
+								Errorbox("""<b>Document not found</b>""")
 							if not url_lst_s and url_lst_d:
-								self.Errorbox("""<b>genindex.html is not found</b>""")
-							if not url_lst_d and url_lst_s:
-								self.Errorbox("""<b>annotated.html is not found</b>""")
+								msg('',7)
+								Errorbox("""<b>genindex.html is not found</b>""")
 			#blocks from out of tree modules
 			else:
 				complete_url=self.out_of_tree_module(module_base_path,block_name_d)
 				if complete_url is not None:
 					print complete_url
+					msg(complete_url,0)
 					get_webpage.open(complete_url)
 				else:
 					self.Errorbox("""<b>Document not found</b>""")						
 		except IndexError as e:
-			self.Errorbox("""<b>Document not found</b>""")
+			msg('',1)
+			Errorbox("""<b>Document not found</b>""")
 	
 	
 	def out_of_tree_module(self,address,name_d):
@@ -108,6 +127,7 @@ class FetchDocument():
 		except IOError as e:
 			open_index = []
 		if not open_index:
+			msg('',2)
 			return None
 		else:
 			url_list = URLLister()
@@ -125,8 +145,10 @@ class FetchDocument():
 					with open(complete_uri): 
 						return "file://"+complete_uri
 				except IOError:
+					msg('',1)
 					return None
 			else:
+				msg('',1)
 				return None
 				
 
@@ -143,7 +165,7 @@ class FetchDocument():
 						if class_n in url.lower() and re.search(name+".html"+"\Z", url):
 							uri=url
 							break
-					elif re.search(name+"\Z", url):
+					elif re.search('\.'+name+"\Z", url):
 						uri=url
 						break
 			if uri is not "":
@@ -152,8 +174,6 @@ class FetchDocument():
 				if self.network_connection() is True:
 					if self.check_url(complete_uri) is True:
 						return complete_uri
-					else:
-						return None
 				#for local copy of doc
 				else:
 					try:
@@ -216,17 +236,16 @@ class FetchDocument():
 	    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
 	    return self.get_server_status_code(url) in good_codes
 
-	def Errorbox(self,err_msg): MessageDialogHelper(
-	type=gtk.MESSAGE_ERROR,
-	buttons=gtk.BUTTONS_CLOSE,
-	title='Error',
-	markup=err_msg)
+
+	
+
 
 class find_source_code():
 
 	def __init__(self,block):
 		self._block=block
 		block_info=self._block.get_make()
+		print block_info
 		check_find=False
 		try:
 			block_info_part=block_info.split('(')[0].split('.')
@@ -236,6 +255,7 @@ class find_source_code():
 			else:
 				block_name=block_info_part[1]+"_impl.cc"
 				block_p=block_info_part[1]+".py"
+			print block_p+" "+block_name
 
 			path=gr.prefs().get_string('grc', 'source_path', '')
 			if os.path.isdir(path):
@@ -243,25 +263,52 @@ class find_source_code():
 					for f in files:
 						if os.path.isfile(os.path.join(dirs, block_name)) is True:
 							check_find=True
+							msg(os.path.join(dirs, block_name),0)
 							os.system("gedit "+os.path.join(dirs, block_name))
 							break
 						if os.path.isfile(os.path.join(dirs, block_p)) is True:
+							msg(os.path.join(dirs, block_p),0)
 							check_find=True
 							os.system("gedit "+os.path.join(dirs, block_p))
 							break
 				
 				if check_find is False:
-					self.Errorbox("""<b>Document not found</b>""")
+					msg('',5)
+					Errorbox("""<b>Document not found</b>""")
 				
 			else:
-				self.Errorbox("""<b>Document not found</b>""")
+				msg(path,6)
+				Errorbox("""<b>Document not found</b>""")
 		except IndexError as e:
-			self.Errorbox("""<b>Document not found</b>""")
-	def Errorbox(self,err_msg): MessageDialogHelper(
-	type=gtk.MESSAGE_ERROR,
-	buttons=gtk.BUTTONS_CLOSE,
-	title='Error',
-	markup=err_msg)
+			msg('',8)
+			Errorbox("""<b>Document not found</b>""")
+
+def Errorbox(err_msg): MessageDialogHelper(
+type=gtk.MESSAGE_ERROR,
+buttons=gtk.BUTTONS_CLOSE,
+title='Error',
+markup=err_msg)
+
+
+def msg(url,check):
+	if check==0:
+		open_doc_and_code_message('>>> Opening:  %s\n\n'%url)
+	if check==1:
+		open_doc_and_code_message('>>> Documentation of selected block is not available\n\n')
+	if check==2:
+		open_doc_and_code_message('>>> Documentation of this out of tree module is not generated by CMake\n\n')
+	if check==3:
+		open_doc_and_code_message('>>> Internet connection is not available and index files are not found in this system\n\n')
+	if check==4:
+		open_doc_and_code_message('>>> Internet connection is not available and annotated.html is not found in this system\n\n')
+	if check==5:
+		open_doc_and_code_message('>>> Source code is not found in this systems\n\n')
+	if check==6:
+		open_doc_and_code_message('>>> Directory %s is not GNU Radio source tree path\n\n'%url)
+	if check==7:
+		open_doc_and_code_message('>>> Internet connection is not available and genindex.html is not found in this system\n\n')
+	if check==8:
+		open_doc_and_code_message('>>> Source code of selected block is not available\n\n')
 
 class URLLister(SGMLParser):
 	def reset(self):
