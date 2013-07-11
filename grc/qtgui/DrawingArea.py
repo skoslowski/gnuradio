@@ -8,7 +8,8 @@ class DrawingArea(QGraphicsView):
         self._flow_graph = flow_graph
 
         self.setFrameShape(QFrame.NoFrame)
-        self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+        self.setRenderHints(QPainter.Antialiasing |
+                            QPainter.SmoothPixmapTransform)
         self.setAcceptDrops(True)
         self.setScene(flow_graph)
 

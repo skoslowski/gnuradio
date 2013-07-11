@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 from .. base.Block import Block as _Block
-from .. gui.Block import Block as _GUIBlock
+from .. qtgui.Block import Block as _GUIBlock
 import extract_docs
 
 class Block(_Block, _GUIBlock):

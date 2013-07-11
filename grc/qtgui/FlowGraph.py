@@ -21,6 +21,7 @@ from PyQt4.QtGui import *
 
 from . Element import Element
 
+
 class FlowGraph(QGraphicsScene, Element):
 
     def __init__(self):
@@ -35,10 +36,13 @@ class FlowGraph(QGraphicsScene, Element):
             key: the block key
             coor: an optional coordinate or None for random
         """
+
         id = self._get_unique_id(key)
+
         #calculate the position coordinate
-        # ToDo: random position
-        if coor is None: coor = 0, 0
+        if coor is None:
+            # ToDo: random position
+            coor = 0, 0
 
         #get the new block
         block = self.get_new_block(key)
@@ -46,7 +50,7 @@ class FlowGraph(QGraphicsScene, Element):
         block.setRotation(0)
         block.get_param('id').set_value(id)
 
-        #Actions.ELEMENT_CREATE()
+        self.addItem(block)
 
         return id
 

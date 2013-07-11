@@ -9,17 +9,6 @@ NAME_INDEX = 0
 KEY_INDEX = 1
 DOC_INDEX = 2
 
-class Block(object):
-    def __init__(self, name, key):
-        self.name = name
-        self.key = key
-
-    def get_name(self):
-        return self.name
-
-    def get_key(self):
-        return self.key
-
 
 class BlockLibrary(QDockWidget, Ui_blockLibraryDock):
 
@@ -38,14 +27,7 @@ class BlockLibrary(QDockWidget, Ui_blockLibraryDock):
 
         self.clear()
         #add blocks and categories
-        #self.platform.load_block_tree(self)
-
-        self.add_block('cat A', Block('test', 'testID'))
-        self.add_block('cat B', Block('test2', 'testID2'))
-        self.add_block('cat C')
-        self.add_block('cat C/cat D', Block('test3', 'testID4'))
-        self.add_block('cat A', Block('test4', 'testID'))
-
+        self.platform.load_block_tree(self)
 
     def clear(self):
         self.blockTree.clear()
@@ -93,10 +75,9 @@ class BlockLibrary(QDockWidget, Ui_blockLibraryDock):
         """
         Add the selected block with the given key to the flow graph.
         """
-        key = self.blockTree.itemFromIndex(index).text(KEY_INDEX)
+        key = str(self.blockTree.itemFromIndex(index).text(KEY_INDEX))
         if key:
-            print key
-            #self.get_flow_graph().add_new_block(key)
+            self.get_flow_graph().add_new_block(key)
 
 
 def _encode_mime_data(indexes):
