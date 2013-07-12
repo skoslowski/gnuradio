@@ -4,6 +4,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt
 
 from . Element import Element
+from .FlowGraph import FlowGraph
 from .. base import odict
 from Constants import \
     BLOCK_LABEL_PADDING, \
@@ -46,6 +47,10 @@ class Block(Element, QGraphicsRectItem):
         x, y, w, h = 50, -40, 200, 150
 
         QGraphicsRectItem.__init__(self, parent, scence)
+
+        if not isinstance(self.get_parent(), FlowGraph):
+            return
+
         self.setPos(0, 0)
         self.setRect(0, 0, w, h)
 
@@ -53,26 +58,25 @@ class Block(Element, QGraphicsRectItem):
                       QGraphicsItem.ItemIsFocusable |
                       QGraphicsItem.ItemIsSelectable |
                       QGraphicsItem.ItemIsPanel)
-        self.setBrush(QBrush(QColor(200,200,200)))
+        self.setBrush(QBrush(QColor(200, 200, 200)))
 
-        text = QGraphicsTextItem(self)
-        #text.setHtml('<b>Block Name</b><br />Dies ist ein Test, Dies ist ein Test, Dies ist ein Test')
-        #text.setTextWidth(w)
+        self.text = QGraphicsTextItem(self)
+        self.text.setTextWidth(w)
+        self.updateLabel()
 
         #self.setG (Qt.ActionsContextMenu)
         #self.addActions((parent.main_window.menuEdit.actions()))
 
-    def contextMenuEvent(self, event):
-        print event
-        menu = QMenu()
-        menu.addActions(self.parentWidget().main_window.menuEdit.actions())
-        menu.show()
-        event.accept()
+    def updateLabel(self):
+        self.text.setHtml('<b>{name}</b><br />{desc}'.format(
+            name=self.get_name(),
+            desc=""#self.get_params()
+        ))
 
     def setPos(self, *args):
-        args = args[0] if len(args) == 1 else args
         QGraphicsRectItem.setPos(self, *args)
-        self.get_param('_coordinate').set_value(str(args))
+        # FixMe: detect drag and drob of blocks
+        #self.get_param('_coordinate').set_value(str(args))
 
     def rotate(self, rotation):
         QGraphicsRectItem.rotate(self, rotation)

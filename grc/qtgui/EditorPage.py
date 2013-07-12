@@ -55,11 +55,11 @@ class EditorPage(QWidget):
         self.set_saved(True)
 
         #import the file
+        initial_state = flow_graph.get_parent().parse_flow_graph(file_path)
+        self.state_cache = None  # StateCache(initial_state)
 
-        #initial_state = flow_graph.get_parent().parse_flow_graph(file_path)
-        self.state_cache = None # StateCache(initial_state)
         #import the data to the flow graph
-        #self.get_flow_graph().import_data(initial_state)
+        flow_graph.import_data(initial_state)
 
         #initialize page gui
         self.drawing_area = DrawingArea(self, flow_graph)
@@ -67,6 +67,7 @@ class EditorPage(QWidget):
         layout.addWidget(self.drawing_area)
         layout.setMargin(0)
 
+        self.get_flow_graph().populate_scene()
         #self.label = None
         #self.get_flow_graph().drawing_area = self.get_drawing_area()
 

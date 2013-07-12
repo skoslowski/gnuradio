@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 import os
 from gnuradio import gr
 from .. base.Platform import Platform as _Platform
-from .. gui.Platform import Platform as _GUIPlatform
+from .. qtgui.Platform import Platform as _GUIPlatform
 from FlowGraph import FlowGraph as _FlowGraph
 from Connection import Connection as _Connection
 from Block import Block as _Block

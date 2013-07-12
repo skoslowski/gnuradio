@@ -52,6 +52,15 @@ class FlowGraph(QGraphicsScene, Element):
 
         self.addItem(block)
 
-        return id
+        return block
+
+    def populate_scene(self):
+        self.clear()
+
+        for child in self.get_blocks():
+            self.addItem(child)
+            child.setPos(*eval(child.get_param('_coordinate').get_value()))
+            child.setRotation(eval(child.get_param('_rotation').get_value()))
+            print
 
 
