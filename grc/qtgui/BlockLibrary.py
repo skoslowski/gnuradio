@@ -34,7 +34,6 @@ class BlockLibrary(QDockWidget, Ui_blockLibraryDock):
         #map (sub)categories to items, automatic mapping for root
         self._categoryItems = {tuple(): self.blockTree}
 
-
     ############################################################
     ## Block Tree Methods
     ############################################################
@@ -65,12 +64,9 @@ class BlockLibrary(QDockWidget, Ui_blockLibraryDock):
             QTreeWidgetItem(self._categoryItems[category],
                             (block.get_name(), block.get_key(), 'Doc'))
 
-
-
     ############################################################
     ## Helper Methods
     ############################################################
-
     def _add_selected_block(self, index):
         """
         Add the selected block with the given key to the flow graph.
