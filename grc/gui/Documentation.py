@@ -32,21 +32,31 @@ from Dialogs import MessageDialogHelper
 from gnuradio import gr
 import re
 import os
-from os.path import expanduser
-from os.path import walk
+from os.path import expanduser, walk
 from Messages import open_doc_and_code_message
 
 
 
-class FetchDocument():
+class open_document_and_source_code():
 
 
-	def __init__(self,block):
-		self._block=block
-		get_webpage = webbrowser.get() 
-		block_info=self._block.get_make()
+	def __init__(self):
+		
+		self.get_webpage = webbrowser.get() 
+		self.sph=gr.prefs().get_string('grc', 'sphinx_base_uri', '')
+		self.dox=gr.prefs().get_string('grc', 'doxygen_base_uri', '')
+		self.path=gr.prefs().get_string('grc', 'source_path', '')	
+		self.data1_doc=['add_vcc','multiply_vcc','fir_filter_ccf']
+		self.data2_doc=['add_cc','multiply_cc','firdes']	
+		self.data1_code=['psk_mod','psk_demod','qam_mod','qam_demod','ofdm_tx','ofdm_rx','gmsk_mod','gmsk_demod','gfsk_mod','gfsk_demod','dbpsk_mod','dbpsk_demod','packet_mod_f','packet_demod_f','fir_filter_ccf']
+		self.data2_code=['psk','qam','ofdm_txrx','gmsk','gfsk','bpsk','ofdm','firdes']
+		
+
+	def open_document(self,block):
+
+		block_info=block.get_make()
 		python_block=True
-		print block_info.split('(')[0]
+		check=False
 		try:
 			block_info_part=block_info.split('(')[0].split('.')
 			
@@ -55,7 +65,17 @@ class FetchDocument():
 				block_name=block_info_part[2]
 			else:
 				block_name=block_info_part[1]
-			print class_name+" "+block_name
+			
+			#############################################################################################
+			#For add, multiply, low pass, band pass, band reject, root raised cosine, band stop blocks
+			#############################################################################################
+			i=0
+			for blk in self.data1_doc:
+				if re.match(block_name, self.data1_doc[i]):	
+					block_name=self.data2_doc[i]
+					break
+				i=i+1
+                        ############################################################################################		
 			#block name as in doxygen docs
 			block_name_d=""
 			block_name_parts=block_name.split('_')
@@ -64,60 +84,50 @@ class FetchDocument():
 					block_name_d=block_name_d+block_name_parts[i]
 				else:
 					block_name_d=block_name_d+block_name_parts[i]+'__'
+			module_base_path=gr.prefs().get_string(class_name, 'doc_path', '')
+			url_lst_d=self.index(self.dox,'annotated.html')
+			url_lst_s=self.index(self.sph,'genindex.html')
 
-			sph=gr.prefs().get_string('grc', 'sphinx_address', '')
-			dox=gr.prefs().get_string('grc', 'doxygen_address', '')
-			
-			module_base_path=gr.prefs().get_string(class_name, 'base_path', '')
-
-			if module_base_path is '':
-				url_lst_d=self.index(dox,'annotated.html')
-				url_lst_s=self.index(sph,'genindex.html')
-				if not url_lst_s and not url_lst_d:
-					msg('',3)
-					Errorbox("""<b>annotated.html and genindex.html are not found</b>""")
-				else:
-					if url_lst_s: 	
-						for url in url_lst_s.urls:
-							if block_name+"_sptr" in url:
-								python_block=False
-					complete_url=self.get_valid_uri(block_name_d,class_name,url_lst_d,dox)
-					if complete_url is not None:
-						msg(complete_url,0)
-						get_webpage.open(complete_url)
-					#sphinx doc
-					else:	
-						complete_url=self.get_valid_uri(block_name,class_name,url_lst_s,sph)
-						if complete_url is not None:
-							#check=0
-							msg(complete_url,0)
-							get_webpage.open(complete_url)
-					#file does not exist
-						else:
-							if url_lst_s and url_lst_d:
-								msg('',1)
-								Errorbox("""<b>Document not found</b>""")
-							if not url_lst_d and url_lst_s and python_block is False:
-								msg('',4)
-								Errorbox("""<b>annotated.html is not found</b>""")
-							if not url_lst_d and url_lst_s and python_block is True:
-								msg('',1)
-								Errorbox("""<b>Document not found</b>""")
-							if not url_lst_s and url_lst_d:
-								msg('',7)
-								Errorbox("""<b>genindex.html is not found</b>""")
-			#blocks from out of tree modules
-			else:
-				complete_url=self.out_of_tree_module(module_base_path,block_name_d)
+			if url_lst_s: 	
+				for url in url_lst_s.urls:
+					if block_name+"_sptr" in url:
+						python_block=False
+			#doxygen doc
+			complete_url=self.get_valid_uri(block_name_d,class_name,url_lst_d,self.dox)
+			if complete_url is not None:
+				check=True
+				open_doc_and_code_message('>>> Opening:  %s\n\n'%complete_url)
+				self.get_webpage.open(complete_url)
+			#sphinx doc
+			else:	
+				complete_url=self.get_valid_uri(block_name,class_name,url_lst_s,self.sph)
 				if complete_url is not None:
-					print complete_url
-					msg(complete_url,0)
-					get_webpage.open(complete_url)
+					check=True
+					open_doc_and_code_message('>>> Opening:  %s\n\n'%complete_url)
+					self.get_webpage.open(complete_url)				
+			#blocks from out of tree modules
+			if check is False:
+				if module_base_path is not '':
+					complete_url=self.out_of_tree_module(module_base_path,block_name_d)
+					if complete_url is not None:
+						open_doc_and_code_message('>>> Opening:  %s\n\n'%complete_url)
+						self.get_webpage.open(complete_url)
+					else:
+						Errorbox("""<b>Documentation of this block is not generated by CMake</b>""")		
+				#file does not exist	
 				else:
-					self.Errorbox("""<b>Document not found</b>""")						
+					if not url_lst_s and not url_lst_d:
+						Errorbox("""<b>Internet connection is not available and index files annotated.html and genindex.html are not found in this system</b>""")	
+					if url_lst_s and url_lst_d:
+						Errorbox("""<b>Documentation of selected block is not available</b>""")
+					if not url_lst_d and url_lst_s and python_block is False:
+						Errorbox("""<b>Internet connection is not available and index file annotated.html is not found in this system</b>""")
+					if not url_lst_d and url_lst_s and python_block is True:
+						Errorbox("""<b>Documentation of selected block is not available</b>""")
+					if not url_lst_s and url_lst_d:
+						Errorbox("""<b>Internet connection is not available and index file genindex.html is not found in this system</b>""")	
 		except IndexError as e:
-			msg('',1)
-			Errorbox("""<b>Document not found</b>""")
+			Errorbox("""<b>Documentation of selected block is not available</b>""")
 	
 	
 	def out_of_tree_module(self,address,name_d):
@@ -127,7 +137,6 @@ class FetchDocument():
 		except IOError as e:
 			open_index = []
 		if not open_index:
-			msg('',2)
 			return None
 		else:
 			url_list = URLLister()
@@ -145,10 +154,8 @@ class FetchDocument():
 					with open(complete_uri): 
 						return "file://"+complete_uri
 				except IOError:
-					msg('',1)
 					return None
 			else:
-				msg('',1)
 				return None
 				
 
@@ -237,51 +244,64 @@ class FetchDocument():
 	    return self.get_server_status_code(url) in good_codes
 
 
-	
 
-
-class find_source_code():
-
-	def __init__(self,block):
-		self._block=block
-		block_info=self._block.get_make()
-		print block_info
+	def open_source_code(self,block):
+		block_info=block.get_make()
 		check_find=False
+		OTM_check_find=False
 		try:
 			block_info_part=block_info.split('(')[0].split('.')
+			class_name=block_info_part[0]
 			if len(block_info_part)==3:
-				block_name=block_info_part[2]+"_impl.cc"
-				block_p=block_info_part[2]+".py"
+				block_name=block_info_part[2]
 			else:
-				block_name=block_info_part[1]+"_impl.cc"
-				block_p=block_info_part[1]+".py"
-			print block_p+" "+block_name
-
-			path=gr.prefs().get_string('grc', 'source_path', '')
-			if os.path.isdir(path):
-				for dirs, subdirs, files in os.walk(path):
+				block_name=block_info_part[1]
+			block_c=block_name+"_impl.cc"
+			block_p=block_name+".py"
+			####################################################################################################
+			#For qpsk_mod, qpsk_demod, psk_mod, psk_demod, qam_mod, qam_demod, gmsk_mod, gmsk_demod, low pass, 
+			#band pass,band reject, root raised cosine, band stop, ofdm_mod, ofdm_demod, qpsk_mod, qpsk_demod, 
+			#gfsk_mod, gfsk_demod, ofdm_tx, ofdm_rx blocks
+			####################################################################################################	
+			i=0
+			for blk in self.data1_code:
+				if re.match(block_name, blk):
+					block_p=self.data2_code[i/2]+'.py'
+					block_c=self.data2_code[i/2]+'.cc'
+					break
+				i=i+1
+			####################################################################################################
+			if os.path.isdir(self.path):
+				for dirs, subdirs, files in os.walk(self.path):
 					for f in files:
-						if os.path.isfile(os.path.join(dirs, block_name)) is True:
+						if os.path.isfile(os.path.join(dirs, block_c)) is True:
 							check_find=True
-							msg(os.path.join(dirs, block_name),0)
-							os.system("gedit "+os.path.join(dirs, block_name))
+							open_doc_and_code_message('>>> Opening:  %s\n\n'%os.path.join(dirs, block_c))
+							os.system("gedit "+os.path.join(dirs, block_c))
 							break
 						if os.path.isfile(os.path.join(dirs, block_p)) is True:
-							msg(os.path.join(dirs, block_p),0)
+							open_doc_and_code_message('>>> Opening:  %s\n\n'%os.path.join(dirs, block_p))
 							check_find=True
 							os.system("gedit "+os.path.join(dirs, block_p))
 							break
+			path=gr.prefs().get_string(class_name, 'module_path', '')
+			if os.path.isdir(path) and check_find is False:
+				for dirs, subdirs, files in os.walk(path):
+					for f in files:
+						if os.path.isfile(os.path.join(dirs, block_c)) is True:
+							OTM_check_find=True
+							open_doc_and_code_message('>>> Opening:  %s\n\n'%os.path.join(dirs, block_c))
+							os.system("gedit "+os.path.join(dirs, block_c))
+							break
+			
 				
-				if check_find is False:
-					msg('',5)
-					Errorbox("""<b>Document not found</b>""")
-				
-			else:
-				msg(path,6)
-				Errorbox("""<b>Document not found</b>""")
+			if os.path.isdir(self.path) is False and os.path.isdir(path) is False:
+				Errorbox("""<b>GNU Radio source tree does not exist in this system</b>""")
+			elif OTM_check_find is False and check_find is False:
+				Errorbox("""<b>Source code of selected block is not available</b>""")
+
 		except IndexError as e:
-			msg('',8)
-			Errorbox("""<b>Document not found</b>""")
+			Errorbox("""<b>Source code of selected block is not available</b>""")
 
 def Errorbox(err_msg): MessageDialogHelper(
 type=gtk.MESSAGE_ERROR,
@@ -289,26 +309,6 @@ buttons=gtk.BUTTONS_CLOSE,
 title='Error',
 markup=err_msg)
 
-
-def msg(url,check):
-	if check==0:
-		open_doc_and_code_message('>>> Opening:  %s\n\n'%url)
-	if check==1:
-		open_doc_and_code_message('>>> Documentation of selected block is not available\n\n')
-	if check==2:
-		open_doc_and_code_message('>>> Documentation of this out of tree module is not generated by CMake\n\n')
-	if check==3:
-		open_doc_and_code_message('>>> Internet connection is not available and index files are not found in this system\n\n')
-	if check==4:
-		open_doc_and_code_message('>>> Internet connection is not available and annotated.html is not found in this system\n\n')
-	if check==5:
-		open_doc_and_code_message('>>> Source code is not found in this systems\n\n')
-	if check==6:
-		open_doc_and_code_message('>>> Directory %s is not GNU Radio source tree path\n\n'%url)
-	if check==7:
-		open_doc_and_code_message('>>> Internet connection is not available and genindex.html is not found in this system\n\n')
-	if check==8:
-		open_doc_and_code_message('>>> Source code of selected block is not available\n\n')
 
 class URLLister(SGMLParser):
 	def reset(self):

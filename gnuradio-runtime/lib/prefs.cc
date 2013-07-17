@@ -89,7 +89,6 @@ namespace gr {
     if(fs::exists(homedir)) {
       fnames.push_back(homedir.string());
     }
-  
 
     return fnames;
   }

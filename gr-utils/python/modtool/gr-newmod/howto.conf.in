@@ -1,2 +1,5 @@
 [howto]
-base_path=@base_path@
+doc_path=@doxygen_base_uri@/build/docs/doxygen/html/
+module_path=@doxygen_base_uri@/
+
+

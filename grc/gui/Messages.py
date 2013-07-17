@@ -106,3 +106,6 @@ def send_fail_save_preferences(prefs_file_path):
 ################# functions for warning	########################################
 def send_warning(warning):
 	send('>>> Warning: %s\n'%warning)
+############################################################################################
+def open_doc_and_code_message(msg):
+	send(msg)

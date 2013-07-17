@@ -21,11 +21,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import Utils
-import webbrowser
-import os
-import httplib
-import urlparse
-from Constants import MIN_DIALOG_WIDTH, MIN_DIALOG_HEIGHT
+
 class TextDisplay(gtk.TextView):
 	"""A non editable gtk text view."""
 
@@ -95,7 +91,6 @@ class AboutDialog(gtk.AboutDialog):
 		self.set_website(platform.get_website())
 		self.run()
 		self.destroy()
-		
 
 def HelpDialog(): MessageDialogHelper(
 	type=gtk.MESSAGE_INFO,

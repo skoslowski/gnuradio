@@ -33,7 +33,7 @@ from MainWindow import MainWindow
 from PropsDialog import PropsDialog
 import Dialogs
 from FileDialogs import OpenFlowGraphFileDialog, SaveFlowGraphFileDialog, SaveImageFileDialog
-from Documentation import FetchDocument, find_source_code
+from Documentation import open_document_and_source_code
 gobject.threads_init()
 
 class ActionHandler:
@@ -57,6 +57,7 @@ class ActionHandler:
 		#setup the main window
 		self.platform = platform;
 		self.main_window = MainWindow(platform)
+		self.open_doc_code=open_document_and_source_code()
 		self.main_window.connect('delete-event', self._quit)
 		self.main_window.connect('key-press-event', self._handle_key_press)
 		self.get_page = self.main_window.get_page
@@ -346,9 +347,9 @@ class ActionHandler:
 		elif action == Actions.ERRORS_WINDOW_DISPLAY:
 			Dialogs.ErrorsDialog(self.get_flow_graph())
 		elif action == Actions.DOC_WINDOW_DISPLAY:
-			FetchDocument(self.get_flow_graph().get_selected_block())
+			self.open_doc_code.open_document(self.get_flow_graph().get_selected_block())
 		elif action == Actions.CODE_WINDOW_DISPLAY:
-			find_source_code(self.get_flow_graph().get_selected_block())
+			self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block())
 		##################################################
 		# Param Modifications
 		##################################################

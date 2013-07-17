@@ -5,6 +5,7 @@
 [grc]
 global_blocks_path = @blocksdir@
 local_blocks_path =
-sphinx_address=@CMAKE_SOURCE_DIR@/build/docs/sphinx/sphinx_out/,http://gnuradio.org/doc/sphinx/
-doxygen_address=@CMAKE_INSTALL_PREFIX@/@GR_PKG_DOC_DIR@/html/,http://gnuradio.org/doc/doxygen/
+sphinx_base_uri=@CMAKE_SOURCE_DIR@/build/docs/sphinx/sphinx_out/,http://gnuradio.org/doc/sphinx/
+doxygen_base_uri=@CMAKE_INSTALL_PREFIX@/@GR_PKG_DOC_DIR@/html/,http://gnuradio.org/doc/doxygen/
 source_path=@CMAKE_SOURCE_DIR@/
+

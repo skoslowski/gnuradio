@@ -129,7 +129,7 @@ configure_file(
     ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake
 @ONLY)
 
-set(base_path ${CMAKE_CURRENT_SOURCE_DIR}/build/docs/doxygen/html/)
+set(doxygen_base_uri ${CMAKE_CURRENT_SOURCE_DIR})
 configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/howto.conf.in
     ${CMAKE_CURRENT_BINARY_DIR}/howto.conf

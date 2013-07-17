@@ -20,7 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 import pygtk
 pygtk.require('2.0')
 import gtk
-from Documentation import FetchDocument
+from Documentation import open_document_and_source_code 
 import Platform
 from Dialogs import TextDisplay
 from Constants import MIN_DIALOG_WIDTH, MIN_DIALOG_HEIGHT
@@ -61,6 +61,7 @@ class PropsDialog(gtk.Dialog):
 			buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_ACCEPT),
 		)
 		self._block = block
+		self.open_doc_code=open_document_and_source_code()
 		self.set_size_request(MIN_DIALOG_WIDTH, MIN_DIALOG_HEIGHT)
 		vbox = gtk.VBox()
 		#Create the scrolled window to hold all the parameters
@@ -102,7 +103,7 @@ class PropsDialog(gtk.Dialog):
 	#button to get documentation
 	def doc_button_on_clicked(self,widget):
 		
-		FetchDocument(self._block)
+		self.open_doc_code.open_document(self._block)
 
 	def _params_changed(self):
 		"""
