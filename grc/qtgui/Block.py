@@ -68,10 +68,24 @@ class Block(Element, QGraphicsRectItem):
         #self.addActions((parent.main_window.menuEdit.actions()))
 
     def updateLabel(self):
+        #display the params
         self.text.setHtml('<b>{name}</b><br />{desc}'.format(
             name=self.get_name(),
             desc=""#self.get_params()
         ))
+        return
+
+        for param in self.get_params():
+            a = param.get_hide ()
+            b = param.get_markup()
+            print a, b
+
+        markups = [param.get_markup()
+                   for param in self.get_params()
+                   if param.get_hide() not in ('all', 'part')]
+        if markups:
+            print '\n'.join(markups)
+
 
     def setPos(self, *args):
         QGraphicsRectItem.setPos(self, *args)

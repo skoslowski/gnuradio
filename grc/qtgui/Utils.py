@@ -17,8 +17,16 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
+from PyQt4 import QtCore
+
 from Constants import POSSIBLE_ROTATIONS
 from Cheetah.Template import Template
+
+try:
+    _fromUtf8 = QtCore.QString.fromUtf8
+except AttributeError:
+    def _fromUtf8(s):
+        return s
 
 def parse_template(tmpl_str, **kwargs):
     """
@@ -31,7 +39,7 @@ def parse_template(tmpl_str, **kwargs):
     Returns:
         a string of the parsed template
     """
-    kwargs['encode'] = gobject.markup_escape_text
+    kwargs['encode'] = _fromUtf8
     #try:
     #   cat = str(Template(tmpl_str, kwargs))
     #except TypeError:
