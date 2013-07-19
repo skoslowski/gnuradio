@@ -18,8 +18,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 from .. base.Param import Param as _Param
-from .. gui.Param import Param as _GUIParam
-from .. gui.Param import EntryParam
+from .. qtgui.Param import Param as _GUIParam
+from .. qtgui.Param import EntryParam
 import Constants
 import numpy
 import os
