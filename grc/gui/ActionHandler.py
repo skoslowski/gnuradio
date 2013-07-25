@@ -347,7 +347,7 @@ class ActionHandler:
 		elif action == Actions.ERRORS_WINDOW_DISPLAY:
 			Dialogs.ErrorsDialog(self.get_flow_graph())
 		elif action == Actions.DOC_WINDOW_DISPLAY:
-			self.open_doc_code.open_document(self.get_flow_graph().get_selected_block())
+			self.open_doc_code.open_document(self.get_flow_graph().get_selected_block(),True)
 		elif action == Actions.CODE_WINDOW_DISPLAY:
 			self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block())
 		##################################################
@@ -458,7 +458,8 @@ class ActionHandler:
 		##################################################
 		#update general buttons
 		Actions.ERRORS_WINDOW_DISPLAY.set_sensitive(not self.get_flow_graph().is_valid())
-		Actions.DOC_WINDOW_DISPLAY.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
+		if bool(self.get_flow_graph().get_selected_elements()) is True:
+			Actions.DOC_WINDOW_DISPLAY.set_sensitive(bool(self.open_doc_code.open_document(self.get_flow_graph().get_selected_block(),False)))
 		Actions.CODE_WINDOW_DISPLAY.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
 		Actions.ELEMENT_DELETE.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
 		Actions.BLOCK_PARAM_MODIFY.set_sensitive(bool(self.get_flow_graph().get_selected_block()))

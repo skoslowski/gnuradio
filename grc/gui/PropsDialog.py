@@ -90,7 +90,7 @@ class PropsDialog(gtk.Dialog):
 		vbox.pack_start(self._error_box, False)
 		vbox.pack_start(self._docs_box, False)
 		#Add the button to fetch the document
-		button = gtk.Button("Fetch documentation")
+		button = gtk.Button("Get documentation")
 		self.action_area.pack_end(button)
 		button.connect("clicked", self.doc_button_on_clicked)
 		button.show()
@@ -103,7 +103,7 @@ class PropsDialog(gtk.Dialog):
 	#button to get documentation
 	def doc_button_on_clicked(self,widget):
 		
-		self.open_doc_code.open_document(self._block)
+		self.open_doc_code.open_document(self._block,True)
 
 	def _params_changed(self):
 		"""

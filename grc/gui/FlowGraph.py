@@ -58,14 +58,22 @@ class FlowGraph(Element):
 			Actions.BLOCK_COPY,
 			Actions.BLOCK_PASTE,
 			Actions.ELEMENT_DELETE,
+			None,
 			Actions.BLOCK_ROTATE_CCW,
 			Actions.BLOCK_ROTATE_CW,
 			Actions.BLOCK_ENABLE,
 			Actions.BLOCK_DISABLE,
-			Actions.BLOCK_PARAM_MODIFY,
 			Actions.BLOCK_CREATE_HIER,
 			Actions.OPEN_HIER,
-		]: self._context_menu.append(action.create_menu_item())
+			None,
+			Actions.DOC_WINDOW_DISPLAY,
+			Actions.BLOCK_PARAM_MODIFY,
+		]: 
+			if action is None: #append a menu item
+				self._context_menu.append(gtk.SeparatorMenuItem())
+			else: 
+				self._context_menu.append(action.create_menu_item())
+		self._context_menu.show_all()
 
 	###########################################################################
 	# Access Drawing Area

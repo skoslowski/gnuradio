@@ -8,4 +8,5 @@ local_blocks_path =
 sphinx_base_uri=@CMAKE_SOURCE_DIR@/build/docs/sphinx/sphinx_out/,http://gnuradio.org/doc/sphinx/
 doxygen_base_uri=@CMAKE_INSTALL_PREFIX@/@GR_PKG_DOC_DIR@/html/,http://gnuradio.org/doc/doxygen/
 source_path=@CMAKE_SOURCE_DIR@/
+source_code_base_uri=http://gnuradio.org/cgit/gnuradio.git/tree
 
