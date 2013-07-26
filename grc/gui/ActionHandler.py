@@ -35,6 +35,7 @@ import Dialogs
 from FileDialogs import OpenFlowGraphFileDialog, SaveFlowGraphFileDialog, SaveImageFileDialog
 from Documentation import open_document_and_source_code
 gobject.threads_init()
+from NewProject import add_module
 
 class ActionHandler:
 	"""
@@ -110,7 +111,7 @@ class ActionHandler:
 			for action in (
 				Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW,
 				Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS,
-				Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY,
+				Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY, Actions.NEW_PROJECT,
 				Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY,
 				Actions.TYPES_WINDOW_DISPLAY, Actions.DOC_WINDOW_DISPLAY, Actions.CODE_WINDOW_DISPLAY,
 			): action.set_sensitive(True)
@@ -350,6 +351,8 @@ class ActionHandler:
 			self.open_doc_code.open_document(self.get_flow_graph().get_selected_block(),True)
 		elif action == Actions.CODE_WINDOW_DISPLAY:
 			self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block())
+		elif action == Actions.NEW_PROJECT:
+			add_module()
 		##################################################
 		# Param Modifications
 		##################################################

@@ -244,6 +244,10 @@ CODE_WINDOW_DISPLAY = Action(
 	tooltip='Find source code',
 	stock_id=gtk.STOCK_FIND,
 )
+NEW_PROJECT= Action(
+	label='_New project',
+	tooltip='Add new project folder',
+)
 ABOUT_WINDOW_DISPLAY = Action(
 	label='_About',
 	tooltip='About this program',

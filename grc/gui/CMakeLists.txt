@@ -41,8 +41,9 @@ GR_PYTHON_INSTALL(FILES
     NotebookPage.py
     PropsDialog.py
     Preferences.py
-    Documentation.py
     StateCache.py
+    Documentation.py
+    NewProject.py
     __init__.py
     DESTINATION ${GR_PYTHON_DIR}/gnuradio/grc/gui
     COMPONENT "grc"

@@ -98,6 +98,9 @@ MENU_BAR_LIST = (
 		Actions.FLOW_GRAPH_EXEC,
 		Actions.FLOW_GRAPH_KILL,
 	]),
+	(gtk.Action('Project', '_Project', None, None), [
+		Actions.NEW_PROJECT,
+	]),
 	(gtk.Action('Help', '_Help', None, None), [
 		Actions.HELP_WINDOW_DISPLAY,
 		Actions.TYPES_WINDOW_DISPLAY,
