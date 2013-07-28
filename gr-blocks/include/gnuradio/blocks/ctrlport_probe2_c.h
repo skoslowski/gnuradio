@@ -51,8 +51,10 @@ namespace gr {
        * \param id A string ID to name the probe over ControlPort.
        * \param desc A string describing the probe.
        * \param len Number of samples to transmit.
+       * \param disp_mask Mask to set default display params.
        */
-      static sptr make(const std::string &id, const std::string &desc, int len);
+      static sptr make(const std::string &id, const std::string &desc,
+                       int len, unsigned int disp_mask);
 
       virtual std::vector<gr_complex> get() = 0;
 

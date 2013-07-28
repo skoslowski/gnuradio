@@ -55,6 +55,7 @@ TOOLBAR_LIST = (
 	None,
 	Actions.RELOAD_BLOCKS,
 	Actions.OPEN_HIER,
+	Actions.BUSSIFY_SOURCES,
 )
 
 ##The list of actions and categories for the menu bar.
@@ -110,42 +111,42 @@ MENU_BAR_LIST = (
 )
 
 class Toolbar(gtk.Toolbar):
-	"""The gtk toolbar with actions added from the toolbar list."""
+    """The gtk toolbar with actions added from the toolbar list."""
 
-	def __init__(self):
-		"""
-		Parse the list of action names in the toolbar list.
-		Look up the action for each name in the action list and add it to the toolbar.
-		"""
-		gtk.Toolbar.__init__(self)
-		self.set_style(gtk.TOOLBAR_ICONS)
-		for action in TOOLBAR_LIST:
-			if action: #add a tool item
-				self.add(action.create_tool_item())
-				#this reset of the tooltip property is required (after creating the tool item) for the tooltip to show
-				action.set_property('tooltip', action.get_property('tooltip'))
-			else: self.add(gtk.SeparatorToolItem())
+    def __init__(self):
+        """
+        Parse the list of action names in the toolbar list.
+        Look up the action for each name in the action list and add it to the toolbar.
+        """
+        gtk.Toolbar.__init__(self)
+        self.set_style(gtk.TOOLBAR_ICONS)
+        for action in TOOLBAR_LIST:
+            if action: #add a tool item
+                self.add(action.create_tool_item())
+                #this reset of the tooltip property is required (after creating the tool item) for the tooltip to show
+                action.set_property('tooltip', action.get_property('tooltip'))
+            else: self.add(gtk.SeparatorToolItem())
 
 class MenuBar(gtk.MenuBar):
-	"""The gtk menu bar with actions added from the menu bar list."""
+    """The gtk menu bar with actions added from the menu bar list."""
 
-	def __init__(self):
-		"""
-		Parse the list of submenus from the menubar list.
-		For each submenu, get a list of action names.
-		Look up the action for each name in the action list and add it to the submenu.
-		Add the submenu to the menu bar.
-		"""
-		gtk.MenuBar.__init__(self)
-		for main_action, actions in MENU_BAR_LIST:
-			#create the main menu item
-			main_menu_item = main_action.create_menu_item()
-			self.append(main_menu_item)
-			#create the menu
-			main_menu = gtk.Menu()
-			main_menu_item.set_submenu(main_menu)
-			for action in actions:
-				if action: #append a menu item
-					main_menu.append(action.create_menu_item())
-				else: main_menu.append(gtk.SeparatorMenuItem())
-			main_menu.show_all() #this show all is required for the separators to show
+    def __init__(self):
+        """
+        Parse the list of submenus from the menubar list.
+        For each submenu, get a list of action names.
+        Look up the action for each name in the action list and add it to the submenu.
+        Add the submenu to the menu bar.
+        """
+        gtk.MenuBar.__init__(self)
+        for main_action, actions in MENU_BAR_LIST:
+            #create the main menu item
+            main_menu_item = main_action.create_menu_item()
+            self.append(main_menu_item)
+            #create the menu
+            main_menu = gtk.Menu()
+            main_menu_item.set_submenu(main_menu)
+            for action in actions:
+                if action: #append a menu item
+                    main_menu.append(action.create_menu_item())
+                else: main_menu.append(gtk.SeparatorMenuItem())
+            main_menu.show_all() #this show all is required for the separators to show

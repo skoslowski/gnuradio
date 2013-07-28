@@ -230,6 +230,7 @@ list(APPEND gr_blocks_sources
     stretch_ff_impl.cc
     tagged_file_sink_impl.cc
     tagged_stream_to_pdu_impl.cc
+    tags_strobe_impl.cc
     threshold_ff_impl.cc
     throttle_impl.cc
     transcendental_impl.cc
@@ -253,6 +254,10 @@ if(ENABLE_GR_CTRLPORT)
 list(APPEND gr_blocks_sources
   ctrlport_probe_c_impl.cc
   ctrlport_probe2_c_impl.cc
+  ctrlport_probe2_f_impl.cc
+  ctrlport_probe2_s_impl.cc
+  ctrlport_probe2_i_impl.cc
+  ctrlport_probe2_b_impl.cc
 )
 endif(ENABLE_GR_CTRLPORT)
 

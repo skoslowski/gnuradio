@@ -32,18 +32,20 @@ namespace gr {
 
     ctrlport_probe2_c::sptr
     ctrlport_probe2_c::make(const std::string &id,
-                            const std::string &desc, int len)
+                            const std::string &desc,
+                            int len, unsigned int disp_mask)
     {
       return gnuradio::get_initial_sptr
-        (new ctrlport_probe2_c_impl(id, desc, len));
+        (new ctrlport_probe2_c_impl(id, desc, len, disp_mask));
     }
 
     ctrlport_probe2_c_impl::ctrlport_probe2_c_impl(const std::string &id,
-                                                   const std::string &desc, int len)
+                                                   const std::string &desc,
+                                                   int len, unsigned int disp_mask)
       : sync_block("probe2_c",
                       io_signature::make(1, 1, sizeof(gr_complex)),
                       io_signature::make(0, 0, 0)),
-        d_id(id), d_desc(desc), d_len(len)
+          d_id(id), d_desc(desc), d_len(len), d_disp_mask(disp_mask)
     {
       set_length(len);
     }
@@ -139,11 +141,9 @@ namespace gr {
       d_rpc_vars.push_back(
         rpcbasic_sptr(new rpcbasic_register_get<ctrlport_probe2_c, std::vector<std::complex<float> > >(
         alias(), d_id.c_str(), &ctrlport_probe2_c::get,
-        pmt::make_c32vector(0,-2),
-        pmt::make_c32vector(0,2),
-        pmt::make_c32vector(0,0), 
+        pmt::mp(-2), pmt::mp(2), pmt::mp(0), 
         "volts", d_desc.c_str(), RPC_PRIVLVL_MIN,
-        DISPXY | DISPOPTSCATTER)));
+        d_disp_mask | DISPOPTCPLX)));
 
       d_rpc_vars.push_back(
         rpcbasic_sptr(new rpcbasic_register_get<ctrlport_probe2_c, int>(

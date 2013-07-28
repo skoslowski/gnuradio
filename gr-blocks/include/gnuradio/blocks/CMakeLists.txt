@@ -191,6 +191,7 @@ install(FILES
     tagged_file_sink.h
     tagged_stream_mux.h
     tagged_stream_to_pdu.h
+    tags_strobe.h
     threshold_ff.h
     throttle.h
     transcendental.h
@@ -213,6 +214,10 @@ if(ENABLE_GR_CTRLPORT)
 install(FILES
   ctrlport_probe_c.h
   ctrlport_probe2_c.h
+  ctrlport_probe2_f.h
+  ctrlport_probe2_s.h
+  ctrlport_probe2_i.h
+  ctrlport_probe2_b.h
   DESTINATION ${GR_INCLUDE_DIR}/gnuradio/blocks
   COMPONENT "blocks_devel"
 )

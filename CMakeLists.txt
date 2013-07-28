@@ -41,8 +41,8 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules)
 # Set the version information here
 set(VERSION_INFO_MAJOR_VERSION 3)
 set(VERSION_INFO_API_COMPAT    7)
-set(VERSION_INFO_MINOR_VERSION 0rc0)
-set(VERSION_INFO_MAINT_VERSION 0)
+set(VERSION_INFO_MINOR_VERSION 1)
+set(VERSION_INFO_MAINT_VERSION git)
 include(GrVersion) #setup version info
 
 # Append -O2 optimization flag for Debug builds
@@ -125,7 +125,7 @@ string(COMPARE EQUAL ${CMAKE_INSTALL_PREFIX} "/usr" isusr)
 if(isusr)
   set(SYSCONFDIR          "/${GR_CONF_DIR}" CACHE PATH "System configuration directory")
 else(isusr)
-  set(SYSCONFDIR          "${CMAKE_INSTALL_PREFIX}/${GR_CONF_DIR}" CACHE PATH "System configuration directory")
+  set(SYSCONFDIR          "${CMAKE_INSTALL_PREFIX}/${GR_CONF_DIR}" CACHE PATH "System configuration directory" FORCE)
 endif(isusr)
 
 set(GR_PREFSDIR         ${SYSCONFDIR}/${CMAKE_PROJECT_NAME}/conf.d)

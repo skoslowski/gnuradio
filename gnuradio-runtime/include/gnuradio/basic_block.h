@@ -118,7 +118,7 @@ namespace gr {
     /*!
      * \brief Tests if there is a handler attached to port \p which_port
      */
-    bool has_msg_handler(pmt::pmt_t which_port) {
+    virtual bool has_msg_handler(pmt::pmt_t which_port) {
       return (d_msg_handlers.find(which_port) != d_msg_handlers.end());
     }
 
@@ -186,7 +186,6 @@ namespace gr {
     void _post(pmt::pmt_t which_port, pmt::pmt_t msg);
   
     //! is the queue empty?
-    //bool empty_p(const pmt::pmt_t &which_port) const { return msg_queue[which_port].empty(); }
     bool empty_p(pmt::pmt_t which_port) { 
       if(msg_queue.find(which_port) == msg_queue.end())
         throw std::runtime_error("port does not exist!");
@@ -196,6 +195,18 @@ namespace gr {
       bool rv = true;
       BOOST_FOREACH(msg_queue_map_t::value_type &i, msg_queue) {
         rv &= msg_queue[i.first].empty();
+      }
+      return rv;
+    }
+
+    //! are all msg ports with handlers empty?
+    bool empty_handled_p(pmt::pmt_t which_port){
+        return (empty_p(which_port) || !has_msg_handler(which_port));
+    }
+    bool empty_handled_p() { 
+      bool rv = true;
+      BOOST_FOREACH(msg_queue_map_t::value_type &i, msg_queue) {
+        rv &= empty_handled_p(i.first);
       }
       return rv;
     }
@@ -331,6 +342,15 @@ namespace gr {
       }
       d_msg_handlers[which_port] = msg_handler_t(msg_handler);
     }
+
+    virtual void set_processor_affinity(const std::vector<int> &mask)
+    { throw std::runtime_error("set_processor_affinity not overloaded in child class."); }
+
+    virtual void unset_processor_affinity()
+    { throw std::runtime_error("unset_processor_affinity not overloaded in child class."); }
+
+    virtual std::vector<int> processor_affinity()
+    { throw std::runtime_error("processor_affinity not overloaded in child class."); }
   };
 
   inline bool operator<(basic_block_sptr lhs, basic_block_sptr rhs)

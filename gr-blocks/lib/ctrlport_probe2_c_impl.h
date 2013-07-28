@@ -36,6 +36,7 @@ namespace gr {
       std::string d_id;
       std::string d_desc;
       size_t d_len;
+      unsigned int d_disp_mask;
       boost::shared_mutex mutex_buffer;
       mutable boost::mutex mutex_notify;
       boost::condition_variable condition_buffer_ready;
@@ -43,7 +44,8 @@ namespace gr {
       std::vector<gr_complex> d_buffer;
 
     public:
-      ctrlport_probe2_c_impl(const std::string &id, const std::string &desc, int len);
+      ctrlport_probe2_c_impl(const std::string &id, const std::string &desc,
+                             int len, unsigned int disp_mask);
       ~ctrlport_probe2_c_impl();
 
       void setup_rpc();

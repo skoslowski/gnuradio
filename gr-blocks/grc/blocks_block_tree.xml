@@ -53,6 +53,7 @@
                 <name>Control Port</name>
                 <block>blocks_ctrlport_monitor</block>
                 <block>blocks_ctrlport_monitor_performance</block>
+                <block>blocks_ctrlport_probe2_x</block>
                 <block>blocks_ctrlport_probe2_c</block>
                 <block>blocks_ctrlport_probe_c</block>
 	</cat>
@@ -62,6 +63,8 @@
 		<block>blocks_tag_debug</block>
 		<block>blocks_message_debug</block>
                 <block>blocks_random_pdu</block>
+                <block>blocks_message_strobe</block>
+                <block>blocks_tags_strobe</block>
 	</cat>
 	<cat>
 	        <name>File Operators</name>
