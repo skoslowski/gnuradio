@@ -31,6 +31,7 @@ import Preferences
 import Messages
 import Utils
 import os
+from html_urls import link_urls
 
 MAIN_WINDOW_TITLE_TMPL = """\
 #if not $saved
@@ -109,7 +110,7 @@ class MainWindow(gtk.Window):
 		self.flow_graph_vpaned.set_position(Preferences.reports_window_position())
 		self.hpaned.set_position(Preferences.blocks_window_position())
 		self.show_all()
-
+		link_urls()
 	############################################################
 	# Event Handlers
 	############################################################

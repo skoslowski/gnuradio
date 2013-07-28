@@ -43,6 +43,7 @@ GR_PYTHON_INSTALL(FILES
     Preferences.py
     StateCache.py
     Documentation.py
+    html_urls.py
     NewProject.py
     __init__.py
     DESTINATION ${GR_PYTHON_DIR}/gnuradio/grc/gui

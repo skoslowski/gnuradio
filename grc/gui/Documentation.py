@@ -37,6 +37,7 @@ from Messages import open_doc_and_code_message
 import time
 import lxml.html
 import contextlib
+from html_urls import link_urls, url_lst
 
 
 
@@ -141,16 +142,19 @@ class open_document_and_source_code():
 	
 	def get_valid_uri(self,name,class_n,index_page,html_file,base_uri):
 		uri=""
-		try:
-			links = self.cache_file(index_page.split(',')[1]+html_file).xpath("//a/@href")
-			for url in links:
-				if class_n in url.lower() and re.search(name+".html"+"\Z", url):
-					uri=url
-					break
-				if re.search('\.'+name+"\Z", url):
-					uri=url
-					break
-		except IOError, AttributeError:
+		remote_lst=False
+		if not url_lst(html_file):
+			link_urls()
+		for url in url_lst(html_file):
+			if class_n in url.lower() and re.search(name+".html"+"\Z", url):
+				uri=url
+				remote_lst=True
+				break
+			if re.search('\.'+name+"\Z", url):
+				uri=url
+				remote_lst=True
+				break
+		if remote_lst is False:
 			try:
 				links = lxml.html.parse("file://"+index_page.split(',')[0]+html_file).xpath("//a/@href")
 				for url in links:
@@ -184,47 +188,6 @@ class open_document_and_source_code():
 					return None
 		else:
 			return None
-
-
-	def cache_file(self,url):
-		timestamp=''
-		filename=''
-		name=''
-		try:
-			base_path=os.path.expanduser('~')+"/.gnuradio/html_files/"
-			if not os.path.isdir(base_path):
-				os.chdir(os.path.expanduser('~')+'/.gnuradio')
-				os.system('mkdir html_files')
-			
-			if 'doxygen' in url.lower():
-				name='_doxygen.html'
-			if 'sphinx' in url.lower():
-				name='_sphinx.html'
-			for dirs, subdirs, files in os.walk(base_path):
-				for f in files:
-					if name in f.lower():
-						timestamp=f.split('_')[0]
-						filename=f
-						break
-			if timestamp is '':	
-				myfile=base_path+time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(time.time()))+name
-				file(myfile, "w").write(urllib2.urlopen(url).read())
-				html = lxml.html.parse(myfile)
-			else:
-				try:
-					with contextlib.closing(urllib2.urlopen(urllib2.Request(
-						url,headers={"If-Modified-Since": timestamp}))) as u:
-					    if u.getcode() != 304:
-						myfile=base_path+time.strftime('%a, %d %b %Y %H:%M:%S GMT', time.gmtime(time.time()))+name
-						file(myfile, "w").write(urllib2.urlopen(url).read())
-						if os.path.isfile(base_path+filename):
-							os.remove(base_path+filename)
-						html=lxml.html.parse(myfile)
-				except StandardError:
-					html=lxml.html.parse(base_path+timestamp+name)
-			return html
-		except IOError:
-			return None
 				
 
 
@@ -250,8 +213,7 @@ class open_document_and_source_code():
 	    except StandardError:
 		return None
 	
-
-	#checks valid url 
+ 
 	def check_url(self,url):
 	    
 	    good_codes = [httplib.OK, httplib.FOUND, httplib.MOVED_PERMANENTLY]
