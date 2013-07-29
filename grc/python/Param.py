@@ -92,6 +92,8 @@ class Param(_Param, _GUIParam):
         self._init = False
         self._hostage_cells = list()
 
+        self._evaluated = None
+
     def get_types(self): return (
         'raw', 'enum',
         'complex', 'real', 'float', 'int',

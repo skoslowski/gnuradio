@@ -21,6 +21,7 @@ class Element(object):
 
     def __init__(self, parent=None):
         self._parent = parent
+        self._error_messages = list()
 
     ##################################################
     # Element Validation API

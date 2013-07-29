@@ -19,14 +19,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from PyQt4.QtGui import *
 
-from . Element import Element
 
-
-class FlowGraph(QGraphicsScene, Element):
+class FlowGraph(QGraphicsScene):
 
     def __init__(self):
         QGraphicsScene.__init__(self)
-        Element.__init__(self)
 
     def add_new_block(self, key, coor=None):
         """
@@ -61,6 +58,17 @@ class FlowGraph(QGraphicsScene, Element):
             self.addItem(child)
             child.setPos(*eval(child.get_param('_coordinate').get_value()))
             child.setRotation(eval(child.get_param('_rotation').get_value()))
-            print
+
+        self.update()
 
 
+    def update(self):
+        """
+        Call the top level rewrite and validate.
+        Call the top level create labels and shapes.
+        """
+        self.rewrite()
+        self.validate()
+        for child in self.get_blocks():
+            child.updateLabel()
+        #self.create_shapes()
