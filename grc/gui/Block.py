@@ -33,7 +33,7 @@ import pango
 
 BLOCK_MARKUP_TMPL="""\
 #set $foreground = $block.is_valid() and 'black' or 'red'
-<span foreground="$foreground" font_desc="Sans 8"><b>$encode($block.get_name())</b></span>"""
+<span foreground="$foreground"><b>$encode($block.get_name())</b></span>"""
 
 class Block(Element):
     """The graphical signal block."""

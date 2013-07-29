@@ -132,7 +132,7 @@ class EnumEntryParam(InputParam):
 
 PARAM_MARKUP_TMPL="""\
 #set $foreground = $param.is_valid() and 'black' or 'red'
-<span foreground="$foreground" font_desc="Sans 7.5"><b>$encode($param.get_name()): </b>$encode(repr($param))</span>"""
+<span foreground="$foreground"><b>$encode($param.get_name()): </b>$encode(repr($param))</span>"""
 
 PARAM_LABEL_MARKUP_TMPL="""\
 #set $foreground = $param.is_valid() and 'black' or 'red'

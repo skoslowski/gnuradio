@@ -104,6 +104,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             #add this page to the notebook
             self.editorTabs.addTab(page, NEW_FLOGRAPH_TITLE)
 
+            page._flow_graph.update()
+
             #only show if blank or manual
             if not file_path or show:
                 self.editorTabs.setCurrentWidget(page)

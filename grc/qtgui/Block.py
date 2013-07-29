@@ -6,10 +6,17 @@ from PyQt4.QtCore import Qt
 from . Element import Element
 from .FlowGraph import FlowGraph
 from .. base import odict
+import Utils
 from Constants import \
     BLOCK_LABEL_PADDING, \
     PORT_SEPARATION, LABEL_SEPARATION, \
     PORT_BORDER_SEPARATION, POSSIBLE_ROTATIONS
+
+
+
+BLOCK_MARKUP_TMPL="""\
+#set $foreground = $block.is_valid() and 'black' or 'red'
+<span foreground="$foreground" font_desc="Sans 8"><b>$encode($block.get_name())</b></span>"""
 
 
 class Block(Element, QGraphicsRectItem):
@@ -64,32 +71,25 @@ class Block(Element, QGraphicsRectItem):
         self.text.setTextWidth(w)
         self.updateLabel()
 
+
         #self.setG (Qt.ActionsContextMenu)
         #self.addActions((parent.main_window.menuEdit.actions()))
 
     def updateLabel(self):
         #display the params
-        self.text.setHtml('<b>{name}</b><br />{desc}'.format(
-            name=self.get_name(),
-            desc=""#self.get_params()
-        ))
-        return
-
-        for param in self.get_params():
-            a = param.get_hide ()
-            b = param.get_markup()
-            print a, b
 
         markups = [param.get_markup()
                    for param in self.get_params()
                    if param.get_hide() not in ('all', 'part')]
-        if markups:
-            print '\n'.join(markups)
 
+        self.text.setHtml('<b>{name}</b><br />{desc}'.format(
+            name=Utils.parse_template(BLOCK_MARKUP_TMPL, block=self),
+            desc='<br />'.join(markups)
+        ))
 
     def setPos(self, *args):
         QGraphicsRectItem.setPos(self, *args)
-        # FixMe: detect drag and drob of blocks
+        # FixMe: detect drag and drop of blocks
         #self.get_param('_coordinate').set_value(str(args))
 
     def rotate(self, rotation):
