@@ -572,4 +572,4 @@ class FlowGraph(Element):
         if not self.get_ctrl_mask(): self.move_selected((int(x - X), int(y - Y)))
         self.set_coordinate((x, y))
         #queue draw for animation
-        self.queue_draw(
+        self.queue_draw()

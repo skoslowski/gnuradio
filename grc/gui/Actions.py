@@ -248,6 +248,10 @@ NEW_PROJECT= Action(
 	label='_New project',
 	tooltip='Add new project folder',
 )
+ADD_BLOCK= Action(
+	label='_Add block',
+	tooltip='Add new block',
+)
 ABOUT_WINDOW_DISPLAY = Action(
     label='_About',
     tooltip='About this program',

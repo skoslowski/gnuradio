@@ -36,6 +36,7 @@ from FileDialogs import OpenFlowGraphFileDialog, SaveFlowGraphFileDialog, SaveIm
 from Documentation import open_document_and_source_code
 gobject.threads_init()
 from NewProject import add_module
+from Add_block import add_new_block
 
 class ActionHandler:
 
@@ -113,7 +114,7 @@ class ActionHandler:
                 Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW,
                 Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS,
                 Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY, Actions.NEW_PROJECT,
-                Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY,
+                Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY, Actions.ADD_BLOCK,
                 Actions.TYPES_WINDOW_DISPLAY, Actions.DOC_WINDOW_DISPLAY, Actions.CODE_WINDOW_DISPLAY,
             ): action.set_sensitive(True)
             if not self.init_file_paths:
@@ -352,7 +353,9 @@ class ActionHandler:
 	elif action == Actions.CODE_WINDOW_DISPLAY:
             self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block())
 	elif action == Actions.NEW_PROJECT:
-            add_module()
+            add_module(self.main_window)
+	elif action == Actions.ADD_BLOCK:
+            add_new_block()
         ##################################################
         # Param Modifications
         ##################################################

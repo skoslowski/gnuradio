@@ -22,18 +22,21 @@
 import gtk
 import sys
 import os
-sys.path.append('/home/aneela/gnuradio/gr-utils/python/modtool')
-from modtool_newmod import ModToolNewModule
 from gnuradio import gr
+from os.path import expanduser
+sys.path.append(gr.prefs().get_string('grc', 'source_path', '')+'/gr-utils/python/modtool')
+from modtool_newmod import ModToolNewModule
 import re
 from modtool_base import ModTool
 from Dialogs import MessageDialogHelper
+from MainWindow import MainWindow
+from .. base import ParseXML
 
 class add_module:
     
 
 
-	def __init__(self):
+	def __init__(self,win):
 		
 		
 		self.root = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
@@ -44,6 +47,7 @@ class add_module:
 		self.root.connect("destroy",self.destroy)
 		self.f_name=""
 		self.new_f_name=""
+		self.main_window = win
 		vbox = gtk.VBox(gtk.FALSE,0)		
 		self.root.add(vbox)
 		vbox.show()
@@ -126,7 +130,13 @@ class add_module:
 		self.newmod=ModToolNewModule()	
 		ModToolNewModule.setup=self.setupnewmod
 		if self.newmod.setup() is True:
-			self.newmod.run()		
+			self.newmod.run()
+		file_path=self.path_e.get_text()+"/gr-"+self.fname_e.get_text()+"/apps/main.grc"
+		self.main_window.new_page()
+		self.main_window.get_page().set_file_path(file_path)
+		ParseXML.to_file(self.main_window.get_flow_graph().export_data(), self.main_window.get_page().get_file_path());
+		self.main_window.get_flow_graph().grc_file_path = "/"+self.main_window.get_page().get_file_path()
+		self.main_window.get_page().set_saved(True)		
 				
 	
 	def mainloop(self):
