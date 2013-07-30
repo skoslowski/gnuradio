@@ -102,6 +102,7 @@ MENU_BAR_LIST = (
 	(gtk.Action('Project', '_Project', None, None), [
 		Actions.NEW_PROJECT,
 		Actions.ADD_BLOCK,
+		Actions.REMOVE_BLOCK,
 	]),
 	(gtk.Action('Help', '_Help', None, None), [
 		Actions.HELP_WINDOW_DISPLAY,

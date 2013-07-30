@@ -37,6 +37,7 @@ from Documentation import open_document_and_source_code
 gobject.threads_init()
 from NewProject import add_module
 from Add_block import add_new_block
+from Remove_block import remove_block
 
 class ActionHandler:
 
@@ -112,7 +113,7 @@ class ActionHandler:
             #enable a select few actions
             for action in (
                 Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW,
-                Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS,
+                Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS, Actions.REMOVE_BLOCK,
                 Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY, Actions.NEW_PROJECT,
                 Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY, Actions.ADD_BLOCK,
                 Actions.TYPES_WINDOW_DISPLAY, Actions.DOC_WINDOW_DISPLAY, Actions.CODE_WINDOW_DISPLAY,
@@ -356,6 +357,8 @@ class ActionHandler:
             add_module(self.main_window)
 	elif action == Actions.ADD_BLOCK:
             add_new_block()
+	elif action == Actions.REMOVE_BLOCK:
+            remove_block()
         ##################################################
         # Param Modifications
         ##################################################

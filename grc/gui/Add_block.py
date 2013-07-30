@@ -42,7 +42,7 @@ class add_new_block:
 		
 		
 		self.root = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
-	        self.root.set_size_request(550, 400)
+	        self.root.set_size_request(600, 400)
 		self.root.set_position(gtk.WIN_POS_CENTER)
 	        self.root.set_border_width(10)
 	        self.root.set_title("Add new block")
@@ -56,7 +56,7 @@ class add_new_block:
 		vbox.pack_start(path_hbox,False,False,10)
 		path_hbox.show()
 
-		path_l = gtk.Label("Choose block location")
+		path_l = gtk.Label("Choose block location (e.g. gr-howto)")
 		path_hbox.pack_start(path_l,False,False,10)	
 		path_l.show()
 		okbut3 = gtk.Button("Enter")
@@ -185,13 +185,20 @@ class add_new_block:
 		
 
 	
-	def collect_entry(self, pwidget):		
-		os.chdir(self.path_e.get_text())
-		self.modname=self.path_e.get_text().split('/')[len(self.path_e.get_text().split('/'))-1].split('-')[1]
-		self.addblock=ModToolAdd()
-		ModToolAdd.setup=self.setupadd
-		if self.addblock.setup() is True:
-			self.addblock.run()
+	def collect_entry(self, pwidget):			
+		try:
+			fold_name=self.path_e.get_text().split('/')[len(self.path_e.get_text().split('/'))-1]
+			self.modname=fold_name.split('-')[1]
+			if re.search(fold_name.split('-')[0],'gr'):
+				os.chdir(self.path_e.get_text())
+				self.addblock=ModToolAdd()
+				ModToolAdd.setup=self.setupadd
+				if self.addblock.setup() is True:
+					self.addblock.run()
+			else:
+				self.Errorbox('No GNU Radio module found in the given directory. Quitting.')
+		except IndexError:
+			self.Errorbox('No GNU Radio module found in the given directory. Quitting')
 	
 	def mainloop(self):
 		gtk.mainloop()

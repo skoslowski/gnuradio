@@ -46,6 +46,7 @@ GR_PYTHON_INSTALL(FILES
     html_urls.py
     NewProject.py
     Add_block.py
+    Remove_block.py
     __init__.py
     DESTINATION ${GR_PYTHON_DIR}/gnuradio/grc/gui
     COMPONENT "grc"
