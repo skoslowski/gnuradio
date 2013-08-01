@@ -38,6 +38,7 @@ gobject.threads_init()
 from NewProject import add_module
 from Add_block import add_new_block
 from Remove_block import remove_block
+from Install_block import install_block
 
 class ActionHandler:
 
@@ -112,7 +113,7 @@ class ActionHandler:
             for action in Actions.get_all_actions(): action.set_sensitive(False) #set all actions disabled
             #enable a select few actions
             for action in (
-                Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW,
+                Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW, Actions.INSTALL_BLOCK,
                 Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS, Actions.REMOVE_BLOCK,
                 Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY, Actions.NEW_PROJECT,
                 Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY, Actions.ADD_BLOCK,
@@ -359,6 +360,8 @@ class ActionHandler:
             add_new_block()
 	elif action == Actions.REMOVE_BLOCK:
             remove_block()
+	elif action == Actions.INSTALL_BLOCK:
+            install_block()
         ##################################################
         # Param Modifications
         ##################################################
@@ -484,6 +487,8 @@ class ActionHandler:
         Actions.ERRORS_WINDOW_DISPLAY.set_sensitive(not self.get_flow_graph().is_valid())
         if bool(self.get_flow_graph().get_selected_elements()) is True:
             Actions.DOC_WINDOW_DISPLAY.set_sensitive(bool(self.open_doc_code.open_document(self.get_flow_graph().get_selected_block(),False)))
+        else:
+            Actions.DOC_WINDOW_DISPLAY.set_sensitive(False)
         Actions.CODE_WINDOW_DISPLAY.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
         Actions.ELEMENT_DELETE.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
         Actions.BLOCK_PARAM_MODIFY.set_sensitive(bool(self.get_flow_graph().get_selected_block()))

@@ -31,6 +31,7 @@ from modtool_base import ModTool
 from Dialogs import MessageDialogHelper
 from MainWindow import MainWindow
 from .. base import ParseXML
+from subprocess import Popen, PIPE
 
 class add_module:
     
@@ -40,10 +41,10 @@ class add_module:
 		
 		
 		self.root = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
-	        self.root.set_size_request(550, 170)
+		self.root.set_size_request(550, 170)
 		self.root.set_position(gtk.WIN_POS_CENTER)
-	        self.root.set_border_width(10)
-	        self.root.set_title("Create new project folder")
+		self.root.set_border_width(10)
+		self.root.set_title("Create new project folder")
 		self.root.connect("destroy",self.destroy)
 		self.f_name=""
 		self.new_f_name=""
@@ -131,12 +132,15 @@ class add_module:
 		ModToolNewModule.setup=self.setupnewmod
 		if self.newmod.setup() is True:
 			self.newmod.run()
+		os.chdir(self.path_e.get_text()+"/gr-"+self.fname_e.get_text())	
+		Popen(['mkdir','build'])
 		file_path=self.path_e.get_text()+"/gr-"+self.fname_e.get_text()+"/apps/main.grc"
 		self.main_window.new_page()
 		self.main_window.get_page().set_file_path(file_path)
 		ParseXML.to_file(self.main_window.get_flow_graph().export_data(), self.main_window.get_page().get_file_path());
 		self.main_window.get_flow_graph().grc_file_path = "/"+self.main_window.get_page().get_file_path()
-		self.main_window.get_page().set_saved(True)		
+		self.main_window.get_page().set_saved(True)	
+
 				
 	
 	def mainloop(self):

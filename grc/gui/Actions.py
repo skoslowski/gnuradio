@@ -256,6 +256,10 @@ REMOVE_BLOCK= Action(
 	label='_Remove block',
 	tooltip='Remove block',
 )
+INSTALL_BLOCK= Action(
+	label='_Install block',
+	tooltip='Install block',
+)
 ABOUT_WINDOW_DISPLAY = Action(
     label='_About',
     tooltip='About this program',
