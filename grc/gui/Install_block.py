@@ -28,6 +28,8 @@ import re
 from subprocess import Popen, PIPE
 from Messages import open_doc_and_code_message
 import pexpect
+
+
 	
 class install_block:
     

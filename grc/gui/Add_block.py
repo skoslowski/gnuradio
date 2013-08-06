@@ -187,7 +187,7 @@ class add_new_block:
 	
 	def collect_entry(self, pwidget):			
 		try:
-			fold_name=self.path_e.get_text().split('/')[len(self.path_e.get_text().split('/'))-1]
+			fold_name=self.path_e.get_text().split('/')[-1]
 			self.modname=fold_name.split('-')[1]
 			if re.search(fold_name.split('-')[0],'gr'):
 				os.chdir(self.path_e.get_text())

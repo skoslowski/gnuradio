@@ -38,7 +38,7 @@ import time
 import lxml.html
 import contextlib
 from html_urls import link_urls, url_lst
-
+from pref import myclass
 
 
 
@@ -72,9 +72,7 @@ class open_document_and_source_code():
     
 
     def open_document(self, block, open_doc):
-
         complete_url = self.get_document_uri(block)
-        
         if complete_url is not None:
             if open_doc is True:
                open_doc_and_code_message('>>> Opening:  %s\n\n'%complete_url)
@@ -198,7 +196,7 @@ class open_document_and_source_code():
 
 
 
-    def open_source_code(self,block):
+    def open_source_code(self,block,open_code):
         block_info=block.get_make()
         code_uri=None
         local_code_file=None
@@ -221,43 +219,52 @@ class open_document_and_source_code():
             ####################################################################################################
             local_code_file=self.local_copy_of_source_code(self.path,block_c,block_p)
             if local_code_file:
-                open_doc_and_code_message('>>> Opening:  %s\n\n'%local_code_file)
-                os.system("gedit "+local_code_file)
+                if open_code is True:
+                    open_doc_and_code_message('>>> Opening:  %s\n\n'%local_code_file)
+                    os.system("gedit "+local_code_file)
+                return True
             else:
                 path=gr.prefs().get_string(class_name, 'module_path', '')
                 OTM_code_file=self.local_copy_of_source_code(path,block_c,None)
                 if OTM_code_file:
-                    open_doc_and_code_message('>>> Opening:  %s\n\n'%OTM_code_file)
-                    os.system("gedit "+OTM_code_file)
+                    if open_code is True:
+                        open_doc_and_code_message('>>> Opening:  %s\n\n'%OTM_code_file)
+                        os.system("gedit "+OTM_code_file)
+                    return True
             if OTM_code_file is None and local_code_file is None and self.network_connection() is True:
-                code_uri=self.remote_copy_of_source_code(self.source_code_uri,class_name,block_c,block_p)
+                code_uri=self.remote_copy_of_source_code(class_name,block_c,block_p)
                 if code_uri:
-                    self.get_webpage.open(code_uri)
-                    open_doc_and_code_message('>>> Opening:  %s\n\n'%code_uri)
+                    tagname = gr.version()
+                    if tagname[0] != 'v': 
+                        tagname = 'v' + tagname
+                    if open_code is True:
+                        self.get_webpage.open(code_uri+'?id='+tagname)
+                        open_doc_and_code_message('>>> Opening:  %s\n\n'%(code_uri+'?id='+tagname))
+                    return True
+            return False
 
-            if os.path.isdir(self.path) is False and os.path.isdir(path) is False and self.network_connection() is False:
+            '''if os.path.isdir(self.path) is False and os.path.isdir(path) is False and self.network_connection() is False:
                 Errorbox("""<b>Internet connection is not available and GNU Radio source tree does not exist in this system</b>""")
             elif OTM_code_file is None and local_code_file is None and code_uri is None:
-                Errorbox("""<b>Source code of selected block is not available</b>""")
+                Errorbox("""<b>Source code of selected block is not available</b>""")'''
 
         else:
-            Errorbox("""<b>Source code of selected block is not available</b>""")
+            return False
 
 
 
-    def remote_copy_of_source_code(self,path,class_name,block_c,block_p):
-        try:
-            links = lxml.html.parse(path+'/gr-'+class_name+'/lib').xpath("//a/@href")
-            for url in links:
+    def remote_copy_of_source_code(self,class_name,block_c,block_p):
+
+      
+        if url_lst(class_name):
+            for url in url_lst(class_name):
                 if 'tree' in url.lower() and re.search('/'+block_c+"\Z", url):
-                    return 'http://gnuradio.org'+url
-            links = lxml.html.parse(path+'/gr-'+class_name+'/python/'+class_name).xpath("//a/@href")
-            for url in links:
+                    return self.source_code_uri.split(',')[1]+url
+        if url_lst(class_name+'_python'):
+            for url in url_lst(class_name+'_python'):
                 if 'tree' in url.lower() and re.search('/'+block_p+"\Z", url):
-                    return 'http://gnuradio.org'+url
-            return None
-        except AttributeError, IOError:
-            return None
+                    return self.source_code_uri.split(',')[1]+url
+        return None
 
     def local_copy_of_source_code(self,path,block_c,block_p):
         if os.path.isdir(path):
@@ -272,12 +279,6 @@ class open_document_and_source_code():
         else:
             return None
 
-
-
-
-def Errorbox(err_msg):
-    MessageDialogHelper(type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_CLOSE,
-                        title='Error', markup=err_msg)
 
 
 
