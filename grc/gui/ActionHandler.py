@@ -35,10 +35,14 @@ import Dialogs
 from FileDialogs import OpenFlowGraphFileDialog, SaveFlowGraphFileDialog, SaveImageFileDialog
 from Documentation import open_document_and_source_code
 gobject.threads_init()
+from gnuradio import gr
+from subprocess import Popen, PIPE
+import ConfigParser
 from NewProject import add_module
 from Add_block import add_new_block
 from Remove_block import remove_block
 from Install_block import install_block
+from Edit_files import edit_files, editor_path
 
 class ActionHandler:
 
@@ -113,7 +117,7 @@ class ActionHandler:
             for action in Actions.get_all_actions(): action.set_sensitive(False) #set all actions disabled
             #enable a select few actions
             for action in (
-                Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW, Actions.INSTALL_BLOCK, 
+                Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW, Actions.INSTALL_BLOCK, Actions.EDIT_FILES,
                 Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS, Actions.REMOVE_BLOCK,
                 Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY, Actions.NEW_PROJECT,
                 Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY, Actions.ADD_BLOCK,
@@ -362,6 +366,17 @@ class ActionHandler:
             remove_block()
 	elif action == Actions.INSTALL_BLOCK:
             install_block()
+	elif action == Actions.EDIT_FILES:
+            edtr=gr.prefs().get_string('editors', 'editor', '')
+            if edtr:
+                os.chdir(edtr.rsplit(edtr.split('/')[-1], 1)[0])
+                Popen([edtr.split('/')[-1]],stdout=PIPE)
+            elif editor_path():
+                edtr=editor_path()
+                os.chdir(edtr.rsplit(edtr.split('/')[-1], 1)[0])
+                Popen([edtr.split('/')[-1]],stdout=PIPE)
+            else:
+                edit_files()
         ##################################################
         # Param Modifications
         ##################################################

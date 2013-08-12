@@ -38,8 +38,7 @@ import time
 import lxml.html
 import contextlib
 from html_urls import link_urls, url_lst
-from pref import myclass
-
+import ConfigParser
 
 
 class open_document_and_source_code():
@@ -100,7 +99,6 @@ class open_document_and_source_code():
             else:
                 return None
     def get_document_uri(self, block):
-
         block_info=block.get_make()
         if block_info:
             block_info_part=block_info.split('(')[0].split('.')
