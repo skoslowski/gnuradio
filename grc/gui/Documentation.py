@@ -99,7 +99,11 @@ class open_document_and_source_code():
             else:
                 return None
     def get_document_uri(self, block):
-        block_info=block.get_make()
+        try:
+            block_info=block.get_make()
+        # if selected element is arrow
+        except AttributeError:
+            return None           
         if block_info:
             block_info_part=block_info.split('(')[0].split('.')
 
@@ -195,7 +199,11 @@ class open_document_and_source_code():
 
 
     def open_source_code(self,block,open_code):
-        block_info=block.get_make()
+        try:
+            block_info=block.get_make()
+        # if selected element is arrow
+        except AttributeError:
+            return False
         code_uri=None
         local_code_file=None
         OTM_code_file=None
