@@ -38,11 +38,12 @@ gobject.threads_init()
 from gnuradio import gr
 from subprocess import Popen, PIPE
 import ConfigParser
-from NewProject import add_module
-from Add_block import add_new_block
-from Remove_block import remove_block
-from Install_block import install_block
-from Edit_files import edit_files, editor_path
+from NewProjectDialog import NewProjectDialog
+from AddBlockDialog import AddBlockDialog
+from RemoveBlockDialog import RemoveBlockDialog
+from InstallBlockDialog import InstallBlockDialog
+from EditFilesDialog import EditFilesDialog, editor_path
+
 
 class ActionHandler:
 
@@ -359,13 +360,13 @@ class ActionHandler:
 	elif action == Actions.CODE_WINDOW_DISPLAY:
             self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block(),True)
 	elif action == Actions.NEW_PROJECT:
-            add_module(self.main_window)
+            NewProjectDialog(self.main_window).run()
 	elif action == Actions.ADD_BLOCK:
-            add_new_block()
+            AddBlockDialog().run()
 	elif action == Actions.REMOVE_BLOCK:
-            remove_block()
+            RemoveBlockDialog().run()
 	elif action == Actions.INSTALL_BLOCK:
-            install_block()
+            InstallBlockDialog()
 	elif action == Actions.EDIT_FILES:
             edtr=gr.prefs().get_string('editors', 'editor', '')
             if edtr:
@@ -376,7 +377,7 @@ class ActionHandler:
                 os.chdir(edtr.rsplit(edtr.split('/')[-1], 1)[0])
                 Popen([edtr.split('/')[-1]],stdout=PIPE)
             else:
-                edit_files()
+                EditFilesDialog()
         ##################################################
         # Param Modifications
         ##################################################
@@ -500,12 +501,12 @@ class ActionHandler:
         ##################################################
         #update general buttons
         Actions.ERRORS_WINDOW_DISPLAY.set_sensitive(not self.get_flow_graph().is_valid())
-        if bool(self.get_flow_graph().get_selected_elements()) is True:
-            Actions.DOC_WINDOW_DISPLAY.set_sensitive(bool(self.open_doc_code.open_document(self.get_flow_graph().get_selected_block(),False)))
+        if bool(self.get_flow_graph().get_selected_blocks()) is True and len(self.get_flow_graph().get_selected_blocks())==1:
+            DocCodeThread(self.get_flow_graph().get_selected_block(),'doc')
         else:
             Actions.DOC_WINDOW_DISPLAY.set_sensitive(False)
-        if bool(self.get_flow_graph().get_selected_elements()) is True:
-            Actions.CODE_WINDOW_DISPLAY.set_sensitive(bool(self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block(),False)))
+        if bool(self.get_flow_graph().get_selected_blocks()) is True and len(self.get_flow_graph().get_selected_blocks())==1:
+            DocCodeThread(self.get_flow_graph().get_selected_block(),'code')
         else:
             Actions.CODE_WINDOW_DISPLAY.set_sensitive(False)
         Actions.ELEMENT_DELETE.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
@@ -548,6 +549,27 @@ class ActionHandler:
         Actions.FLOW_GRAPH_GEN.set_sensitive(sensitive)
         Actions.FLOW_GRAPH_EXEC.set_sensitive(sensitive)
         Actions.FLOW_GRAPH_KILL.set_sensitive(self.get_page().get_proc() != None)
+
+
+
+class DocCodeThread (Thread):
+    def __init__(self,block,choose):
+        Thread.__init__(self)
+        self.block=block
+        self.choose=choose
+        self.start()
+    def run(self):
+        if self.choose=='doc':
+            enable_doc_button(self.block)
+        if self.choose=='code':
+            enable_code_button(self.block)
+
+def enable_doc_button(block):
+    Actions.DOC_WINDOW_DISPLAY.set_sensitive(bool(open_document_and_source_code().open_document(block,False)))
+
+def enable_code_button(block):
+    Actions.CODE_WINDOW_DISPLAY.set_sensitive(bool(open_document_and_source_code().open_source_code(block,False)))
+
 
 class ExecFlowGraphThread(Thread):
     """Execute the flow graph as a new process and wait on it to finish."""

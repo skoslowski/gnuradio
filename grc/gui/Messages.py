@@ -111,3 +111,6 @@ def send_warning(warning):
 def open_doc_and_code_message(message):
     send(message)
 
+################# functions for opening Documentation and source code ########################################
+def project_folder_message(message):
+    send(message)
