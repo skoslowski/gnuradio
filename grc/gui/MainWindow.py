@@ -106,6 +106,7 @@ class MainWindow(gtk.Window):
         self.flow_graph_vpaned.pack2(self.reports_scrolled_window, False) #dont allow resize
         #load preferences and show the main window
         Preferences.load(platform)
+        Preferences.add_OOT_module('')
         self.resize(*Preferences.main_window_size())
         self.flow_graph_vpaned.set_position(Preferences.reports_window_position())
         self.hpaned.set_position(Preferences.blocks_window_position())

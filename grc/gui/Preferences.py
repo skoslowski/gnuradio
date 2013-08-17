@@ -24,7 +24,8 @@ _platform = None
 _config_parser = ConfigParser.ConfigParser()
 
 def file_extension(): return '.'+_platform.get_key()
-def _prefs_file(): return os.path.join(os.path.expanduser('~'), file_extension())
+def _prefs_file(): 
+    return os.path.join(os.path.expanduser('~'), file_extension())
 
 def load(platform):
     global _platform
@@ -32,6 +33,7 @@ def load(platform):
     #create sections
     _config_parser.add_section('main')
     _config_parser.add_section('files_open')
+    _config_parser.add_section('module_list')
     try: _config_parser.read(_prefs_file())
     except: pass
 def save():
@@ -84,3 +86,42 @@ def blocks_window_position(pos=None):
     else:
         try: return _config_parser.getint('main', 'blocks_window_position') or 1 #greater than 0
         except: return -1
+def get_OOT_module(module):
+    if _config_parser.get('module_list', module)=='':
+        return None
+    else:
+       return _config_parser.get('module_list', module) 
+def add_OOT_module(module):
+
+    if (not module=='') :
+        mod1=_config_parser.get('module_list', 'mod1')
+        mod2=_config_parser.get('module_list', 'mod2')
+        mod3=_config_parser.get('module_list', 'mod3')
+        mod4=_config_parser.get('module_list', 'mod4')
+        mod5=_config_parser.get('module_list', 'mod5')
+        _config_parser.remove_option('module_list', 'mod1')
+        _config_parser.remove_option('module_list', 'mod2')
+        _config_parser.remove_option('module_list', 'mod3')
+        _config_parser.remove_option('module_list', 'mod4')
+        _config_parser.remove_option('module_list', 'mod5')
+
+        _config_parser.set('module_list', 'mod1', module)
+        _config_parser.set('module_list', 'mod2', mod1)
+        _config_parser.set('module_list', 'mod3', mod2)
+        _config_parser.set('module_list', 'mod4', mod3)
+        _config_parser.set('module_list', 'mod5', mod4)
+        with open(_prefs_file(), 'w') as configfile:
+            _config_parser.write(configfile)
+    elif not _config_parser.has_option('module_list', 'mod1'):
+        _config_parser.set('module_list', 'mod1', module)
+        _config_parser.set('module_list', 'mod2', '')
+        _config_parser.set('module_list', 'mod3', '')
+        _config_parser.set('module_list', 'mod4', '')
+        _config_parser.set('module_list', 'mod5', '')
+        with open(_prefs_file(), 'w') as configfile:
+            _config_parser.write(configfile)
+
+
+
+
+

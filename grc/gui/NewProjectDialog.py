@@ -30,6 +30,7 @@ from .. base import ParseXML
 from subprocess import Popen, PIPE
 from ModtoolGRC import ModToolNewModuleGRC
 from Messages import project_folder_message
+from Preferences import add_OOT_module
 
 class NewProjectDialog(gtk.Dialog):
 
@@ -109,6 +110,7 @@ class NewProjectDialog(gtk.Dialog):
             newmod=ModToolNewModuleGRC()
             if newmod.setup(self.fname_e.get_text(),self.dir_path) is True:
                 newmod.run()
+                add_OOT_module(self.path_e.get_text())
                 project_folder_message('\nout of tree module has been created in %s\n\n' % self.path_e.get_text())
                 build_path='%s/build' % (self.path_e.get_text())
                 Popen(['mkdir',build_path])

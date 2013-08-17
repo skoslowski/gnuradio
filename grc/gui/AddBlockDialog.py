@@ -27,7 +27,7 @@ from gnuradio import gr
 from ModtoolGRC import ModToolAddGRC, Errorbox
 import re
 from Messages import project_folder_message
-
+from Preferences import get_OOT_module, add_OOT_module
 
 	
 class AddBlockDialog(gtk.Dialog):
@@ -46,24 +46,39 @@ class AddBlockDialog(gtk.Dialog):
         self.set_size_request(600, 350)
         vbox = gtk.VBox()
         self.vbox.pack_start(vbox, True, True, 0)
+       
 
-        self.path_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.path_hbox,False,False,10)
-        self.path_hbox.show()
+        self.mod_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.mod_hbox,False,False,10)
+        self.mod_hbox.show()
 
-        self.path_l = gtk.Label("Choose block location (e.g. gr-howto)")
-        self.path_hbox.pack_start(self.path_l,False,False,10)	
-        self.path_l.show()
-        self.enter_but = gtk.Button("...")
-        self.path_hbox.pack_end(self.enter_but,False)
-        self.enter_but.set_size_request(110,-1)
-        self.enter_but.connect("pressed", self.chooser_c,)
-        self.enter_but.show()
-        self.path_e = gtk.Entry()
-        self.path_e.set_size_request(200,-1)
-        self.path_hbox.pack_end(self.path_e,False)
-        self.path_e.show()
-        self.show_all()		
+        self.mod_path=''
+        self.mod_name_l = gtk.Label("Choose block location (e.g. gr-howto)")
+        self.mod_hbox.pack_start(self.mod_name_l,False,False,10)	
+        self.mod_name_l.show()
+        self.mod_name_e = gtk.combo_box_new_text()
+        self.mod_name_e.set_size_request(310,-1)
+        self.mod_hbox.pack_end(self.mod_name_e,False)
+        self.mod_list=['mod1','mod2','mod3','mod4','mod5']
+        check=False
+        for i in self.mod_list:
+            if get_OOT_module(i) is not None:
+                self.mod_name_e.append_text(get_OOT_module(i).split('/')[-1])
+                check=True
+        if check is False:
+            self.mod_name_e.append_text("No active module")
+        self.mod_name_e.append_text("Select some module")
+        self.mod_name_e.set_active(0)	
+        for i in self.mod_list:
+            model = self.mod_name_e.get_model()
+            index = self.mod_name_e.get_active()
+            name = model[index][0]
+            if get_OOT_module(i) is not None:
+                if name == get_OOT_module(i).split('/')[-1]:
+                    self.mod_path=get_OOT_module(i)
+                    break
+        self.mod_name_e.connect('changed', self.changed_folder)
+        self.mod_name_e.show()
 
         self.block_name_hbox = gtk.HBox(gtk.FALSE,0)
         vbox.pack_start(self.block_name_hbox,False,False,10)
@@ -109,21 +124,31 @@ class AddBlockDialog(gtk.Dialog):
 	
         self.show_all()
 
-
-
-    def chooser_c(self,w):	
-        self.fold_cr  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
+    def changed_folder(self, mod_name_e):
+        model = self.mod_name_e.get_model()
+        index = self.mod_name_e.get_active()
+        name = model[index][0]
+        if name=="Select some module":
+            self.mod  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
 
 		
-        self.fold_cr.show()
-        response = self.fold_cr.run()
-        if response == gtk.RESPONSE_OK:
-            self.new_f_name=self.fold_cr.get_filename()
-            self.path_e.set_text(self.new_f_name)
-            self.fold_cr.destroy()
-        if response == gtk.RESPONSE_CANCEL:
-            self.fold_cr.destroy()
+            self.mod.show()
+            response = self.mod.run()
+            if response == gtk.RESPONSE_OK:
+                self.mod_path=self.mod.get_filename()
+                self.mod_name_e.append_text(self.mod_path.split('/')[-1])
+                self.mod_name_e.set_active(index+1)
+                add_OOT_module(self.mod_path)
+                self.mod.destroy()
+            if response == gtk.RESPONSE_CANCEL:
+                self.mod.destroy()
+        else:
+            for i in self.mod_list:
+                if get_OOT_module(i) is not None:
+                    if name == get_OOT_module(i).split('/')[-1]:
+                        self.mod_path=get_OOT_module(i)
+                        break
 
 
     def run(self):
@@ -131,19 +156,19 @@ class AddBlockDialog(gtk.Dialog):
         response = gtk.Dialog.run(self)
         if response == gtk.RESPONSE_OK:
             try:
-                fold_name=self.path_e.get_text().split('/')[-1]
+                fold_name=self.mod_path.split('/')[-1]
                 modname=fold_name.split('-')[1]
                 if fold_name.split('-')[0]=='gr':
-                    if os.path.isdir(self.path_e.get_text()):
+                    if os.path.isdir(self.mod_path):
                         path=os.getcwd()
-                        os.chdir(self.path_e.get_text())
+                        os.chdir(self.mod_path)
                         addblock=ModToolAddGRC()
                         if addblock.setup(modname, self.type_name_e.entry.get_text(), self.block_name_e.get_text(), self.arg_name_e.get_text()) is True:
                             addblock.run()
-                            project_folder_message('\nBlock %s has been added in %s\n\n' % (self.block_name_e.get_text(), self.path_e.get_text()))
+                            project_folder_message('\nBlock %s has been added in %s\n\n' % (self.block_name_e.get_text(), self.mod_path))
                         os.chdir(path)
                     else:
-                        Errorbox('%s is not found'% self.path_e.get_text())
+                        Errorbox('%s is not found'% self.mod_path)
                 else:
                     Errorbox('No GNU Radio module found in the given directory. Quitting.')
             except IndexError:
