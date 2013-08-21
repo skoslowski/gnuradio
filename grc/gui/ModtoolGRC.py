@@ -9,7 +9,6 @@ import glob
 from Messages import project_folder_message
 
 
-
 class ModToolNewModuleGRC(ModToolNewModule):
 
     def setup(self,modname,directory):
@@ -37,15 +36,39 @@ class ModToolNewModuleGRC(ModToolNewModule):
 
 class ModToolAddGRC(ModToolAdd):
 
-    '''def __init__(self,directory):
+    def __init__(self,directory):
         ModTool.__init__(self)
         self.directory=directory
         self._add_cc_qa = False
-        self._add_py_qa = False'''
+        self._add_py_qa = False
 
     def setup(self, modname, blocktype, blockname, arg):
-
-        ModTool.setup(self)
+        (options, self.args) = self.parser.parse_args()
+        self.options = options
+        self._dir = self.directory
+	print self._dir
+        print self._check_directory(self._dir)
+        if not self._check_directory(self._dir):
+            Errorbox("No GNU Radio module found in the given directory. Quitting.")
+            return False
+        self._info['modname'] = modname
+        if self._info['modname'] is None:
+            Errorbox("No GNU Radio module found in the given directory. Quitting.")
+            return False
+        print "GNU Radio module name identified: " + self._info['modname']
+        if self._info['version'] == '36' and os.path.isdir(os.path.join('include', self._info['modname'])):
+            self._info['version'] = '37'
+        if not self._has_subdirs['lib']:
+            self._skip_subdirs['lib'] = True
+        if not self._has_subdirs['python']:
+            self._skip_subdirs['python'] = True
+        if self._get_mainswigfile() is None or not self._has_subdirs['swig']:
+            self._skip_subdirs['swig'] = True
+        if not self._has_subdirs['grc']:
+            self._skip_subdirs['grc'] = True
+        self._info['blockname'] = blockname
+        self._setup_files()
+        self._info['yes'] = 'yes'
         self._info['modname']=modname
         self._info['blocktype'] = blocktype
         self._info['lang'] = 'cpp'
@@ -63,7 +86,7 @@ class ModToolAddGRC(ModToolAdd):
         if not re.match('[a-zA-Z0-9_]+', self._info['blockname']):
             Errorbox('Invalid block name.')
             return False
-		#print "Block/code identifier: " + self._info['blockname']
+
         self._info['fullblockname'] = self._info['modname'] + '_' + self._info['blockname']
         self._info['license'] = self.setup_choose_license()
         self._info['arglist'] = arg
@@ -77,20 +100,48 @@ class ModToolAddGRC(ModToolAdd):
             Errorbox("Warning: Autotools modules are not supported.Files will be created, but Makefiles will not be edited.")
         return True
 
+
+
 class ModToolRemoveGRC(ModToolRemove):
 
-    def __init__(self, lib, include, swig, grc, python):
+    def __init__(self, lib, include, swig, grc, python,directory):
         ModTool.__init__(self)
         self.lib=lib
         self.include=include
         self.swig=swig
         self.python=python
         self.grc=grc
+        self.directory=directory
         
 
     def setup(self,modname,blockname):
         self._info['modname']=modname
-        ModTool.setup(self)
+        (options, self.args) = self.parser.parse_args()
+        self.options = options
+        self._dir = self.directory
+	print self._dir
+        print self._check_directory(self._dir)
+        if not self._check_directory(self._dir):
+            Errorbox("No GNU Radio module found in the given directory. Quitting.")
+            return False
+        if self._info['modname'] is None:
+            Errorbox("No GNU Radio module found in the given directory. Quitting.")
+            return False
+        print "GNU Radio module name identified: " + self._info['modname']
+        if self._info['version'] == '36' and os.path.isdir(os.path.join('include', self._info['modname'])):
+            self._info['version'] = '37'
+        if not self._has_subdirs['lib']:
+            self._skip_subdirs['lib'] = True
+        if not self._has_subdirs['python']:
+            self._skip_subdirs['python'] = True
+        if self._get_mainswigfile() is None or not self._has_subdirs['swig']:
+            self._skip_subdirs['swig'] = True
+        if not self._has_subdirs['grc']:
+            self._skip_subdirs['grc'] = True
+        self._info['blockname'] = blockname
+        self._setup_files()
+        self._info['yes'] = 'yes'
+
         self._info['pattern'] =blockname
         if len(self._info['pattern']) == 0:
             self._info['pattern'] = '.'
@@ -138,34 +189,6 @@ class ModToolRemoveGRC(ModToolRemove):
         ed.write()
         return files_deleted
 
-'''class ModToolGRC(ModTool):
-    name=''
-    def setup(self,directory,modname,blockname):
-
-        self._dir = directory
-	print self._dir
-        print self._check_directory(self._dir)
-        if not self._check_directory(self._dir):
-            print "No GNU Radio module found in the given directory. Quitting."
-            sys.exit(1)
-        self._info['modname'] = modname
-        if self._info['modname'] is None:
-            print "No GNU Radio module found in the given directory. Quitting."
-            sys.exit(1)
-        print "GNU Radio module name identified: " + self._info['modname']
-        if self._info['version'] == '36' and os.path.isdir(os.path.join('include', self._info['modname'])):
-            self._info['version'] = '37'
-        if not self._has_subdirs['lib']:
-            self._skip_subdirs['lib'] = True
-        if not self._has_subdirs['python']:
-            self._skip_subdirs['python'] = True
-        if self._get_mainswigfile() is None or not self._has_subdirs['swig']:
-            self._skip_subdirs['swig'] = True
-        if not self._has_subdirs['grc']:
-            self._skip_subdirs['grc'] = True
-        self._info['blockname'] = blockname
-        self._setup_files()
-        self._info['yes'] = 'yes'''
 
 
 def Errorbox(err_msg): 

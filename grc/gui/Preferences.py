@@ -99,19 +99,30 @@ def add_OOT_module(module):
         mod3=_config_parser.get('module_list', 'mod3')
         mod4=_config_parser.get('module_list', 'mod4')
         mod5=_config_parser.get('module_list', 'mod5')
-        _config_parser.remove_option('module_list', 'mod1')
-        _config_parser.remove_option('module_list', 'mod2')
-        _config_parser.remove_option('module_list', 'mod3')
-        _config_parser.remove_option('module_list', 'mod4')
-        _config_parser.remove_option('module_list', 'mod5')
+        active_mod_list=[mod1,mod2,mod3,mod4,mod5]
+        conf_options=['mod1','mod2','mod3','mod4','mod5']
+        if module not in active_mod_list:
+            _config_parser.remove_option('module_list', 'mod1')
+            _config_parser.remove_option('module_list', 'mod2')
+            _config_parser.remove_option('module_list', 'mod3')
+            _config_parser.remove_option('module_list', 'mod4')
+            _config_parser.remove_option('module_list', 'mod5')
 
-        _config_parser.set('module_list', 'mod1', module)
-        _config_parser.set('module_list', 'mod2', mod1)
-        _config_parser.set('module_list', 'mod3', mod2)
-        _config_parser.set('module_list', 'mod4', mod3)
-        _config_parser.set('module_list', 'mod5', mod4)
-        with open(_prefs_file(), 'w') as configfile:
-            _config_parser.write(configfile)
+            _config_parser.set('module_list', 'mod1', module)
+            _config_parser.set('module_list', 'mod2', mod1)
+            _config_parser.set('module_list', 'mod3', mod2)
+            _config_parser.set('module_list', 'mod4', mod3)
+            _config_parser.set('module_list', 'mod5', mod4)
+            with open(_prefs_file(), 'w') as configfile:
+                _config_parser.write(configfile)
+        else:
+            for i in range(0,5):
+                if module==active_mod_list[i]:
+                    _config_parser.remove_option('module_list', 'mod1')
+                    _config_parser.remove_option('module_list', conf_options[i])
+                    _config_parser.set('module_list', 'mod1', module)
+                    _config_parser.set('module_list', conf_options[i], mod1)
+                    break
     elif not _config_parser.has_option('module_list', 'mod1'):
         _config_parser.set('module_list', 'mod1', module)
         _config_parser.set('module_list', 'mod2', '')

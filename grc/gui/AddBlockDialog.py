@@ -148,6 +148,7 @@ class AddBlockDialog(gtk.Dialog):
                 if get_OOT_module(i) is not None:
                     if name == get_OOT_module(i).split('/')[-1]:
                         self.mod_path=get_OOT_module(i)
+                        add_OOT_module(self.mod_path)
                         break
 
 
@@ -160,13 +161,10 @@ class AddBlockDialog(gtk.Dialog):
                 modname=fold_name.split('-')[1]
                 if fold_name.split('-')[0]=='gr':
                     if os.path.isdir(self.mod_path):
-                        path=os.getcwd()
-                        os.chdir(self.mod_path)
-                        addblock=ModToolAddGRC()
+                        addblock=ModToolAddGRC(self.mod_path)
                         if addblock.setup(modname, self.type_name_e.entry.get_text(), self.block_name_e.get_text(), self.arg_name_e.get_text()) is True:
                             addblock.run()
                             project_folder_message('\nBlock %s has been added in %s\n\n' % (self.block_name_e.get_text(), self.mod_path))
-                        os.chdir(path)
                     else:
                         Errorbox('%s is not found'% self.mod_path)
                 else:
