@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with GNU Radio; see the file COPYING.  If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
-# Boston, MA 02110-1301, USA.
+# Boston, MA 0217-1301, USA.
 #
 """ Module to add new blocks """
 import gtk
@@ -43,18 +43,18 @@ class AddBlockDialog(gtk.Dialog):
 
 
 
-        self.set_size_request(600, 350)
+        self.set_size_request(600, 300)
         vbox = gtk.VBox()
         self.vbox.pack_start(vbox, True, True, 0)
        
 
         self.mod_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.mod_hbox,False,False,10)
+        vbox.pack_start(self.mod_hbox,False,False,7)
         self.mod_hbox.show()
 
         self.mod_path=''
         self.mod_name_l = gtk.Label("Choose block location (e.g. gr-howto)")
-        self.mod_hbox.pack_start(self.mod_name_l,False,False,10)	
+        self.mod_hbox.pack_start(self.mod_name_l,False,False,7)	
         self.mod_name_l.show()
         self.mod_name_e = gtk.combo_box_new_text()
         self.mod_name_e.set_size_request(310,-1)
@@ -81,12 +81,12 @@ class AddBlockDialog(gtk.Dialog):
         self.mod_name_e.show()
 
         self.block_name_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.block_name_hbox,False,False,10)
+        vbox.pack_start(self.block_name_hbox,False,False,7)
         self.block_name_hbox.show()
 
 		
         self.block_name_l = gtk.Label("Enter block name")
-        self.block_name_hbox.pack_start(self.block_name_l,False,False,10)	
+        self.block_name_hbox.pack_start(self.block_name_l,False,False,7)	
         self.block_name_l.show()
         self.block_name_e = gtk.Entry()
         self.block_name_e.set_size_request(310,-1)
@@ -94,12 +94,12 @@ class AddBlockDialog(gtk.Dialog):
         self.block_name_e.show()
 
         self.type_name_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.type_name_hbox,False,False,10)
+        vbox.pack_start(self.type_name_hbox,False,False,7)
         self.type_name_hbox.show()
 
 		
         self.type_name_l = gtk.Label("Enter block type")
-        self.type_name_hbox.pack_start(self.type_name_l,False,False,10)	
+        self.type_name_hbox.pack_start(self.type_name_l,False,False,7)	
         self.type_name_l.show()
         self.type_name_e = gtk.Combo()
         self.type_name_e.set_size_request(310,-1)
@@ -110,12 +110,12 @@ class AddBlockDialog(gtk.Dialog):
         self.type_name_e.show()
 
         self.arg_name_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.arg_name_hbox,False,False,10)
+        vbox.pack_start(self.arg_name_hbox,False,False,7)
         self.arg_name_hbox.show()
 
 		
         self.arg_name_l = gtk.Label("Enter args")
-        self.arg_name_hbox.pack_start(self.arg_name_l,False,False,10)	
+        self.arg_name_hbox.pack_start(self.arg_name_l,False,False,7)	
         self.arg_name_l.show()
         self.arg_name_e = gtk.Entry()
         self.arg_name_e.set_size_request(310,-1)
@@ -132,7 +132,7 @@ class AddBlockDialog(gtk.Dialog):
             self.mod  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
 
-		
+	    self.mod.set_current_folder(os.path.expanduser('~'))
             self.mod.show()
             response = self.mod.run()
             if response == gtk.RESPONSE_OK:
@@ -161,10 +161,10 @@ class AddBlockDialog(gtk.Dialog):
                 modname=fold_name.split('-')[1]
                 if fold_name.split('-')[0]=='gr':
                     if os.path.isdir(self.mod_path):
-                        addblock=ModToolAddGRC(self.mod_path)
-                        if addblock.setup(modname, self.type_name_e.entry.get_text(), self.block_name_e.get_text(), self.arg_name_e.get_text()) is True:
+                        addblock=ModToolAddGRC(self.mod_path,modname, self.type_name_e.entry.get_text(), self.block_name_e.get_text(), self.arg_name_e.get_text())
+                        if addblock.setup() is True:
                             addblock.run()
-                            project_folder_message('\nBlock %s has been added in %s\n\n' % (self.block_name_e.get_text(), self.mod_path))
+                            project_folder_message('Block "%s" has been added in "%s".\n' % (self.block_name_e.get_text(), self.mod_path))
                     else:
                         Errorbox('%s is not found'% self.mod_path)
                 else:

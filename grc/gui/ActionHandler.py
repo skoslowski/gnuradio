@@ -38,7 +38,7 @@ gobject.threads_init()
 from gnuradio import gr
 from subprocess import Popen, PIPE
 import ConfigParser
-from NewProjectDialog import NewProjectDialog
+from NewModuleDialog import NewModuleDialog
 from AddBlockDialog import AddBlockDialog
 from RemoveBlockDialog import RemoveBlockDialog
 from InstallBlockDialog import InstallBlockDialog
@@ -360,7 +360,7 @@ class ActionHandler:
 	elif action == Actions.CODE_WINDOW_DISPLAY:
             self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block(),True)
 	elif action == Actions.NEW_PROJECT:
-            NewProjectDialog(self.main_window).run()
+            NewModuleDialog(self.main_window).run()
 	elif action == Actions.ADD_BLOCK:
             AddBlockDialog().run()
 	elif action == Actions.REMOVE_BLOCK:

@@ -44,7 +44,7 @@ GR_PYTHON_INSTALL(FILES
     StateCache.py
     Documentation.py
     HtmlUrl.py
-    NewProjectDialog.py
+    NewModuleDialog.py
     AddBlockDialog.py
     RemoveBlockDialog.py
     InstallBlockDialog.py

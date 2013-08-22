@@ -18,7 +18,7 @@
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 #
-""" Module to add new blocks """
+""" Module to remove blocks """
 import gtk
 import sys
 import os
@@ -42,26 +42,28 @@ class RemoveBlockDialog(gtk.Dialog):
 
         self.lib=False
         self.include=False
-        self.swig=True
-        self.python=True
+        self.swig=False
+        self.python=False
         self.grc=False
         self.grc_fold=False
         self.lib_fold=False
         self.include_fold=False
-        self.set_size_request(600, 320)
+        self.python_fold=False
+        self.swig_fold=False
+        self.set_size_request(400, 420)
         vbox = gtk.VBox()
         self.vbox.pack_start(vbox, True, True, 0)
 
         self.mod_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.mod_hbox,False,False,10)
+        vbox.pack_start(self.mod_hbox,False,False,7)
         self.mod_hbox.show()
 
         self.mod_path=''
-        self.mod_name_l = gtk.Label("Choose block location (e.g. gr-howto)")
-        self.mod_hbox.pack_start(self.mod_name_l,False,False,10)	
+        self.mod_name_l = gtk.Label("Choose block location")
+        self.mod_hbox.pack_start(self.mod_name_l,False,False,7)	
         self.mod_name_l.show()
         self.mod_name_e = gtk.combo_box_new_text()
-        self.mod_name_e.set_size_request(310,-1)
+        self.mod_name_e.set_size_request(200,-1)
         self.mod_hbox.pack_end(self.mod_name_e,False)
         self.mod_list=['mod1','mod2','mod3','mod4','mod5']
         check=False
@@ -85,14 +87,14 @@ class RemoveBlockDialog(gtk.Dialog):
         self.mod_name_e.show()	
 
         self.block_name_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.block_name_hbox,False,False,10)
+        vbox.pack_start(self.block_name_hbox,False,False,7)
         self.block_name_hbox.show()
 
         self.block_name_l = gtk.Label("Select block name")
-        self.block_name_hbox.pack_start(self.block_name_l,False,False,10)	
+        self.block_name_hbox.pack_start(self.block_name_l,False,False,7)	
         self.block_name_l.show()
         self.block_name_e = gtk.combo_box_new_text()
-        self.block_name_e.set_size_request(310,-1)
+        self.block_name_e.set_size_request(200,-1)
         self.block_name_hbox.pack_end(self.block_name_e,False)
         self.block_list=self.get_blk_list(self.mod_path)
         if not self.block_list:
@@ -111,98 +113,97 @@ class RemoveBlockDialog(gtk.Dialog):
 		
 
         self.lib_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.lib_hbox,False,False,10)
+        vbox.pack_start(self.lib_hbox,False,False,7)
         self.lib_hbox.show()
 
 		
-        self.lib_l = gtk.Label("Delete files from lib/?")
-        self.lib_hbox.pack_start(self.lib_l,False,False,10)	
+        self.lib_l = gtk.CheckButton("Delete files from lib/?")
+        self.lib_hbox.pack_start(self.lib_l,False,False,7)
+        self.lib_l.connect("toggled", self.callback, 'lib')	
         self.lib_l.show()
-        self.lib_e = gtk.Combo()
-        self.lib_e.set_size_request(310,-1)
-        self.lib_hbox.pack_end(self.lib_e,False)
-        self.lib_e.entry.set_text("Yes")
-        slist = ["Yes","No"]	
-        self.lib_e.set_popdown_strings(slist)
         if not self.block_list or self.lib_fold is False:
-            self.lib_e.set_sensitive(False)
-        self.lib_e.show()
+            self.lib_l.set_sensitive(False)
 
         self.include_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.include_hbox,False,False,10)
+        vbox.pack_start(self.include_hbox,False,False,7)
         self.include_hbox.show()
 
 		
-        self.include_l = gtk.Label("Delete files from include/?")
-        self.include_hbox.pack_start(self.include_l,False,False,10)	
+        self.include_l = gtk.CheckButton("Delete files from include/?")
+        self.include_hbox.pack_start(self.include_l,False,False,7)
+        self.include_l.connect("toggled", self.callback, 'include')	
         self.include_l.show()
-        self.include_e = gtk.Combo()
-        self.include_e.set_size_request(310,-1)
-        self.include_hbox.pack_end(self.include_e,False)
-        self.include_e.entry.set_text("Yes")
-        slist = ["Yes","No"]	
-        self.include_e.set_popdown_strings(slist)
         if not self.block_list or self.include_fold is False:
-            self.include_e.set_sensitive(False)
-        self.include_e.show()
+            self.include_l.set_sensitive(False)
 
         self.grc_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.grc_hbox,False,False,10)
+        vbox.pack_start(self.grc_hbox,False,False,7)
         self.grc_hbox.show()
 
 		
-        self.grc_l = gtk.Label("Delete files from grc/?")
-        self.grc_hbox.pack_start(self.grc_l,False,False,10)	
+        self.grc_l = gtk.CheckButton("Delete files from grc/?")
+        self.grc_hbox.pack_start(self.grc_l,False,False,7)
+        self.grc_l.connect("toggled", self.callback, 'grc')	
         self.grc_l.show()
-        self.grc_e = gtk.Combo()
-        self.grc_e.set_size_request(310,-1)
-        self.grc_hbox.pack_end(self.grc_e,False)
-        self.grc_e.entry.set_text("Yes")
-        slist = ["Yes","No"]	
-        self.grc_e.set_popdown_strings(slist)
         if not self.block_list or self.grc_fold is False:
-            self.grc_e.set_sensitive(False)
-        self.grc_e.show()
+            self.grc_l.set_sensitive(False)
 
 
-        '''self.swig_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.swig_hbox,False,False,10)
+
+        self.swig_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.swig_hbox,False,False,7)
         self.swig_hbox.show()
 
 		
-        self.swig_l = gtk.Label("Delete files from swig/?")
-        self.swig_hbox.pack_start(self.swig_l,False,False,10)	
+        self.swig_l = gtk.CheckButton("Delete files from swig/?")
+        self.swig_hbox.pack_start(self.swig_l,False,False,7)
+        self.swig_l.connect("toggled", self.callback, 'swig')	
         self.swig_l.show()
-        self.swig_e = gtk.Combo()
-        self.swig_e.set_size_request(310,-1)
-        self.swig_hbox.pack_end(self.swig_e,False)
-        self.swig_e.entry.set_text("Yes")
-        slist = ["Yes","No"]	
-        self.swig_e.set_popdown_strings(slist)
-        if self.check is False:
-            self.swig_e.set_sensitive(False)
-        self.swig_e.show()
+        if not self.block_list or self.swig_fold is False:
+            self.swig_l.set_sensitive(False)
+
 
 
         self.python_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.python_hbox,False,False,10)
+        vbox.pack_start(self.python_hbox,False,False,7)
         self.python_hbox.show()
 
 		
-        self.python_l = gtk.Label("Delete files from python/?")
-        self.python_hbox.pack_start(self.python_l,False,False,10)	
+        self.python_l = gtk.CheckButton("Delete files from python/?")
+        self.python_hbox.pack_start(self.python_l,False,False,7)
+        self.python_l.connect("toggled", self.callback, 'python')	
         self.python_l.show()
-        self.python_e = gtk.Combo()
-        self.python_e.set_size_request(310,-1)
-        self.python_hbox.pack_end(self.python_e,False)
-        self.python_e.entry.set_text("Yes")
-        slist = ["Yes","No"]	
-        self.python_e.set_popdown_strings(slist)
-        if self.check is False:
-            self.python_e.set_sensitive(False)
-        self.python_e.show()'''
+        if not self.block_list or self.python_fold is False:
+            self.python_l.set_sensitive(False)
 	
         self.show_all()
+
+    def callback(self, widget, data=None):
+        if data=='lib':
+            if widget.get_active():
+                self.lib=True
+            else:
+                self.lib=False
+        if data=='include':
+            if widget.get_active():
+                self.include=True
+            else:
+                self.include=False
+        if data=='grc':
+            if widget.get_active():
+                self.grc=True
+            else:
+                self.grc=False
+        if data=='python':
+            if widget.get_active():
+                self.python=True
+            else:
+                self.python=False
+        if data=='swig':
+            if widget.get_active():
+                self.swig=True
+            else:
+                self.swig=False
 
     def get_blk_list(self,path):
         blk_lst=[]
@@ -227,6 +228,8 @@ class RemoveBlockDialog(gtk.Dialog):
         self.grc_fold=False
         self.lib_fold=False
         self.include_fold=False
+        self.swig_fold=False
+        self.python_fold=False
         if os.path.isdir(path):
             for dirs, subdirs, files in os.walk(path):
                 for f in files:
@@ -257,7 +260,7 @@ class RemoveBlockDialog(gtk.Dialog):
             self.mod  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
 
-		
+	    self.mod.set_current_folder(os.path.expanduser('~'))
             self.mod.show()
             response = self.mod.run()
             if response == gtk.RESPONSE_OK:
@@ -281,11 +284,11 @@ class RemoveBlockDialog(gtk.Dialog):
             self.block_name_e.set_sensitive(False)
             for i in range(0,no_of_blks):
                 self.block_name_e.remove_text(no_of_blks-1-i)
-            self.lib_e.set_sensitive(False)
-            self.include_e.set_sensitive(False)
-            #self.swig_e.set_sensitive(False)
-            self.grc_e.set_sensitive(False)
-            #self.python.set_sensitive(False)
+            self.lib_l.set_sensitive(False)
+            self.include_l.set_sensitive(False)
+            self.swig_l.set_sensitive(False)
+            self.grc_l.set_sensitive(False)
+            self.python_l.set_sensitive(False)
         else:
             self.block_name_e.set_sensitive(True)
             for i in range(0,no_of_blks):
@@ -300,17 +303,25 @@ class RemoveBlockDialog(gtk.Dialog):
     def folders(self):
        
         if self.lib_fold is True:
-            self.lib_e.set_sensitive(True)
+            self.lib_l.set_sensitive(True)
         else:
-            self.lib_e.set_sensitive(False)
+            self.lib_l.set_sensitive(False)
         if self.include_fold is True:
-            self.include_e.set_sensitive(True)
+            self.include_l.set_sensitive(True)
         else:
-            self.include_e.set_sensitive(False)
+            self.include_l.set_sensitive(False)
         if self.grc_fold is True:
-            self.grc_e.set_sensitive(True)
+            self.grc_l.set_sensitive(True)
         else:
-            self.grc_e.set_sensitive(False)
+            self.grc_l.set_sensitive(False)
+        if self.swig_fold is True:
+            self.swig_l.set_sensitive(True)
+        else:
+            self.swig_l.set_sensitive(False)
+        if self.python_fold is True:
+            self.python_l.set_sensitive(True)
+        else:
+            self.python_l.set_sensitive(False)
 
 
 
@@ -319,23 +330,12 @@ class RemoveBlockDialog(gtk.Dialog):
 
         response = gtk.Dialog.run(self)
         if response == gtk.RESPONSE_OK:
-
-            if self.lib_e.entry.get_text()=='Yes':
-                self.lib=True
-            if self.include_e.entry.get_text()=='Yes':
-                self.include=True
-            '''if self.swig_e.entry.get_text()=='Yes':
-                self.swig=True
-            if self.python_e.entry.get_text()=='Yes':
-                self.python=True'''
-            if self.grc_e.entry.get_text()=='Yes':
-                self.grc=True
             try:
                 fold_name=self.mod_path.split('/')[-1]
                 modname=fold_name.split('-')[1]
                 if (fold_name.split('-')[0]=='gr'):
-                    rmblock=ModToolRemoveGRC(self.lib, self.include, self.swig, self.grc, self.python,self.mod_path)
-                    rmblock.setup(modname, self.block_name_e.get_active_text())
+                    rmblock=ModToolRemoveGRC(self.lib, self.include, self.swig, self.grc, self.python,modname, self.block_name_e.get_active_text(),self.mod_path)
+                    rmblock.setup()
                     rmblock.run()
                 else:
                     Errorbox('No GNU Radio module found in the given directory. Quitting.')

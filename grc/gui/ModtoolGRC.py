@@ -8,6 +8,10 @@ from optparse import OptionParser, OptionGroup
 import glob
 from Messages import project_folder_message
 
+class ModToolException(Exception):
+    """ Standard exception for modtool. """
+    def __init__(self,arg):
+        Errorbox(arg)
 
 class ModToolNewModuleGRC(ModToolNewModule):
 
@@ -15,8 +19,11 @@ class ModToolNewModuleGRC(ModToolNewModule):
 
         self._info['modname'] = modname
         if not re.match('[a-zA-Z0-9_]+', self._info['modname']):
-            Errorbox('Invalid module name.')
-            return False
+            '''Errorbox('Invalid module name.')'''
+            try:
+                raise ModToolException('Invalid module name.')
+            except ModToolException:
+                return False
         if not os.path.isdir(directory):
             Errorbox('Could not find the dir %s.' % directory)
             return False
@@ -34,15 +41,10 @@ class ModToolNewModuleGRC(ModToolNewModule):
             return False
         return True
 
-class ModToolAddGRC(ModToolAdd):
+class ModToolGRC(ModTool):
 
-    def __init__(self,directory):
-        ModTool.__init__(self)
-        self.directory=directory
-        self._add_cc_qa = False
-        self._add_py_qa = False
+    def setup(self):
 
-    def setup(self, modname, blocktype, blockname, arg):
         (options, self.args) = self.parser.parse_args()
         self.options = options
         self._dir = self.directory
@@ -51,7 +53,7 @@ class ModToolAddGRC(ModToolAdd):
         if not self._check_directory(self._dir):
             Errorbox("No GNU Radio module found in the given directory. Quitting.")
             return False
-        self._info['modname'] = modname
+        self._info['modname'] = self.modname
         if self._info['modname'] is None:
             Errorbox("No GNU Radio module found in the given directory. Quitting.")
             return False
@@ -66,11 +68,28 @@ class ModToolAddGRC(ModToolAdd):
             self._skip_subdirs['swig'] = True
         if not self._has_subdirs['grc']:
             self._skip_subdirs['grc'] = True
-        self._info['blockname'] = blockname
+        self._info['blockname'] = self.blockname
         self._setup_files()
-        self._info['yes'] = 'yes'
-        self._info['modname']=modname
-        self._info['blocktype'] = blocktype
+        self._info['yes'] = options.yes
+
+class ModToolAddGRC(ModToolAdd,ModToolGRC):
+
+    def __init__(self,directory, modname, blocktype, blockname, arg):
+        ModTool.__init__(self)
+        self.directory=directory
+        self.modname=modname
+        self.blocktype=blocktype
+        self.blockname=blockname
+        self.arg=arg
+        self._add_cc_qa = False
+        self._add_py_qa = False
+
+    def setup(self):
+
+
+        ModToolGRC.setup(self)
+        self._info['modname']=self.modname
+        self._info['blocktype'] = self.blocktype
         self._info['lang'] = 'cpp'
         if self._info['lang'] == 'c++':
             self._info['lang'] = 'cpp'
@@ -81,7 +100,7 @@ class ModToolAddGRC(ModToolAdd):
             Errorbox("Missing or skipping relevant subdir.")
             return False
 
-        self._info['blockname']=blockname
+        self._info['blockname']=self.blockname
 		
         if not re.match('[a-zA-Z0-9_]+', self._info['blockname']):
             Errorbox('Invalid block name.')
@@ -89,7 +108,7 @@ class ModToolAddGRC(ModToolAdd):
 
         self._info['fullblockname'] = self._info['modname'] + '_' + self._info['blockname']
         self._info['license'] = self.setup_choose_license()
-        self._info['arglist'] = arg
+        self._info['arglist'] = self.arg
 		
         if not (self._info['blocktype'] in ('noblock') or self._skip_subdirs['python']):
             self._add_py_qa = False
@@ -102,9 +121,9 @@ class ModToolAddGRC(ModToolAdd):
 
 
 
-class ModToolRemoveGRC(ModToolRemove):
+class ModToolRemoveGRC(ModToolRemove,ModToolGRC):
 
-    def __init__(self, lib, include, swig, grc, python,directory):
+    def __init__(self, lib, include, swig, grc, python,modname,blockname,directory):
         ModTool.__init__(self)
         self.lib=lib
         self.include=include
@@ -112,37 +131,15 @@ class ModToolRemoveGRC(ModToolRemove):
         self.python=python
         self.grc=grc
         self.directory=directory
+        self.blockname=blockname
+        self.modname=modname
         
 
-    def setup(self,modname,blockname):
-        self._info['modname']=modname
-        (options, self.args) = self.parser.parse_args()
-        self.options = options
-        self._dir = self.directory
-	print self._dir
-        print self._check_directory(self._dir)
-        if not self._check_directory(self._dir):
-            Errorbox("No GNU Radio module found in the given directory. Quitting.")
-            return False
-        if self._info['modname'] is None:
-            Errorbox("No GNU Radio module found in the given directory. Quitting.")
-            return False
-        print "GNU Radio module name identified: " + self._info['modname']
-        if self._info['version'] == '36' and os.path.isdir(os.path.join('include', self._info['modname'])):
-            self._info['version'] = '37'
-        if not self._has_subdirs['lib']:
-            self._skip_subdirs['lib'] = True
-        if not self._has_subdirs['python']:
-            self._skip_subdirs['python'] = True
-        if self._get_mainswigfile() is None or not self._has_subdirs['swig']:
-            self._skip_subdirs['swig'] = True
-        if not self._has_subdirs['grc']:
-            self._skip_subdirs['grc'] = True
-        self._info['blockname'] = blockname
-        self._setup_files()
-        self._info['yes'] = 'yes'
+    def setup(self):
 
-        self._info['pattern'] =blockname
+        ModToolGRC.setup(self)
+        self._info['modname']=self.modname
+        self._info['pattern'] =self.blockname
         if len(self._info['pattern']) == 0:
             self._info['pattern'] = '.'
     def _run_subdir(self, path, globs, makefile_vars, cmakeedit_func=None):
@@ -158,7 +155,7 @@ class ModToolRemoveGRC(ModToolRemove):
         if len(files_filt) == 0:
             print "None found."
             if ((self.lib is True and 'lib' in path.lower()) or (self.include is True and 'include' in path.lower()) or (self.swig is True and 'swig' in path.lower()) or (self.python is True and 'python' in path.lower()) or (self.grc is True and 'grc' in path.lower())):
-                project_folder_message('Files are not found in %s.\n' %path)
+                project_folder_message('Files are not found in "%s".\n' %path)
             return []
 		# 2. Delete files, Makefile entries and other occurences
         files_deleted = []
@@ -179,7 +176,7 @@ class ModToolRemoveGRC(ModToolRemove):
         	continue
             files_deleted.append(b)
             print "Deleting %s." % f
-            project_folder_message("Deleting %s.\n" % f)
+            project_folder_message('Deleting "%s".\n' % f)
             os.unlink(f)
             print "Deleting occurrences of %s from %s/CMakeLists.txt..." % (b, path)
             for var in makefile_vars:
