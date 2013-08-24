@@ -28,7 +28,7 @@ import re
 from MainWindow import MainWindow
 from .. base import ParseXML
 from subprocess import Popen, PIPE
-from ModtoolGRC import ModToolNewModuleGRC
+from ModtoolGRC import ModToolNewModuleGRC, ModToolException
 from Messages import project_folder_message
 from Preferences import add_OOT_module
 
@@ -53,12 +53,12 @@ class NewModuleDialog(gtk.Dialog):
 
 		
         self.fname_l = gtk.Label("Enter module name")
-        self.fname_hbox.pack_start(self.fname_l,False,False,7)	
+        self.fname_hbox.pack_start(self.fname_l,False)	
         self.fname_l.show()
         self.fname_e = gtk.Entry()
-        self.fname_e.set_size_request(370,-1)
-        self.fname_e.connect('changed', self.changed_folder)
-        self.fname_hbox.pack_end(self.fname_e,False)
+        self.fname_l.set_size_request(250,-1)
+        self.fname_e.connect('changed', self.handle_change)
+        self.fname_hbox.pack_start(self.fname_e,True)
         self.fname_e.show()
 
         self.path_hbox = gtk.HBox(gtk.FALSE,0)
@@ -66,35 +66,42 @@ class NewModuleDialog(gtk.Dialog):
         self.path_hbox.show()
 
         self.path_l = gtk.Label("Choose folder location")
-        self.path_hbox.pack_start(self.path_l,False,False,7)	
+        self.path_hbox.pack_start(self.path_l,False)	
         self.path_l.show()
         self.enter_but = gtk.Button("...")
         self.path_hbox.pack_end(self.enter_but,False)
         self.enter_but.set_size_request(70,-1)
-        self.enter_but.connect("pressed", self.chooser_c,)
+        self.enter_but.connect("pressed", self.choose_folder,)
         self.enter_but.show()
         self.path_e = gtk.Entry()
-        self.path_e.set_size_request(300,-1)
-        self.path_hbox.pack_end(self.path_e,False)
+        self.path_l.set_size_request(250,-1)
+        self.path_hbox.pack_start(self.path_e,True)
         self.path_e.show()
         self.show_all()
 
-    def changed_folder(self, fname_e):
+    def handle_change(self, fname_e):
         try: 
             if not self.path_e.get_text()=='':
-                self.path_e.set_text(self.path_e.get_text().replace(self.path_e.get_text().split('/')[-1],'gr-%s'%self.fname_e.get_text()))
+                if 'gr-' in self.path_e.get_text().split('/')[-1].lower():
+                    self.path_e.set_text(self.path_e.get_text().replace(self.path_e.get_text().split('/')[-1],'gr-%s'%self.fname_e.get_text()))
+                else:
+                    self.path_e.set_text('%s/gr-%s'%(self.path_e.get_text(), self.fname_e.get_text()))
         except NameError:
             pass
 
-    def chooser_c(self,w):	
+    def choose_folder(self,w):	
         self.fold_path_name  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
-        self.fold_path_name.set_current_folder(os.path.expanduser('~'))	
+
+        self.fold_path_name.set_current_folder(os.path.expanduser('~'))
         self.fold_path_name.show()
         response = self.fold_path_name.run()
         if response == gtk.RESPONSE_OK:
             self.dir_path=self.fold_path_name.get_filename()
-            self.path_e.set_text('%s/gr-%s' % (self.dir_path,self.fname_e.get_text()))
+            if self.fname_e.get_text():
+                self.path_e.set_text('%s/gr-%s' % (self.dir_path,self.fname_e.get_text()))
+            else:
+                self.path_e.set_text(self.dir_path)
             self.fold_path_name.destroy()
         if response == gtk.RESPONSE_CANCEL:
             self.fold_path_name.destroy()
@@ -104,26 +111,33 @@ class NewModuleDialog(gtk.Dialog):
 
     def run(self):
 
-        response = gtk.Dialog.run(self)
-        if response == gtk.RESPONSE_OK:
-            newmod=ModToolNewModuleGRC()
-            if newmod.setup(self.fname_e.get_text(),self.dir_path) is True:
-                newmod.run()
-                add_OOT_module(self.path_e.get_text())
-                project_folder_message('Out of tree module has been created in "%s".\n' % self.path_e.get_text())
-                build_path='%s/build' % (self.path_e.get_text())
-                Popen(['mkdir',build_path])
-                file_path='%s/apps/main.grc' %(self.path_e.get_text())
-                self.main_window.new_page()
-                self.main_window.get_page().set_file_path(file_path)
-                ParseXML.to_file(self.main_window.get_flow_graph().export_data(), self.main_window.get_page().get_file_path());
-                self.main_window.get_flow_graph().grc_file_path = '/%s' % self.main_window.get_page().get_file_path()
-                self.main_window.get_page().set_saved(True)
-            '''else:
+        run_again=True
+        while run_again:
+            response = gtk.Dialog.run(self)
+            if response == gtk.RESPONSE_OK:
+
+                newmod=ModToolNewModuleGRC()
+                try:
+                    newmod.setup(self.fname_e.get_text(),self.dir_path)
+                    newmod.run()
+                    add_OOT_module(self.path_e.get_text())
+                    project_folder_message('Out of tree module has been created in "%s".\n' % self.path_e.get_text())
+                    build_path='%s/build' % (self.path_e.get_text())
+                    Popen(['mkdir',build_path])
+                    file_path='%s/apps/main.grc' %(self.path_e.get_text())
+                    self.main_window.new_page()
+                    self.main_window.get_page().set_file_path(file_path)
+                    ParseXML.to_file(self.main_window.get_flow_graph().export_data(), self.main_window.get_page().get_file_path());
+                    self.main_window.get_flow_graph().grc_file_path = '/%s' % self.main_window.get_page().get_file_path()
+                    self.main_window.get_page().set_saved(True)
+                    run_again=False
+                except ModToolException:
+                    pass
+            elif response == gtk.RESPONSE_REJECT:
+                run_again=False
+            else:
                 self.destroy()
-                return response == gtk.RESPONSE_OK'''
-        elif response == gtk.RESPONSE_REJECT:
-            pass
+                return response == gtk.RESPONSE_OK
         self.destroy()
         return response == gtk.RESPONSE_OK
 

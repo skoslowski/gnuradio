@@ -245,8 +245,8 @@ CODE_WINDOW_DISPLAY = Action(
 	stock_id=gtk.STOCK_FIND,
 )
 NEW_PROJECT= Action(
-	label='_New project',
-	tooltip='Add new project folder',
+	label='_New module',
+	tooltip='Add new module',
 )
 ADD_BLOCK= Action(
 	label='_Add block',

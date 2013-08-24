@@ -24,7 +24,7 @@ import sys
 import os
 from os.path import expanduser
 from gnuradio import gr
-from ModtoolGRC import ModToolAddGRC, Errorbox
+from ModtoolGRC import ModToolAddGRC, Errorbox, ModToolException
 import re
 from Messages import project_folder_message
 from Preferences import get_OOT_module, add_OOT_module
@@ -43,7 +43,7 @@ class AddBlockDialog(gtk.Dialog):
 
 
 
-        self.set_size_request(600, 300)
+        self.set_size_request(600, 220)
         vbox = gtk.VBox()
         self.vbox.pack_start(vbox, True, True, 0)
        
@@ -53,12 +53,12 @@ class AddBlockDialog(gtk.Dialog):
         self.mod_hbox.show()
 
         self.mod_path=''
-        self.mod_name_l = gtk.Label("Choose block location (e.g. gr-howto)")
-        self.mod_hbox.pack_start(self.mod_name_l,False,False,7)	
+        self.mod_name_l = gtk.Label("Choose block location")
+        self.mod_hbox.pack_start(self.mod_name_l,False)	
         self.mod_name_l.show()
         self.mod_name_e = gtk.combo_box_new_text()
-        self.mod_name_e.set_size_request(310,-1)
-        self.mod_hbox.pack_end(self.mod_name_e,False)
+        self.mod_name_l.set_size_request(250,-1)
+        self.mod_hbox.pack_start(self.mod_name_e,True)
         self.mod_list=['mod1','mod2','mod3','mod4','mod5']
         check=False
         for i in self.mod_list:
@@ -77,7 +77,7 @@ class AddBlockDialog(gtk.Dialog):
                 if name == get_OOT_module(i).split('/')[-1]:
                     self.mod_path=get_OOT_module(i)
                     break
-        self.mod_name_e.connect('changed', self.changed_folder)
+        self.mod_name_e.connect('changed', self.handle_change)
         self.mod_name_e.show()
 
         self.block_name_hbox = gtk.HBox(gtk.FALSE,0)
@@ -86,11 +86,11 @@ class AddBlockDialog(gtk.Dialog):
 
 		
         self.block_name_l = gtk.Label("Enter block name")
-        self.block_name_hbox.pack_start(self.block_name_l,False,False,7)	
+        self.block_name_hbox.pack_start(self.block_name_l,False)	
         self.block_name_l.show()
         self.block_name_e = gtk.Entry()
-        self.block_name_e.set_size_request(310,-1)
-        self.block_name_hbox.pack_end(self.block_name_e,False)
+        self.block_name_l.set_size_request(250,-1)
+        self.block_name_hbox.pack_start(self.block_name_e,True)
         self.block_name_e.show()
 
         self.type_name_hbox = gtk.HBox(gtk.FALSE,0)
@@ -99,11 +99,11 @@ class AddBlockDialog(gtk.Dialog):
 
 		
         self.type_name_l = gtk.Label("Enter block type")
-        self.type_name_hbox.pack_start(self.type_name_l,False,False,7)	
+        self.type_name_hbox.pack_start(self.type_name_l,False)	
         self.type_name_l.show()
         self.type_name_e = gtk.Combo()
-        self.type_name_e.set_size_request(310,-1)
-        self.type_name_hbox.pack_end(self.type_name_e,False)
+        self.type_name_l.set_size_request(250,-1)
+        self.type_name_hbox.pack_start(self.type_name_e,True)
         self.type_name_e.entry.set_text("general")
         slist = [ "general","sink", "source", "sync", "decimator", "interpolator","tagged_stream", "hier", "noblock"]	
         self.type_name_e.set_popdown_strings(slist)
@@ -115,16 +115,16 @@ class AddBlockDialog(gtk.Dialog):
 
 		
         self.arg_name_l = gtk.Label("Enter args")
-        self.arg_name_hbox.pack_start(self.arg_name_l,False,False,7)	
+        self.arg_name_hbox.pack_start(self.arg_name_l,False)	
         self.arg_name_l.show()
         self.arg_name_e = gtk.Entry()
-        self.arg_name_e.set_size_request(310,-1)
-        self.arg_name_hbox.pack_end(self.arg_name_e,False)
+        self.arg_name_l.set_size_request(250,-1)
+        self.arg_name_hbox.pack_start(self.arg_name_e,True)
         self.arg_name_e.show()
 	
         self.show_all()
 
-    def changed_folder(self, mod_name_e):
+    def handle_change(self, mod_name_e):
         model = self.mod_name_e.get_model()
         index = self.mod_name_e.get_active()
         name = model[index][0]
@@ -153,26 +153,34 @@ class AddBlockDialog(gtk.Dialog):
 
 
     def run(self):
-
-        response = gtk.Dialog.run(self)
-        if response == gtk.RESPONSE_OK:
-            try:
-                fold_name=self.mod_path.split('/')[-1]
-                modname=fold_name.split('-')[1]
-                if fold_name.split('-')[0]=='gr':
-                    if os.path.isdir(self.mod_path):
-                        addblock=ModToolAddGRC(self.mod_path,modname, self.type_name_e.entry.get_text(), self.block_name_e.get_text(), self.arg_name_e.get_text())
-                        if addblock.setup() is True:
-                            addblock.run()
-                            project_folder_message('Block "%s" has been added in "%s".\n' % (self.block_name_e.get_text(), self.mod_path))
+        run_again=True
+        while run_again:
+            response = gtk.Dialog.run(self)
+            if response == gtk.RESPONSE_OK:
+                try:
+                    fold_name=self.mod_path.split('/')[-1]
+                    modname=fold_name.split('-')[1]
+                    if fold_name.split('-')[0]=='gr':
+                        if os.path.isdir(self.mod_path):
+                            addblock=ModToolAddGRC(self.mod_path,modname, self.type_name_e.entry.get_text(), self.block_name_e.get_text(), self.arg_name_e.get_text())
+                            try:
+                                addblock.setup()
+                                addblock.run()
+                                project_folder_message('Block "%s" has been added in "%s".\n' % (self.block_name_e.get_text(), self.mod_path))
+                                run_again=False
+                            except ModToolException:
+                                pass                               
+                        else:
+                            Errorbox('%s is not found'% self.mod_path)
                     else:
-                        Errorbox('%s is not found'% self.mod_path)
-                else:
+                        Errorbox('No GNU Radio module found in the given directory. Quitting.')
+                except IndexError:
                     Errorbox('No GNU Radio module found in the given directory. Quitting.')
-            except IndexError:
-                Errorbox('No GNU Radio module found in the given directory. Quitting.')
-        elif response == gtk.RESPONSE_REJECT:
-            pass
+            elif response == gtk.RESPONSE_REJECT:
+                run_again=False
+            else:
+                self.destroy()
+                return response == gtk.RESPONSE_OK            
         self.destroy()
         return response == gtk.RESPONSE_OK
 
