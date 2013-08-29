@@ -27,66 +27,51 @@ from gnuradio import gr
 import re
 from subprocess import Popen, PIPE
 import ConfigParser
+from ModtoolGRC import Errorbox
+from Preferences import get_editor, add_OOT_editors
 
 	
-class EditFilesDialog:
-    
+class EditFilesDialog(gtk.Dialog):
+
     def __init__(self):
 
-        self.root = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
-        self.root.set_size_request(600, 200)
-        self.root.set_position(gtk.WIN_POS_CENTER)
-        self.root.set_border_width(10)
-        self.root.set_title("Edit files")
-        self.root.connect("destroy",self.destroy)
-        vbox = gtk.VBox(gtk.FALSE,0)		
-        self.root.add(vbox)
-        vbox.show()
+        gtk.Dialog.__init__(self,
+            title="Edit files",
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_OK),
+        )
 
 
-        edit_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(edit_hbox,False,False,10)
-        edit_hbox.show()
 
-        edit_l = gtk.Label("Choose your editor's path")
-        edit_hbox.pack_start(edit_l,False,False,10)	
-        edit_l.show()
-        enter_but = gtk.Button("Enter")
-        edit_hbox.pack_end(enter_but,False)
-        enter_but.set_size_request(110,-1)
-        enter_but.connect("pressed", self.chooser_c,)
-        enter_but.show()
+        self.set_size_request(600, 150)
+        vbox = gtk.VBox()
+        self.vbox.pack_start(vbox, True, True, 0)
+
+
+        self.edit_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.edit_hbox,False,False,7)
+        self.edit_hbox.show()
+
+        self.edit_l = gtk.Label("Choose your editor's path")
+        self.edit_hbox.pack_start(self.edit_l,False)	
+        self.edit_l.show()
+        self.enter_but = gtk.Button("...")
+        self.edit_hbox.pack_end(self.enter_but,False)
+        self.enter_but.set_size_request(70,-1)
+        self.enter_but.connect("pressed", self.choose_path,)
+        self.enter_but.show()
         self.edit_e = gtk.Entry()
-        self.edit_e.set_size_request(200,-1)
-        edit_hbox.pack_end(self.edit_e,False)
+        self.edit_e.set_size_request(250,-1)
+        self.edit_hbox.pack_start(self.edit_e,True)
         self.edit_e.show()
-
+        self.show_all()
 	
-
-        end_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_end(end_hbox,False,False,10)
-        end_hbox.show()
-
-        okbut = gtk.Button("OK")
-        end_hbox.pack_end(okbut,False)
-        okbut.set_size_request(100,-1)
-        okbut.connect("pressed", self.collect_entry,)
-        okbut.show()
-        cancelbut = gtk.Button("Cancel")
-        cancelbut.connect_object("clicked", gtk.Widget.destroy, self.root)
-        end_hbox.pack_end(cancelbut,False)
-        cancelbut.set_size_request(100,-1)
-        cancelbut.show()
-	
-        self.root.show()
-        self.mainloop()
 
     def executable_filter(self, filter_info, data):
         path = filter_info[0]
         return os.access(path, os.X_OK)
 
 
-    def chooser_c(self,w):	
+    def choose_path(self,w):	
         self.file_path_name  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
 
@@ -104,48 +89,33 @@ class EditFilesDialog:
         if response == gtk.RESPONSE_CANCEL:
             self.file_path_name.destroy()
 
-	
-    def destroy(self,widget):
-        gtk.mainquit()
 		
 
-    def collect_entry(self, pwidget):
-        global editor
-        conf_path='%s/.gnuradio/config.conf' % os.path.expanduser("~")			
-        if os.path.exists(self.edit_e.get_text()):
-            editor=self.edit_e.get_text()
-            config = ConfigParser.ConfigParser()
-            config.read(conf_path)
-            if config.has_section('editors'):
-                config.remove_section('editors')
-                with open(conf_path, 'w') as configfile:
-                    config.write(configfile)
-                configadd = ConfigParser.ConfigParser()
-                configadd.add_section('editors')
-                configadd.set('editors', 'editor', editor)
-                with open(conf_path, 'a') as configfile:
-                    configadd.write(configfile)
+    def run(self):
+
+
+        run_again=True
+        while run_again:
+            response = gtk.Dialog.run(self)
+            if response == gtk.RESPONSE_OK:
+                print 1			
+                if os.path.exists(self.edit_e.get_text()):
+                    editor=self.edit_e.get_text()
+                    add_OOT_editors(editor)
+                    run_again=False
+                else:
+                    Errorbox('File not found')
+            elif response == gtk.RESPONSE_REJECT:
+                print 6
+                run_again=False
             else:
-                configadd = ConfigParser.ConfigParser()
-                configadd.add_section('editors')
-                configadd.set('editors', 'editor', editor)
-                with open(conf_path, 'a') as configfile:
-                    configadd.write(configfile)
-            os.chdir(editor.rsplit(editor.split('/')[-1], 1)[0])
-            Popen([editor.split('/')[-1]],stdout=PIPE)
-        else:
-            self.Errorbox('File not found')
-
-	
-    def mainloop(self):
-        gtk.mainloop()
+                print 5
+                self.destroy()
+                return response == gtk.RESPONSE_OK
+        self.destroy()
+        return response == gtk.RESPONSE_OK
 
 
-    def Errorbox(self,err_msg): 
-        message = gtk.MessageDialog(type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK)
-        message.set_markup(err_msg)
-        message.run()
-        message.destroy()
 
 def editor_path():
     global editor

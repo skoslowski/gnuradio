@@ -34,6 +34,7 @@ def load(platform):
     _config_parser.add_section('main')
     _config_parser.add_section('files_open')
     _config_parser.add_section('module_list')
+    _config_parser.add_section('OOT_editors')
     try: _config_parser.read(_prefs_file())
     except: pass
 def save():
@@ -90,7 +91,14 @@ def get_OOT_module(module):
     if _config_parser.get('module_list', module)=='':
         return None
     else:
-       return _config_parser.get('module_list', module) 
+        return _config_parser.get('module_list', module) 
+
+def get_editor():
+    if _config_parser.get('OOT_editors', 'editor')=='':
+        return None
+    else:
+        return _config_parser.get('OOT_editors', 'editor') 
+
 def add_OOT_module(module):
 
     if (not module=='') :
@@ -129,6 +137,17 @@ def add_OOT_module(module):
         _config_parser.set('module_list', 'mod3', '')
         _config_parser.set('module_list', 'mod4', '')
         _config_parser.set('module_list', 'mod5', '')
+        with open(_prefs_file(), 'w') as configfile:
+            _config_parser.write(configfile)
+
+def add_OOT_editors(editor):
+    if (not editor=='') :
+        _config_parser.remove_option('OOT_editors', 'editor')
+        _config_parser.set('OOT_editors', 'editor', editor)
+        with open(_prefs_file(), 'w') as configfile:
+            _config_parser.write(configfile)
+    elif not _config_parser.has_option('OOT_editors', 'editor'):
+        _config_parser.set('OOT_editors', 'editor', editor)
         with open(_prefs_file(), 'w') as configfile:
             _config_parser.write(configfile)
 

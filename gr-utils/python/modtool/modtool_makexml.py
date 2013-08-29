@@ -10,11 +10,11 @@
 #
 # GNU Radio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
+# along with GNU Radio; see the file COPYING. If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 #
@@ -26,7 +26,7 @@ import re
 import glob
 from optparse import OptionGroup
 
-from modtool_base import ModTool
+from modtool_base import ModTool, ModToolException
 from parser_cc_block import ParserCCBlock
 from grc_xml_generator import GRCXMLGenerator
 from cmakefile_editor import CMakeFileEditor
@@ -39,13 +39,13 @@ class ModToolMakeXML(ModTool):
     def __init__(self):
         ModTool.__init__(self)
 
-    def setup(self):
-        ModTool.setup(self)
-        options = self.options
+    def setup(self, options, args):
+        ModTool.setup(self, options, args)
+
         if options.block_name is not None:
             self._info['pattern'] = options.block_name
-        elif len(self.args) >= 2:
-            self._info['pattern'] = self.args[1]
+        elif len(args) >= 2:
+            self._info['pattern'] = args[1]
         else:
             self._info['pattern'] = raw_input('Which blocks do you want to parse? (Regex): ')
         if len(self._info['pattern']) == 0:
@@ -82,8 +82,8 @@ class ModToolMakeXML(ModTool):
 
     def _make_grc_xml_from_block_data(self, params, iosig, blockname):
         """ Take the return values from the parser and call the XML
-        generator. Also, check the makefile if the .xml file is in there.
-        If necessary, add. """
+generator. Also, check the makefile if the .xml file is in there.
+If necessary, add. """
         fname_xml = '%s_%s.xml' % (self._info['modname'], blockname)
         # Some adaptions for the GRC
         for inout in ('in', 'out'):
@@ -152,7 +152,6 @@ class ModToolMakeXML(ModTool):
                                    _type_translate
                                   )
         except IOError:
-            print "Can't open some of the files necessary to parse %s." % fname_cc
-            sys.exit(1)
-        return (parser.read_params(), parser.read_io_signature(), blockname)
+            raise ModToolException("Can't open some of the files necessary to parse %s." % fname_cc)
 
+        return (parser.read_params(), parser.read_io_signature(), blockname)

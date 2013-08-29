@@ -43,6 +43,7 @@ from AddBlockDialog import AddBlockDialog
 from RemoveBlockDialog import RemoveBlockDialog
 from InstallBlockDialog import InstallBlockDialog
 from EditFilesDialog import EditFilesDialog, editor_path
+from ModtoolGRC import Errorbox
 
 
 class ActionHandler:
@@ -366,18 +367,9 @@ class ActionHandler:
 	elif action == Actions.REMOVE_BLOCK:
             RemoveBlockDialog().run()
 	elif action == Actions.INSTALL_BLOCK:
-            InstallBlockDialog()
+            InstallBlockDialog().run()
 	elif action == Actions.EDIT_FILES:
-            edtr=gr.prefs().get_string('editors', 'editor', '')
-            if edtr:
-                os.chdir(edtr.rsplit(edtr.split('/')[-1], 1)[0])
-                Popen([edtr.split('/')[-1]],stdout=PIPE)
-            elif editor_path():
-                edtr=editor_path()
-                os.chdir(edtr.rsplit(edtr.split('/')[-1], 1)[0])
-                Popen([edtr.split('/')[-1]],stdout=PIPE)
-            else:
-                EditFilesDialog()
+            Errorbox('I will do it later :)')
         ##################################################
         # Param Modifications
         ##################################################

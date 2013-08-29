@@ -26,129 +26,113 @@ from os.path import expanduser
 from gnuradio import gr
 import re
 from subprocess import Popen, PIPE
-from Messages import open_doc_and_code_message
 import pexpect
+from ModtoolGRC import Errorbox
+from Messages import project_folder_message
 
 
 	
-class InstallBlockDialog:
+class InstallBlockDialog(gtk.Dialog):
     
 
 
     def __init__(self):
 
-        self.root = gtk.Window(type=gtk.WINDOW_TOPLEVEL)
-        self.root.set_size_request(600, 220)
-        self.root.set_position(gtk.WIN_POS_CENTER)
-        self.root.set_border_width(10)
-        self.root.set_title("Install block")
-        self.root.connect("destroy",self.destroy)
-        vbox = gtk.VBox(gtk.FALSE,0)		
-        self.root.add(vbox)
-        vbox.show()
 
-        path_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(path_hbox,False,False,10)
-        path_hbox.show()
+        gtk.Dialog.__init__(self,
+            title="Create new module",
+            buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_OK),
+        )
 
-        path_l = gtk.Label("Choose block location (e.g. gr-howto)")
-        path_hbox.pack_start(path_l,False,False,10)	
-        path_l.show()
-        okbut3 = gtk.Button("Enter")
-        path_hbox.pack_end(okbut3,False)
-        okbut3.set_size_request(110,-1)
-        okbut3.connect("pressed", self.chooser_c,)
-        okbut3.show()
+        self.set_size_request(600, 170)
+        vbox = gtk.VBox()
+        self.vbox.pack_start(vbox, True, True, 0)
+
+        self.path_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.path_hbox,False,False,7)
+        self.path_hbox.show()
+
+        self.path_l = gtk.Label("Choose block location")
+        self.path_hbox.pack_start(self.path_l,False)	
+        self.path_l.show()
+        self.enter_but = gtk.Button("...")
+        self.path_hbox.pack_end(self.enter_but,False)
+        self.enter_but.set_size_request(70,-1)
+        self.enter_but.connect("pressed", self.choose_folder,)
+        self.enter_but.show()
         self.path_e = gtk.Entry()
-        self.path_e.set_size_request(200,-1)
-        path_hbox.pack_end(self.path_e,False)
+        self.path_l.set_size_request(250,-1)
+        self.path_hbox.pack_start(self.path_e,True)
         self.path_e.show()
-		
-        password_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(password_hbox,False,False,10)
-        password_hbox.show()
+
+
+        self.password_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.password_hbox,False,False,7)
+        self.password_hbox.show()
 
 		
-        password_l = gtk.Label("Enter password [sudo]")
-        password_hbox.pack_start(password_l,False,False,10)	
-        password_l.show()
+        self.password_l = gtk.Label("Enter password [sudo]")
+        self.password_hbox.pack_start(self.password_l,False)	
+        self.password_l.show()
         self.password_e = gtk.Entry()
-        self.password_e.set_size_request(310,-1)
-        password_hbox.pack_end(self.password_e,False)
+        self.password_l.set_size_request(250,-1)
         self.password_e.set_visibility(False)
+        self.password_hbox.pack_start(self.password_e,True)
         self.password_e.show()
 
-        end_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_end(end_hbox,False,False,10)
-        end_hbox.show()
+        self.show_all()
 
-        self.okbut = gtk.Button("Install")
-        end_hbox.pack_end(self.okbut,False)
-        self.okbut.set_size_request(100,-1)
-        self.okbut.connect("pressed", self.collect_entry,)
-        self.okbut.show()
-        cancelbut = gtk.Button("Cancel")
-        cancelbut.connect_object("clicked", gtk.Widget.destroy, self.root)
-        end_hbox.pack_end(cancelbut,False)
-        cancelbut.set_size_request(100,-1)
-        cancelbut.show()
-	
-        self.root.show()
-        self.mainloop()
 
-	
-
-    def chooser_c(self,w):
-        self.fold_cr  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
+		
+    def choose_folder(self,w):	
+        self.fold_path_name  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
 
-		
-        self.fold_cr.show()
-        response = self.fold_cr.run()
+        self.fold_path_name.set_current_folder(os.path.expanduser('~'))
+        self.fold_path_name.show()
+        response = self.fold_path_name.run()
         if response == gtk.RESPONSE_OK:
-            self.new_f_name=self.fold_cr.get_filename()
-            self.path_e.set_text(self.new_f_name)
-            self.fold_cr.destroy()
+            self.path_e.set_text(self.fold_path_name.get_filename())
+            self.fold_path_name.destroy()
         if response == gtk.RESPONSE_CANCEL:
-            self.fold_cr.destroy()
+            self.fold_path_name.destroy()
 
-	
-    def destroy(self,widget):
-        gtk.mainquit()
+    def run(self):
 
-	
-	
+        run_again=True
+        while run_again:
+            response = gtk.Dialog.run(self)
+            if response == gtk.RESPONSE_OK:
 
-    def collect_entry(self, pwidget):
-
-        if os.path.isdir(self.path_e.get_text()):
-            os.chdir(self.path_e.get_text())
-            if True:
-                os.chdir(self.path_e.get_text()+'/build')
-                cmake_op=Popen(['cmake','-DENABLE_DOXYGEN=ON', '../'],stdout=PIPE)
-                open_doc_and_code_message(cmake_op.stdout.read())
-                open_doc_and_code_message('\n---------------------------------------------------\n')
-                #install_op=os.system('echo %s|sudo -S make install' %self.password_e.get_text())-DENABLE_DOXYGEN=ON 
-                child = pexpect.spawn('sudo make install')
-                child.expect(['ssword', pexpect.EOF])
-                child.sendline(self.password_e.get_text())
-                child.expect(pexpect.EOF)
-                open_doc_and_code_message(child.before)
-                open_doc_and_code_message('\n\n')
-                child.close()
-
+                if os.path.isdir(self.path_e.get_text()) and '/gr-' in self.path_e.get_text().lower():
+                    path=os.getcwd()
+                    os.chdir(self.path_e.get_text()+'/build')
+                    cmake_op=Popen(['cmake','-DENABLE_DOXYGEN=ON','../'],stdout=PIPE)
+                    project_folder_message(cmake_op.stdout.read())
+                    project_folder_message('\n---------------------------------------------------\n')
+                    #install_op=os.system('echo %s|sudo -S make install' %self.password_e.get_text())-DENABLE_DOXYGEN=ON 
+                    child = pexpect.spawn('sudo make install')
+                    child.expect(['ssword', pexpect.EOF])
+                    child.sendline(self.password_e.get_text())
+                    #i=child.expect(['Permission denied', pexpect.EOF, timeout=None])
+                    child.expect(pexpect.EOF, timeout=None)
+                    project_folder_message(child.before)
+                    project_folder_message('\n\n')
+                    child.close()
+                    os.chdir(path)
+                    run_again=False
+                else:
+                    Errorbox('No GNU Radio module found in the given directory. Quitting.')
+            elif response == gtk.RESPONSE_REJECT:
+                run_again=False
             else:
-                self.Errorbox('Installation Error.')
-        else:
-            self.Errorbox('No GNU Radio module found in the given directory. Quitting.')
-		
-    def mainloop(self):
-        gtk.mainloop()
+                self.destroy()
+                return response == gtk.RESPONSE_OK
+        self.destroy()
+        return response == gtk.RESPONSE_OK
+	
+
+
 
 	
 
-    def Errorbox(self,err_msg): 
-        message = gtk.MessageDialog(type=gtk.MESSAGE_ERROR, buttons=gtk.BUTTONS_OK)
-        message.set_markup(err_msg)
-        message.run()
-        message.destroy()

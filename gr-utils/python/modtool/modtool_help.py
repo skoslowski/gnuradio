@@ -10,11 +10,11 @@
 #
 # GNU Radio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
+# along with GNU Radio; see the file COPYING. If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 #
@@ -27,7 +27,7 @@ from templates import Templates
 
 def print_class_descriptions():
     ''' Go through all ModTool* classes and print their name,
-        alias and description. '''
+alias and description. '''
     desclist = []
     for gvar in globals().values():
         try:
@@ -35,10 +35,10 @@ def print_class_descriptions():
                 desclist.append((gvar.name, ','.join(gvar.aliases), gvar.__doc__))
         except (TypeError, AttributeError):
             pass
-    print 'Name      Aliases          Description'
+    print 'Name Aliases Description'
     print '====================================================================='
     for description in desclist:
-        print '%-8s  %-12s    %s' % description
+        print '%-8s %-12s %s' % description
 
 class ModToolHelp(ModTool):
     ''' Show some help. '''
@@ -47,7 +47,7 @@ class ModToolHelp(ModTool):
     def __init__(self):
         ModTool.__init__(self)
 
-    def setup(self):
+    def setup(self, options, args):
         pass
 
     def run(self):
@@ -63,4 +63,3 @@ class ModToolHelp(ModTool):
             print_class_descriptions()
             return
         cmd_dict[help_requested_for]().setup_parser().print_help()
-

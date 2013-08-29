@@ -10,11 +10,11 @@
 #
 # GNU Radio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
+# along with GNU Radio; see the file COPYING. If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 #
@@ -23,7 +23,7 @@
 import os
 from optparse import OptionGroup
 
-from modtool_base import ModTool
+from modtool_base import ModTool, ModToolException
 from util_functions import get_modname
 
 class ModToolInfo(ModTool):
@@ -32,9 +32,12 @@ class ModToolInfo(ModTool):
     aliases = ('getinfo', 'inf')
     def __init__(self):
         ModTool.__init__(self)
+        self._directory = None
+        self._python_readable = False
+        self._suggested_dirs = None
 
     def setup_parser(self):
-        " Initialise the option parser for 'gr_modtool info' "
+        """ Initialise the option parser for 'gr_modtool info' """
         parser = ModTool.setup_parser(self)
         parser.usage = '%prog info [options]. \n Call %prog without any options to run it interactively.'
         ogroup = OptionGroup(parser, "Info options")
@@ -45,28 +48,23 @@ class ModToolInfo(ModTool):
         parser.add_option_group(ogroup)
         return parser
 
-    def setup(self):
+    def setup(self, options, args):
         # Won't call parent's setup(), because that's too chatty
-        (self.options, self.args) = self.parser.parse_args()
+
+        self._directory = options.directory
+        self._python_readable = options.python_readable
+        self._suggested_dirs = options.suggested_dirs
 
     def run(self):
         """ Go, go, go! """
-        mod_info = {}
-        mod_info['base_dir'] = self._get_base_dir(self.options.directory)
+        mod_info = dict()
+        mod_info['base_dir'] = self._get_base_dir(self._directory)
         if mod_info['base_dir'] is None:
-            if self.options.python_readable:
-                print '{}'
-            else:
-                print "No module found."
-            exit(1)
+            raise ModToolException('{}' if self._python_readable else "No module found.")
         os.chdir(mod_info['base_dir'])
         mod_info['modname'] = get_modname()
         if mod_info['modname'] is None:
-            if self.options.python_readable:
-                print '{}'
-            else:
-                print "No module found."
-            exit(1)
+            raise ModToolException('{}' if self._python_readable else "No module found.")
         if self._info['version'] == '36' and os.path.isdir(os.path.join('include', mod_info['modname'])):
             self._info['version'] = '37'
         mod_info['version'] = self._info['version']
@@ -82,7 +80,7 @@ class ModToolInfo(ModTool):
         if build_dir is not None:
             mod_info['build_dir'] = build_dir
             mod_info['incdirs'] += self._get_include_dirs(mod_info)
-        if self.options.python_readable:
+        if self._python_readable:
             print str(mod_info)
         else:
             self._pretty_print(mod_info)
@@ -102,9 +100,9 @@ class ModToolInfo(ModTool):
 
     def _get_build_dir(self, mod_info):
         """ Figure out the build dir (i.e. where you run 'cmake'). This checks
-        for a file called CMakeCache.txt, which is created when running cmake.
-        If that hasn't happened, the build dir cannot be detected, unless it's
-        called 'build', which is then assumed to be the build dir. """
+for a file called CMakeCache.txt, which is created when running cmake.
+If that hasn't happened, the build dir cannot be detected, unless it's
+called 'build', which is then assumed to be the build dir. """
         base_build_dir = mod_info['base_dir']
         if 'is_component' in mod_info.keys():
             (base_build_dir, rest_dir) = os.path.split(base_build_dir)
@@ -131,24 +129,25 @@ class ModToolInfo(ModTool):
                     inc_dirs += line.replace('GNURADIO_RUNTIME_INCLUDE_DIRS:%s=' % path_or_internal, '').strip().split(';')
         except IOError:
             pass
-        if len(inc_dirs) == 0 and self.options.suggested_dirs is not None:
-            inc_dirs = [os.path.normpath(path) for path in self.options.suggested_dirs.split(':') if os.path.isdir(path)]
+        if len(inc_dirs) == 0 and self._suggested_dirs is not None:
+            inc_dirs = [os.path.normpath(path) for path in self._suggested_dirs.split(':') if os.path.isdir(path)]
         return inc_dirs
 
     def _pretty_print(self, mod_info):
         """ Output the module info in human-readable format """
         index_names = {'base_dir': 'Base directory',
-                       'modname':  'Module name',
-                       'is_component':  'Is GR component',
+                       'modname': 'Module name',
+                       'is_component': 'Is GR component',
                        'build_dir': 'Build directory',
                        'incdirs': 'Include directories'}
         for key in mod_info.keys():
             if key == 'version':
-                print "        API version: %s" % {
+                print " API version: %s" % {
                         '36': 'pre-3.7',
                         '37': 'post-3.7',
                         'autofoo': 'Autotools (pre-3.5)'
                         }[mod_info['version']]
             else:
                 print '%19s: %s' % (index_names[key], mod_info[key])
+
 

@@ -27,7 +27,9 @@ from gnuradio import gr
 from ModtoolGRC import ModToolAddGRC, Errorbox, ModToolException
 import re
 from Messages import project_folder_message
-from Preferences import get_OOT_module, add_OOT_module
+from Preferences import get_OOT_module, add_OOT_module, get_editor
+from EditFilesDialog import EditFilesDialog, editor_path
+from subprocess import Popen, PIPE
 
 	
 class AddBlockDialog(gtk.Dialog):
@@ -151,6 +153,21 @@ class AddBlockDialog(gtk.Dialog):
                         add_OOT_module(self.mod_path)
                         break
 
+    def open_files(self,edtr,h_file,cc_file,xml_file,py_file):
+        if os.path.exists(h_file): 
+            project_folder_message('Opening file "%s.h" from "%s".\n' %(self.block_name_e.get_text(), self.mod_path))
+            Popen([edtr,h_file],stdout=PIPE)
+        if os.path.exists(cc_file):
+            project_folder_message('Opening file "%s_impl.cc" from "%s".\n' %(self.block_name_e.get_text(), self.mod_path))
+            Popen([edtr,cc_file],stdout=PIPE)
+        if os.path.exists(xml_file):
+            project_folder_message('Opening file "%s_%s.xml" from "%s".\n' %(self.mod_path.split('/')[-1].split('-')[1], self.block_name_e.get_text(), self.mod_path))
+            Popen([edtr,xml_file],stdout=PIPE)
+        if os.path.exists(py_file):
+            project_folder_message('Opening file "%s.py" from "%s".\n' %(self.block_name_e.get_text(), self.mod_path))
+            Popen([edtr,py_file],stdout=PIPE)
+
+
 
     def run(self):
         run_again=True
@@ -167,6 +184,17 @@ class AddBlockDialog(gtk.Dialog):
                                 addblock.setup()
                                 addblock.run()
                                 project_folder_message('Block "%s" has been added in "%s".\n' % (self.block_name_e.get_text(), self.mod_path))
+                                edtr=get_editor()
+                                h_path='%s/include/%s/%s.h'%(self.mod_path,modname,self.block_name_e.get_text())
+                                cc_path='%s/lib/%s_impl.cc'%(self.mod_path,self.block_name_e.get_text())
+                                xml_path='%s/grc/%s_%s.xml'%(self.mod_path,modname,self.block_name_e.get_text())
+                                py_path='%s/python/%s.py'%(self.mod_path,self.block_name_e.get_text())
+                                if edtr is None:
+                                    EditFilesDialog().run()
+                                    edtr=get_editor()
+                                    self.open_files(edtr,h_path, cc_path, xml_path, py_path)
+                                else:
+                                    self.open_files(edtr,h_path, cc_path, xml_path, py_path)
                                 run_again=False
                             except ModToolException:
                                 pass                               

@@ -10,11 +10,11 @@
 #
 # GNU Radio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
+# along with GNU Radio; see the file COPYING. If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 #
@@ -34,16 +34,17 @@ class ModToolRemove(ModTool):
     """ Remove block (delete files and remove Makefile entries) """
     name = 'remove'
     aliases = ('rm', 'del')
+
     def __init__(self):
         ModTool.__init__(self)
 
-    def setup(self):
-        ModTool.setup(self)
-        options = self.options
+    def setup(self, options, args):
+        ModTool.setup(self, options, args)
+
         if options.block_name is not None:
             self._info['pattern'] = options.block_name
-        elif len(self.args) >= 2:
-            self._info['pattern'] = self.args[1]
+        elif len(args) >= 2:
+            self._info['pattern'] = args[1]
         else:
             self._info['pattern'] = raw_input('Which blocks do you want to delete? (Regex): ')
         if len(self._info['pattern']) == 0:
@@ -53,7 +54,7 @@ class ModToolRemove(ModTool):
         """ Go, go, go! """
         def _remove_cc_test_case(filename=None, ed=None):
             """ Special function that removes the occurrences of a qa*.cc file
-            from the CMakeLists.txt. """
+from the CMakeLists.txt. """
             if filename[:2] != 'qa':
                 return
             if self._info['version'] == '37':
@@ -78,7 +79,7 @@ class ModToolRemove(ModTool):
 
         def _remove_py_test_case(filename=None, ed=None):
             """ Special function that removes the occurrences of a qa*.{cc,h} file
-            from the CMakeLists.txt and the qa_$modname.cc. """
+from the CMakeLists.txt and the qa_$modname.cc. """
             if filename[:2] != 'qa':
                 return
             filebase = os.path.splitext(filename)[0]
@@ -114,12 +115,12 @@ class ModToolRemove(ModTool):
 
     def _run_subdir(self, path, globs, makefile_vars, cmakeedit_func=None):
         """ Delete all files that match a certain pattern in path.
-        path - The directory in which this will take place
-        globs - A tuple of standard UNIX globs of files to delete (e.g. *.xml)
-        makefile_vars - A tuple with a list of CMakeLists.txt-variables which
-                        may contain references to the globbed files
-        cmakeedit_func - If the CMakeLists.txt needs special editing, use this
-        """
+path - The directory in which this will take place
+globs - A tuple of standard UNIX globs of files to delete (e.g. *.xml)
+makefile_vars - A tuple with a list of CMakeLists.txt-variables which
+may contain references to the globbed files
+cmakeedit_func - If the CMakeLists.txt needs special editing, use this
+"""
         # 1. Create a filtered list
         files = []
         for g in globs:
@@ -156,4 +157,3 @@ class ModToolRemove(ModTool):
                 cmakeedit_func(b, ed)
         ed.write()
         return files_deleted
-

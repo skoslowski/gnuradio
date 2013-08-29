@@ -10,11 +10,11 @@
 #
 # GNU Radio is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with GNU Radio; see the file COPYING.  If not, write to
+# along with GNU Radio; see the file COPYING. If not, write to
 # the Free Software Foundation, Inc., 51 Franklin Street,
 # Boston, MA 02110-1301, USA.
 #
@@ -29,6 +29,10 @@ from util_functions import get_modname
 from templates import Templates
 
 
+class ModToolException(BaseException):
+    """ Standard exception for modtool classes. """
+    pass
+
 class ModTool(object):
     """ Base class for all modtool command classes. """
     def __init__(self):
@@ -41,13 +45,11 @@ class ModTool(object):
             self._has_subdirs[subdir] = False
             self._skip_subdirs[subdir] = False
         self.parser = self.setup_parser()
-        self.args = None
-        self.options = None
         self._dir = None
 
     def setup_parser(self):
         """ Init the option parser. If derived classes need to add options,
-        override this and call the parent function. """
+override this and call the parent function. """
         parser = OptionParser(add_help_option=False)
         parser.usage = '%prog ' + self.name + ' [options] <PATTERN> \n' + \
                        ' Call "%prog ' + self.name + '" without any options to run it interactively.'
@@ -72,20 +74,17 @@ class ModTool(object):
         parser.add_option_group(ogroup)
         return parser
 
-    def setup(self):
+    def setup(self, options, args):
         """ Initialise all internal variables, such as the module name etc. """
-        (options, self.args) = self.parser.parse_args()
         self._dir = options.directory
         if not self._check_directory(self._dir):
-            print "No GNU Radio module found in the given directory. Quitting."
-            sys.exit(1)
+            raise ModToolException('No GNU Radio module found in the given directory.')
         if options.module_name is not None:
             self._info['modname'] = options.module_name
         else:
             self._info['modname'] = get_modname()
         if self._info['modname'] is None:
-            print "No GNU Radio module found in the given directory. Quitting."
-            sys.exit(1)
+            raise ModToolException('No GNU Radio module found in the given directory.')
         print "GNU Radio module name identified: " + self._info['modname']
         if self._info['version'] == '36' and os.path.isdir(os.path.join('include', self._info['modname'])):
             self._info['version'] = '37'
@@ -98,18 +97,17 @@ class ModTool(object):
         if options.skip_grc or not self._has_subdirs['grc']:
             self._skip_subdirs['grc'] = True
         self._info['blockname'] = options.block_name
-        self.options = options
         self._setup_files()
         self._info['yes'] = options.yes
 
     def _setup_files(self):
         """ Initialise the self._file[] dictionary """
         if not self._skip_subdirs['swig']:
-            self._file['swig'] = os.path.join('swig',   self._get_mainswigfile())
-        self._file['qalib']    = os.path.join('lib',    'qa_%s.cc' % self._info['modname'])
-        self._file['pyinit']   = os.path.join('python', '__init__.py')
-        self._file['cmlib']    = os.path.join('lib',    'CMakeLists.txt')
-        self._file['cmgrc']    = os.path.join('grc',    'CMakeLists.txt')
+            self._file['swig'] = os.path.join('swig', self._get_mainswigfile())
+        self._file['qalib'] = os.path.join('lib', 'qa_%s.cc' % self._info['modname'])
+        self._file['pyinit'] = os.path.join('python', '__init__.py')
+        self._file['cmlib'] = os.path.join('lib', 'CMakeLists.txt')
+        self._file['cmgrc'] = os.path.join('grc', 'CMakeLists.txt')
         self._file['cmpython'] = os.path.join('python', 'CMakeLists.txt')
         if self._info['version'] in ('37', 'component'):
             self._info['includedir'] = os.path.join('include', self._info['modname'])
@@ -120,8 +118,8 @@ class ModTool(object):
 
     def _check_directory(self, directory):
         """ Guesses if dir is a valid GNU Radio module directory by looking for
-        CMakeLists.txt and at least one of the subdirs lib/, python/ and swig/.
-        Changes the directory, if valid. """
+CMakeLists.txt and at least one of the subdirs lib/, python/ and swig/.
+Changes the directory, if valid. """
         has_makefile = False
         try:
             files = os.listdir(directory)
@@ -148,7 +146,7 @@ class ModTool(object):
 
     def _get_mainswigfile(self):
         """ Find out which name the main SWIG file has. In particular, is it
-            a MODNAME.i or a MODNAME_swig.i? Returns None if none is found. """
+a MODNAME.i or a MODNAME_swig.i? Returns None if none is found. """
         modname = self._info['modname']
         swig_files = (modname + '.i',
                       modname + '_swig.i')
@@ -173,4 +171,3 @@ def get_class_dict(the_globals):
         except (TypeError, AttributeError):
             pass
     return classdict
-
