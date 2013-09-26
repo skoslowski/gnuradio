@@ -47,7 +47,6 @@ GR_PYTHON_INSTALL(FILES
     NewModuleDialog.py
     AddBlockDialog.py
     RemoveBlockDialog.py
-    InstallBlockDialog.py
     EditFilesDialog.py
     ModtoolGRC.py
     __init__.py

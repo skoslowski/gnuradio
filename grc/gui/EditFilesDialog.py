@@ -26,15 +26,21 @@ from os.path import expanduser
 from gnuradio import gr
 import re
 from subprocess import Popen, PIPE
-import ConfigParser
 from ModtoolGRC import Errorbox
 from Preferences import get_editor, add_OOT_editors
 
 	
 class EditFilesDialog(gtk.Dialog):
 
+    """
+    A dialog to edit the files related to module blocks.
+    """
+    
     def __init__(self):
 
+        """
+        dialog contructor.
+        """
         gtk.Dialog.__init__(self,
             title="Edit files",
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_OK),
@@ -46,32 +52,40 @@ class EditFilesDialog(gtk.Dialog):
         vbox = gtk.VBox()
         self.vbox.pack_start(vbox, True, True, 0)
 
+        #choose editor path.
+        self.editor_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.editor_hbox,False,False,7)
+        self.editor_hbox.show()
 
-        self.edit_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.edit_hbox,False,False,7)
-        self.edit_hbox.show()
-
-        self.edit_l = gtk.Label("Choose your editor's path")
-        self.edit_hbox.pack_start(self.edit_l,False)	
-        self.edit_l.show()
+        self.editor_label = gtk.Label("Choose your editor's path")
+        self.editor_hbox.pack_start(self.editor_label,False)	
+        self.editor_label.show()
         self.enter_but = gtk.Button("...")
-        self.edit_hbox.pack_end(self.enter_but,False)
+        self.editor_hbox.pack_end(self.enter_but,False)
         self.enter_but.set_size_request(70,-1)
         self.enter_but.connect("pressed", self.choose_path,)
         self.enter_but.show()
-        self.edit_e = gtk.Entry()
-        self.edit_e.set_size_request(250,-1)
-        self.edit_hbox.pack_start(self.edit_e,True)
-        self.edit_e.show()
+        self.editor_entity = gtk.Entry()
+        self.editor_entity.set_size_request(250,-1)
+        self.editor_hbox.pack_start(self.editor_entity,True)
+        self.editor_entity.show()
         self.show_all()
 	
 
     def executable_filter(self, filter_info, data):
+
+        '''
+        Filter to choose executable files.
+        '''
         path = filter_info[0]
         return os.access(path, os.X_OK)
 
 
-    def choose_path(self,w):	
+    def choose_path(self,w):
+
+        '''
+        choose the path to editor.
+        '''	
         self.file_path_name  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_OPEN,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
 
@@ -83,7 +97,7 @@ class EditFilesDialog(gtk.Dialog):
         response = self.file_path_name.run()
         if response == gtk.RESPONSE_OK:
             self.new_f_name=self.file_path_name.get_filename()
-            self.edit_e.set_text(self.new_f_name)
+            self.editor_entity.set_text(self.new_f_name)
             self.file_path_name.destroy()
 
         if response == gtk.RESPONSE_CANCEL:
@@ -93,23 +107,27 @@ class EditFilesDialog(gtk.Dialog):
 
     def run(self):
 
+        """
+        Run the dialog and get its response.
+        
+        Returns:
+            true if the response was accept
+        """
 
         run_again=True
+        #dialog box remains open even if error message is displayed.
         while run_again:
             response = gtk.Dialog.run(self)
-            if response == gtk.RESPONSE_OK:
-                print 1			
-                if os.path.exists(self.edit_e.get_text()):
-                    editor=self.edit_e.get_text()
+            if response == gtk.RESPONSE_OK:			
+                if os.path.exists(self.editor_entity.get_text()):
+                    editor=self.editor_entity.get_text()
                     add_OOT_editors(editor)
                     run_again=False
                 else:
                     Errorbox('File not found')
             elif response == gtk.RESPONSE_REJECT:
-                print 6
                 run_again=False
             else:
-                print 5
                 self.destroy()
                 return response == gtk.RESPONSE_OK
         self.destroy()

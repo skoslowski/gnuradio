@@ -1,3 +1,23 @@
+#
+# Copyright 2013 Free Software Foundation, Inc.
+#
+# This file is part of GNU Radio
+#
+# GNU Radio is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# GNU Radio is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Radio; see the file COPYING.  If not, write to
+# the Free Software Foundation, Inc., 51 Franklin Street,
+# Boston, MA 0217-1301, USA.
+#
 import gtk
 from gnuradio.modtool import ModToolNewModule, ModTool, ModToolAdd, util_functions, CMakeFileEditor, remove_pattern_from_file, ModToolRemove
 import sys
@@ -6,10 +26,8 @@ from gnuradio import gr
 import re
 from optparse import OptionParser, OptionGroup
 import glob
-from Messages import project_folder_message
+from Messages import OTM_message
 from datetime import datetime
-#from templates import Templates
-#from code_generator import get_template
 import Cheetah.Template
 from gnuradio.modtool.code_generator import get_template
 from gnuradio.modtool.templates import Templates
@@ -21,8 +39,12 @@ class ModToolException(Exception):
         Errorbox(arg)
 
 class ModToolNewModuleGRC(ModToolNewModule):
+  
+    """sub class of ModToolNewModule"""
 
     def setup(self,modname,directory):
+
+        """override the setup function of original module"""
 
         self._info['modname'] = modname
         if not re.match('[a-zA-Z0-9_]+', self._info['modname']):
@@ -43,10 +65,12 @@ class ModToolNewModuleGRC(ModToolNewModule):
 
 class ModToolGRC(ModTool):
 
+    """sub class of ModTool"""
+
     def setup(self):
 
-        '''(options, self.args) = self.parser.parse_args()
-        self.options = options'''
+        """override the setup function of original module"""
+
         self._dir = self.directory
         if not self._check_directory(self._dir):
             raise ModToolException("No GNU Radio module found in the given directory. Quitting.")
@@ -70,6 +94,8 @@ class ModToolGRC(ModTool):
 
 class ModToolAddGRC(ModToolAdd,ModToolGRC):
 
+    """sub class of ModToolAdd"""
+
     def __init__(self,directory, modname, blocktype, blockname, arg):
         ModTool.__init__(self)
         self.directory=directory
@@ -83,6 +109,8 @@ class ModToolAddGRC(ModToolAdd,ModToolGRC):
         self._license_file = None
 
     def setup(self):
+
+        """override the setup function of original module"""
 
         ModToolGRC.setup(self)
         self._info['modname']=self.modname
@@ -119,19 +147,18 @@ class ModToolAddGRC(ModToolAdd,ModToolGRC):
 
 class ModToolRemoveGRC(ModToolRemove,ModToolGRC):
 
-    def __init__(self, lib, include, swig, grc, python,modname,blockname,directory):
+    """sub class of ModToolRemove"""
+
+    def __init__(self, modname,blockname,directory):
         ModTool.__init__(self)
-        self.lib=lib
-        self.include=include
-        self.swig=swig
-        self.python=python
-        self.grc=grc
         self.directory=directory
         self.blockname=blockname
         self.modname=modname
         
 
     def setup(self):
+
+        """override the setup function of original module"""
 
         ModToolGRC.setup(self)
         self._info['modname']=self.modname
@@ -140,50 +167,6 @@ class ModToolRemoveGRC(ModToolRemove,ModToolGRC):
             self._info['pattern'] = '.'
 
 
-
-    '''def _run_subdir(self, path, globs, makefile_vars, cmakeedit_func=None):
-
-        files = []
-        for g in globs:
-            files = files + glob.glob("%s/%s"% (path, g))
-        files_filt = []
-        print "Searching for matching files in %s/:" % path
-        for f in files:
-            if re.search(self._info['pattern'], os.path.basename(f)) is not None:
-                files_filt.append(f)
-        if len(files_filt) == 0:
-            print "None found."
-            if ((self.lib is True and 'lib' in path.lower()) or (self.include is True and 'include' in path.lower()) or (self.swig is True and 'swig' in path.lower()) or (self.python is True and 'python' in path.lower()) or (self.grc is True and 'grc' in path.lower())):
-                project_folder_message('Files are not found in "%s".\n' %path)
-            return []
-		# 2. Delete files, Makefile entries and other occurences
-        files_deleted = []
-        ed = CMakeFileEditor('%s/CMakeLists.txt' % path)
-        for f in files_filt:
-            b = os.path.basename(f)
-            if 'lib' in f.lower():
-           	yes = self.lib
-            if 'include' in f.lower():
-            	yes = self.include
-            if 'swig' in f.lower():
-            	yes = self.swig
-            if 'python' in f.lower():
-            	yes = self.python
-            if 'grc' in f.lower():
-            	yes = self.grc
-            if yes is False:
-        	continue
-            files_deleted.append(b)
-            print "Deleting %s." % f
-            project_folder_message('Deleting "%s".\n' % f)
-            os.unlink(f)
-            print "Deleting occurrences of %s from %s/CMakeLists.txt..." % (b, path)
-            for var in makefile_vars:
-                ed.remove_value(var, b)
-            if cmakeedit_func is not None:
-                cmakeedit_func(b, ed)
-        ed.write()
-        return files_deleted'''
 
 
 

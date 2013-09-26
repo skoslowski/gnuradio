@@ -41,8 +41,6 @@ import ConfigParser
 from NewModuleDialog import NewModuleDialog
 from AddBlockDialog import AddBlockDialog
 from RemoveBlockDialog import RemoveBlockDialog
-from InstallBlockDialog import InstallBlockDialog
-from EditFilesDialog import EditFilesDialog, editor_path
 from ModtoolGRC import Errorbox
 
 
@@ -119,9 +117,9 @@ class ActionHandler:
             for action in Actions.get_all_actions(): action.set_sensitive(False) #set all actions disabled
             #enable a select few actions
             for action in (
-                Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW, Actions.INSTALL_BLOCK, Actions.EDIT_FILES,
+                Actions.APPLICATION_QUIT, Actions.FLOW_GRAPH_NEW,
                 Actions.FLOW_GRAPH_OPEN, Actions.FLOW_GRAPH_SAVE_AS, Actions.REMOVE_BLOCK,
-                Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY, Actions.NEW_PROJECT,
+                Actions.FLOW_GRAPH_CLOSE, Actions.ABOUT_WINDOW_DISPLAY, Actions.NEW_MODULE,
                 Actions.FLOW_GRAPH_SCREEN_CAPTURE, Actions.HELP_WINDOW_DISPLAY, Actions.ADD_BLOCK,
                 Actions.TYPES_WINDOW_DISPLAY, Actions.DOC_WINDOW_DISPLAY, Actions.CODE_WINDOW_DISPLAY,
             ): action.set_sensitive(True)
@@ -360,16 +358,12 @@ class ActionHandler:
             self.open_doc_code.open_document(self.get_flow_graph().get_selected_block(),True)
 	elif action == Actions.CODE_WINDOW_DISPLAY:
             self.open_doc_code.open_source_code(self.get_flow_graph().get_selected_block(),True)
-	elif action == Actions.NEW_PROJECT:
+	elif action == Actions.NEW_MODULE:
             NewModuleDialog(self.main_window).run()
 	elif action == Actions.ADD_BLOCK:
             AddBlockDialog().run()
 	elif action == Actions.REMOVE_BLOCK:
             RemoveBlockDialog().run()
-	elif action == Actions.INSTALL_BLOCK:
-            InstallBlockDialog().run()
-	elif action == Actions.EDIT_FILES:
-            Errorbox('I will do it later :)')
         ##################################################
         # Param Modifications
         ##################################################
@@ -493,6 +487,11 @@ class ActionHandler:
         ##################################################
         #update general buttons
         Actions.ERRORS_WINDOW_DISPLAY.set_sensitive(not self.get_flow_graph().is_valid())
+        Actions.ELEMENT_DELETE.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
+        Actions.BLOCK_PARAM_MODIFY.set_sensitive(bool(self.get_flow_graph().get_selected_block()))
+        Actions.BLOCK_ROTATE_CCW.set_sensitive(bool(self.get_flow_graph().get_selected_blocks()))
+        Actions.BLOCK_ROTATE_CW.set_sensitive(bool(self.get_flow_graph().get_selected_blocks()))
+        #execute a separate process to check the avalibility of documentation and source code.
         if bool(self.get_flow_graph().get_selected_blocks()) is True and len(self.get_flow_graph().get_selected_blocks())==1:
             DocCodeThread(self.get_flow_graph().get_selected_block(),'doc')
         else:
@@ -501,10 +500,6 @@ class ActionHandler:
             DocCodeThread(self.get_flow_graph().get_selected_block(),'code')
         else:
             Actions.CODE_WINDOW_DISPLAY.set_sensitive(False)
-        Actions.ELEMENT_DELETE.set_sensitive(bool(self.get_flow_graph().get_selected_elements()))
-        Actions.BLOCK_PARAM_MODIFY.set_sensitive(bool(self.get_flow_graph().get_selected_block()))
-        Actions.BLOCK_ROTATE_CCW.set_sensitive(bool(self.get_flow_graph().get_selected_blocks()))
-        Actions.BLOCK_ROTATE_CW.set_sensitive(bool(self.get_flow_graph().get_selected_blocks()))
         #update cut/copy/paste
         Actions.BLOCK_CUT.set_sensitive(bool(self.get_flow_graph().get_selected_blocks()))
         Actions.BLOCK_COPY.set_sensitive(bool(self.get_flow_graph().get_selected_blocks()))
@@ -545,7 +540,17 @@ class ActionHandler:
 
 
 class DocCodeThread (Thread):
+
+    """Execute a new process to check the availability of Documentation and source code"""
     def __init__(self,block,choose):
+
+        """
+        DocCodeThread constructor.
+        
+        Args:
+            block: an instance of block
+            choose: either for documentation or for source code
+        """
         Thread.__init__(self)
         self.block=block
         self.choose=choose

@@ -1,4 +1,25 @@
+#
+# Copyright 2013 Free Software Foundation, Inc.
+#
+# This file is part of GNU Radio
+#
+# GNU Radio is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# GNU Radio is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with GNU Radio; see the file COPYING.  If not, write to
+# the Free Software Foundation, Inc., 51 Franklin Street,
+# Boston, MA 0217-1301, USA.
+#
 
+"""Module to execute a new process for extracting lists of URL's from html index files for documentation and source codes."""
 from threading import Thread
 import lxml.html
 import contextlib
@@ -11,7 +32,9 @@ import signal
 import os
 import sys
 
+
 exitFlag = 0
+#define lists for URL's
 lst_doxygen=[]
 lst_sphinx=[]
 lst_blocks_lib=[]
@@ -57,7 +80,14 @@ lst_wxgui_python=[]
 
 
 class URLThread (Thread):
+    """Execute a new process to extract the lists of URL's from html index files"""
     def __init__(self, counter):
+        """
+        URLThread constructor.
+        
+        Args:
+            counter: delay in seconds to ping for internet connection
+        """
         Thread.__init__(self)
 	self.counter=counter
         self.setDaemon(True)
@@ -66,6 +96,7 @@ class URLThread (Thread):
         link_urls(self.counter)
 
 def link_urls(delay):
+    
     global lst_doxygen
     global lst_sphinx
     global exitFlag

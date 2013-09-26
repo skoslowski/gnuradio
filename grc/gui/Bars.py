@@ -100,11 +100,9 @@ MENU_BAR_LIST = (
 		Actions.FLOW_GRAPH_KILL,
 	]),
 	(gtk.Action('Project', '_Project', None, None), [
-		Actions.NEW_PROJECT,
+		Actions.NEW_MODULE,
 		Actions.ADD_BLOCK,
 		Actions.REMOVE_BLOCK,
-		Actions.EDIT_FILES,
-		Actions.INSTALL_BLOCK,
 	]),
 	(gtk.Action('Help', '_Help', None, None), [
 		Actions.HELP_WINDOW_DISPLAY,

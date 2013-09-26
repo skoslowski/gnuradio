@@ -93,6 +93,13 @@ def get_OOT_module(module):
     else:
         return _config_parser.get('module_list', module) 
 
+def get_active_OOT_module():
+    try:
+        module=_config_parser.get('module_list', 'mod1')+'/grc'
+        return module
+    except:
+        return ''
+
 def get_editor():
     if _config_parser.get('OOT_editors', 'editor')=='':
         return None

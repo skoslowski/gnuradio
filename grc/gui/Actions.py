@@ -244,7 +244,7 @@ CODE_WINDOW_DISPLAY = Action(
 	tooltip='Find source code',
 	stock_id=gtk.STOCK_FIND,
 )
-NEW_PROJECT= Action(
+NEW_MODULE= Action(
 	label='_New module',
 	tooltip='Add new module',
 )
@@ -255,14 +255,6 @@ ADD_BLOCK= Action(
 REMOVE_BLOCK= Action(
 	label='_Remove block',
 	tooltip='Remove block',
-)
-INSTALL_BLOCK= Action(
-	label='_Install block',
-	tooltip='Install block',
-)
-EDIT_FILES= Action(
-	label='_Edit files',
-	tooltip='Edit files',
 )
 ABOUT_WINDOW_DISPLAY = Action(
     label='_About',

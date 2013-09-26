@@ -26,247 +26,137 @@ from os.path import expanduser
 from gnuradio import gr
 import re
 from ModtoolGRC import ModToolRemoveGRC, Errorbox
-from Messages import project_folder_message
+from Messages import OTM_message
 from Preferences import get_OOT_module, add_OOT_module
 
 	
 class RemoveBlockDialog(gtk.Dialog):
+
+    """
+    A dialog to remove blocks from out of tree module.
+    """
     
     def __init__(self):
 
+        """
+        dialog contructor.
+        """
         gtk.Dialog.__init__(self,
             title="Remove block",
             buttons=(gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT, gtk.STOCK_OK, gtk.RESPONSE_OK),
         )
 
-
-        self.lib=False
-        self.include=False
-        self.swig=False
-        self.python=False
-        self.grc=False
-        self.grc_fold=False
-        self.lib_fold=False
-        self.include_fold=False
-        self.python_fold=False
-        self.swig_fold=False
-        self.set_size_request(500, 370)
+        self.set_size_request(500, 170)
         vbox = gtk.VBox()
         self.vbox.pack_start(vbox, True, True, 0)
 
-        self.mod_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.mod_hbox,False,False,7)
-        self.mod_hbox.show()
+        #choose module name.
+        self.module_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.module_hbox,False,False,7)
+        self.module_hbox.show()
 
         self.mod_path=''
-        self.mod_name_l = gtk.Label("Choose block location")
-        self.mod_hbox.pack_start(self.mod_name_l,False)	
-        self.mod_name_l.show()
-        self.mod_name_e = gtk.combo_box_new_text()
-        self.mod_name_l.set_size_request(250,-1)
-        self.mod_hbox.pack_start(self.mod_name_e,True)
+        self.module_label = gtk.Label("Choose block location")
+        self.module_hbox.pack_start(self.module_label,False)	
+        self.module_label.show()
+        self.module_entry = gtk.combo_box_new_text()
+        self.module_label.set_size_request(250,-1)
+        self.module_hbox.pack_start(self.module_entry,True)
+        #create a drop down list of five recently used modules.
         self.mod_list=['mod1','mod2','mod3','mod4','mod5']
         check=False
         for i in self.mod_list:
             if get_OOT_module(i) is not None:
-                self.mod_name_e.append_text(get_OOT_module(i).split('/')[-1])
+                self.module_entry.append_text(get_OOT_module(i).split('/')[-1])
                 check=True
         if check is False:
-            self.mod_name_e.append_text("No active module")
-        self.mod_name_e.append_text("Select some module")
-        self.mod_name_e.set_active(0)	
+            self.module_entry.append_text("No active module")
+        #choose some other module.
+        self.module_entry.append_text("Select some other module")
+        self.module_entry.set_active(0)
+        #get module location from /.grc config file using module name.	
         for i in self.mod_list:
-            model = self.mod_name_e.get_model()
-            index = self.mod_name_e.get_active()
+            model = self.module_entry.get_model()
+            index = self.module_entry.get_active()
             name = model[index][0]
             if get_OOT_module(i) is not None:
                 if name == get_OOT_module(i).split('/')[-1]:
                     self.mod_path=get_OOT_module(i)
                     break
-        self.mod_name_e.connect('changed', self.handle_change)
-        self.mod_name_e.show()	
+        self.module_entry.connect('changed', self.handle_change)
+        self.module_entry.show()	
 
-        self.block_name_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.block_name_hbox,False,False,7)
-        self.block_name_hbox.show()
+	#create an entry box to choose block name.
+        self.block_hbox = gtk.HBox(gtk.FALSE,0)
+        vbox.pack_start(self.block_hbox,False,False,7)
+        self.block_hbox.show()
 
-        self.block_name_l = gtk.Label("Select block name")
-        self.block_name_hbox.pack_start(self.block_name_l,False)	
-        self.block_name_l.show()
-        self.block_name_e = gtk.combo_box_new_text()
-        self.block_name_l.set_size_request(250,-1)
-        self.block_name_hbox.pack_start(self.block_name_e,True)
+        self.block_label = gtk.Label("Select block name")
+        self.block_hbox.pack_start(self.block_label,False)	
+        self.block_label.show()
+        #create a drop down list of all blocks present in a selected module.
+        self.block_entry = gtk.combo_box_new_text()
+        self.block_label.set_size_request(250,-1)
+        self.block_hbox.pack_start(self.block_entry,True)
         self.block_list=self.get_blk_list(self.mod_path)
         if not self.block_list:
-            self.block_name_e.set_sensitive(False)
+            self.block_entry.set_sensitive(False)
         else:
             for i in self.block_list:
-                self.block_name_e.append_text(i)
-            self.block_name_e.set_active(0)
-            self.active_block=self.block_name_e.get_model()[self.block_name_e.get_active()][0]
-            self.files_info(self.mod_path,self.active_block)	
+                self.block_entry.append_text(i)
+            self.block_entry.set_active(0)
+            self.active_block=self.block_entry.get_model()[self.block_entry.get_active()][0]	
 
-
-
-        self.block_name_e.connect('changed', self.choose_block)
-        self.block_name_e.show()
+        self.block_entry.show()
 		
 
-        self.lib_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.lib_hbox,False,False,7)
-        self.lib_hbox.show()
-
-		
-        self.lib_l = gtk.CheckButton("Delete files from lib/?")
-        self.lib_hbox.pack_start(self.lib_l,False,False,7)
-        self.lib_l.set_size_request(250,-1)
-        self.lib_l.connect("toggled", self.callback, 'lib')	
-        self.lib_l.show()
-        if not self.block_list or self.lib_fold is False:
-            self.lib_l.set_sensitive(False)
-
-        self.include_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.include_hbox,False,False,7)
-        self.include_hbox.show()
-
-		
-        self.include_l = gtk.CheckButton("Delete files from include/?")
-        self.include_hbox.pack_start(self.include_l,False,False,7)
-        self.include_l.set_size_request(250,-1)
-        self.include_l.connect("toggled", self.callback, 'include')	
-        self.include_l.show()
-        if not self.block_list or self.include_fold is False:
-            self.include_l.set_sensitive(False)
-
-        self.grc_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.grc_hbox,False,False,7)
-        self.grc_hbox.show()
-
-		
-        self.grc_l = gtk.CheckButton("Delete files from grc/?")
-        self.grc_hbox.pack_start(self.grc_l,False,False,7)
-        self.grc_l.set_size_request(250,-1)
-        self.grc_l.connect("toggled", self.callback, 'grc')	
-        self.grc_l.show()
-        if not self.block_list or self.grc_fold is False:
-            self.grc_l.set_sensitive(False)
-
-
-
-        self.swig_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.swig_hbox,False,False,7)
-        self.swig_hbox.show()
-
-		
-        self.swig_l = gtk.CheckButton("Delete files from swig/?")
-        self.swig_hbox.pack_start(self.swig_l,False,False,7)
-        self.swig_l.set_size_request(250,-1)
-        self.swig_l.connect("toggled", self.callback, 'swig')	
-        self.swig_l.show()
-        if not self.block_list or self.swig_fold is False:
-            self.swig_l.set_sensitive(False)
-
-
-
-        self.python_hbox = gtk.HBox(gtk.FALSE,0)
-        vbox.pack_start(self.python_hbox,False,False,7)
-        self.python_hbox.show()
-
-		
-        self.python_l = gtk.CheckButton("Delete files from python/?")
-        self.python_hbox.pack_start(self.python_l,False,False,7)
-        self.python_l.set_size_request(250,-1)
-        self.python_l.connect("toggled", self.callback, 'python')	
-        self.python_l.show()
-        if not self.block_list or self.python_fold is False:
-            self.python_l.set_sensitive(False)
 	
         self.show_all()
 
-    def callback(self, widget, data=None):
-        if data=='lib':
-            if widget.get_active():
-                self.lib=True
-            else:
-                self.lib=False
-        if data=='include':
-            if widget.get_active():
-                self.include=True
-            else:
-                self.include=False
-        if data=='grc':
-            if widget.get_active():
-                self.grc=True
-            else:
-                self.grc=False
-        if data=='python':
-            if widget.get_active():
-                self.python=True
-            else:
-                self.python=False
-        if data=='swig':
-            if widget.get_active():
-                self.swig=True
-            else:
-                self.swig=False
-
     def get_blk_list(self,path):
+
+        """
+        get a list of blocks present in selected module.
+        """
+
         blk_lst=[]
+        mod_name=path.split('/')[-1].split('-')[-1]
         if os.path.isdir(path):
             for dirs, subdirs, files in os.walk(path):
                 for f in files:
-                    if re.search(".xml\Z", f):
+                    if re.search(".xml\Z", f) and dirs==path+'/grc':
                         blk_name=f.split('.')[0].split('_')[-1]
                         if blk_name not in blk_lst:
                             blk_lst.append(blk_name)
-                    if re.search("_impl.cc\Z", f):
+                    if re.search("_impl.cc\Z", f) and dirs==path+'/lib':
                         blk_name=f.split('.')[0].split('_')[0]
                         if blk_name not in blk_lst:
                             blk_lst.append(blk_name)
-                    if re.search(".h\Z", f) and 'api' not in f.lower() and 'qa' not in f.lower() and 'impl' not in f.lower():
+                    if re.search(".h\Z", f) and 'api' not in f.lower() and 'qa' not in f.lower() and 'impl' not in f.lower() and  dirs==path+'/'+mod_name+'/include':
                         blk_name=f.split('.')[0]
                         if blk_name not in blk_lst:
                             blk_lst.append(blk_name)
-                    if re.search(".py\Z", f) and dirs.split('/')[-1]=='python' and 'init' not in f.lower():
+                    if re.search(".py\Z", f) and dirs.split('/')[-1]=='python' and 'init' not in f.lower()  and dirs==path+'/python':
                         blk_name=f.split('.')[0]
                         if blk_name not in blk_lst:
                             blk_lst.append(blk_name)
         return blk_lst
 
-    def files_info(self,path,blk):
-        self.grc_fold=False
-        self.lib_fold=False
-        self.include_fold=False
-        self.swig_fold=False
-        self.python_fold=False
-        if os.path.isdir(path):
-            for dirs, subdirs, files in os.walk(path):
-                for f in files:
-                    if re.search(blk+".xml\Z", f):
-                        self.grc_fold=True
-                    if re.search(blk+"_impl.cc\Z", f):
-                        self.lib_fold=True
-                    if re.search(blk+".h\Z", f) and 'api' not in f.lower() and 'qa' not in f.lower():
-                        self.include_fold=True
-                    if re.search(blk+".py\Z", f):
-                        self.python_fold=True
 
-    def choose_block(self, block_name_e):
-        
-        self.active_block=self.block_name_e.get_active_text()
-        if self.active_block is not None:
-            self.files_info(self.mod_path,self.active_block)
-            self.folders()
-                    
-                    
-                
+    def handle_change(self, module_entry):
+
+        """
+        any change in module selection will update the /.grc config file.
+        file chooser dialog can also be opened to choose some other module.
+        get a list of blocks present in selected module.
+        """
 
 
-    def handle_change(self, mod_name_e):
-        model = self.mod_name_e.get_model()
-        index = self.mod_name_e.get_active()
+        model = self.module_entry.get_model()
+        index = self.module_entry.get_active()
         name = model[index][0]
-        if name=="Select some module":
+        #open file chooser dialog
+        if name=="Select some other module":
             self.mod  = gtk.FileChooserDialog(title=None,action=gtk.FILE_CHOOSER_ACTION_CREATE_FOLDER,
                                   buttons=(gtk.STOCK_CANCEL,gtk.RESPONSE_CANCEL,gtk.STOCK_OK,gtk.RESPONSE_OK))
 
@@ -275,12 +165,14 @@ class RemoveBlockDialog(gtk.Dialog):
             response = self.mod.run()
             if response == gtk.RESPONSE_OK:
                 self.mod_path=self.mod.get_filename()
-                self.mod_name_e.append_text(self.mod_path.split('/')[-1])
-                self.mod_name_e.set_active(index+1)
+                self.module_entry.append_text(self.mod_path.split('/')[-1])
+                self.module_entry.set_active(index+1)
+                #set the choosen module as currently active module in /.grc config file
                 add_OOT_module(self.mod_path)
                 self.mod.destroy()
             if response == gtk.RESPONSE_CANCEL:
                 self.mod.destroy()
+        #set the choosen module as currently active module in /.grc config file
         else:
             for i in self.mod_list:
                 if get_OOT_module(i) is not None:
@@ -290,54 +182,31 @@ class RemoveBlockDialog(gtk.Dialog):
                         break
         no_of_blks=len(self.block_list)
         self.block_list=self.get_blk_list(self.mod_path)
+        print self.block_list
+        #display block list.
         if not self.block_list:
-            self.block_name_e.set_sensitive(False)
-            for i in range(0,no_of_blks):
-                self.block_name_e.remove_text(no_of_blks-1-i)
-            self.lib_l.set_sensitive(False)
-            self.include_l.set_sensitive(False)
-            self.swig_l.set_sensitive(False)
-            self.grc_l.set_sensitive(False)
-            self.python_l.set_sensitive(False)
+            self.block_entry.set_sensitive(False)
         else:
-            self.block_name_e.set_sensitive(True)
+            self.block_entry.set_sensitive(True)
             for i in range(0,no_of_blks):
-                self.block_name_e.remove_text(no_of_blks-1-i)
+                self.block_entry.remove_text(no_of_blks-1-i)
             for i in self.block_list:
-                self.block_name_e.append_text(i)
-            self.block_name_e.set_active(0)
-            self.active_block=self.block_name_e.get_active_text()
-            self.files_info(self.mod_path,self.active_block)
-            self.folders()
-
-    def folders(self):
-       
-        if self.lib_fold is True:
-            self.lib_l.set_sensitive(True)
-        else:
-            self.lib_l.set_sensitive(False)
-        if self.include_fold is True:
-            self.include_l.set_sensitive(True)
-        else:
-            self.include_l.set_sensitive(False)
-        if self.grc_fold is True:
-            self.grc_l.set_sensitive(True)
-        else:
-            self.grc_l.set_sensitive(False)
-        if self.swig_fold is True:
-            self.swig_l.set_sensitive(True)
-        else:
-            self.swig_l.set_sensitive(False)
-        if self.python_fold is True:
-            self.python_l.set_sensitive(True)
-        else:
-            self.python_l.set_sensitive(False)
-
-
+                self.block_entry.append_text(i)
+            self.block_entry.set_active(0)
+            self.active_block=self.block_entry.get_active_text()
 
 
     def run(self):
+
+        """
+        Run the dialog and get its response.
+        
+        Returns:
+            true if the response was accept
+        """
+
         run_again=True
+        #dialog box remains open even if error message is displayed.
         while run_again: 
             response = gtk.Dialog.run(self)       
             if response == gtk.RESPONSE_OK:
@@ -345,9 +214,11 @@ class RemoveBlockDialog(gtk.Dialog):
                     fold_name=self.mod_path.split('/')[-1]
                     modname=fold_name.split('-')[1]
                     if (fold_name.split('-')[0]=='gr'):
-                        rmblock=ModToolRemoveGRC(self.lib, self.include, self.swig, self.grc, self.python,modname, self.block_name_e.get_active_text(),self.mod_path)
+                        #borrowed version of ModToolRemove for GRC.
+                        rmblock=ModToolRemoveGRC(modname, self.block_entry.get_active_text(),self.mod_path)
                         rmblock.setup()
                         rmblock.run()
+                        OTM_message('Deleting all the occurences of block "%s" from "gr-%s". \n' %(self.block_entry.get_active_text(),modname))
                         run_again=False
                     else:
                         Errorbox('No GNU Radio module found in the given directory. Quitting.')
