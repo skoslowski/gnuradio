@@ -100,6 +100,9 @@ class Block(Element, QGraphicsRectItem):
         QGraphicsRectItem.setRotation(self, rot)
         self.get_param('_rotation').set_value(str(rot))
 
+    def set_highlighted(self, foo):
+        pass
+
     def testPorts(self):
         x, y, w, h = 50, -40, 200, 150
         PORT_H, PORT_W = 10, 10
