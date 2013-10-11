@@ -115,6 +115,9 @@ class Block(Element):
             self.get_sources().append(source)
         self.back_ofthe_bus(self.get_sources())
         #create the sink objects
+        print len(self._sources)
+        if self._sources:
+            print type(self._sources[0])
         self._sinks = list()
         for sink in map(lambda n: self.get_parent().get_parent().Port(block=self, n=n, dir='sink'), sinks):
             key = sink.get_key()
