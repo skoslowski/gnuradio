@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 from .. base.Port import Port as _Port
-from .. gui.Port import Port as _GUIPort
+from .. qtgui.Port import Port as _GUIPort
 import Constants
 
 def _get_source_from_virtual_sink_port(vsp):

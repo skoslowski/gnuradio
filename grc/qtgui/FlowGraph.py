@@ -18,7 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 from PyQt4.QtGui import *
-
+import PyQt4.QtCore as QtCore
 
 class FlowGraph(QGraphicsScene):
 
@@ -39,7 +39,7 @@ class FlowGraph(QGraphicsScene):
         #calculate the position coordinate
         if coor is None:
             # ToDo: random position
-            coor = 0, 0
+            coor = QtCore.QPointF(0, 0)
 
         #get the new block
         block = self.get_new_block(key)
