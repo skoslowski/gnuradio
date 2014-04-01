@@ -79,7 +79,7 @@ def _get_sink_from_virtual_sink_port(vsp, traversed=[]):
     )
     except: raise Exception, 'Could not resolve source for virtual sink port %s'%vsp
 
-class Port(_Port, _GUIPort):
+class Port(_GUIPort):
 
     def __init__(self, block, n, dir):
         """
@@ -100,13 +100,7 @@ class Port(_Port, _GUIPort):
             n['key'] = str(block._sink_count)
             block._sink_count += 1
         #build the port
-        _Port.__init__(
-            self,
-            block=block,
-            n=n,
-            dir=dir,
-        )
-        _GUIPort.__init__(self)
+        _GUIPort.__init__(self, block, n, dir)
         self._nports = n.find('nports') or ''
         self._vlen = n.find('vlen') or ''
         self._optional = bool(n.find('optional'))

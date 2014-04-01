@@ -87,8 +87,8 @@ class Platform(_Element):
             except ParseXML.XMLSyntaxError as e:
                 # print >> sys.stderr, 'Warning: Block validation failed:\n\t%s\n\tIgnoring: %s' % (e, xml_file)
                 pass
-            except Exception as e:
-                print >> sys.stderr, 'Warning: Block loading failed:\n\t%s\n\tIgnoring: %s' % (e, xml_file)
+            #except Exception as e:
+            #    print >> sys.stderr, 'Warning: Block loading failed:\n\t%s\n\tIgnoring: %s' % (e, xml_file)
 
     def iter_xml_files(self):
         """Iterator for block descriptions and category trees"""

@@ -19,7 +19,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 import os
 from gnuradio import gr
-from .. base.Platform import Platform as _Platform
 from .. qtgui.Platform import Platform as _GUIPlatform
 from FlowGraph import FlowGraph as _FlowGraph
 from Connection import Connection as _Connection
@@ -34,7 +33,7 @@ import Constants
 
 COLORS = [(name, color) for name, key, sizeof, color in Constants.CORE_TYPES]
 
-class Platform(_Platform, _GUIPlatform):
+class Platform(_GUIPlatform):
 
     def __init__(self):
         """
@@ -45,7 +44,7 @@ class Platform(_Platform, _GUIPlatform):
         #convert block paths to absolute paths
         block_paths = set(map(os.path.abspath, BLOCKS_DIRS))
         #init
-        _Platform.__init__(
+        _GUIPlatform.__init__(
             self,
             name='GNU Radio Companion',
             version=gr.version(),
@@ -58,7 +57,6 @@ class Platform(_Platform, _GUIPlatform):
             generator=Generator,
             colors=COLORS,
         )
-        _GUIPlatform.__init__(self)
 
     ##############################################
     # Constructors

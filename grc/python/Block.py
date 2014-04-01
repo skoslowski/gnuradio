@@ -17,11 +17,10 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
-from .. base.Block import Block as _Block
 from .. qtgui.Block import Block as _GUIBlock
 import extract_docs
 
-class Block(_Block, _GUIBlock):
+class Block(_GUIBlock):
 
     def is_virtual_sink(self): return self.get_key() == 'virtual_sink'
     def is_virtual_source(self): return self.get_key() == 'virtual_source'
@@ -53,12 +52,7 @@ class Block(_Block, _GUIBlock):
         self._bus_structure_source = n.find('bus_structure_source') or ''
         self._bus_structure_sink = n.find('bus_structure_sink') or ''
         #build the block
-        _Block.__init__(
-            self,
-            flow_graph=flow_graph,
-            n=n,
-        )
-        _GUIBlock.__init__(self)
+        _GUIBlock.__init__(self, flow_graph, n)
 
     def get_bus_structure(self, direction):
         if direction == 'source':
@@ -83,7 +77,7 @@ class Block(_Block, _GUIBlock):
         Call the base class validate.
         Evaluate the checks: each check must evaluate to True.
         """
-        _Block.validate(self)
+        _GUIBlock.validate(self)
         #evaluate the checks
         for check in self._checks:
             check_res = self.resolve_dependencies(check)
@@ -96,7 +90,7 @@ class Block(_Block, _GUIBlock):
         """
         Add and remove ports to adjust for the nports.
         """
-        _Block.rewrite(self)
+        _GUIBlock.rewrite(self)
 
         # adjust nports
         for ports in (self.get_sources(), self.get_sinks()):
@@ -152,9 +146,6 @@ class Block(_Block, _GUIBlock):
         doc = self._doc.strip('\n').replace('\\\n', '')
         #merge custom doc with doxygen docs
         return '\n'.join([doc, extract_docs.extract(self.get_key())]).strip('\n')
-
-    def get_category(self):
-        return _Block.get_category(self)
 
     def get_imports(self):
         """

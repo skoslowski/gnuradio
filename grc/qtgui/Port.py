@@ -1,22 +1,31 @@
 from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt
 
+from .. base.Port import Port as _Port
+
 import Utils
 
 PORT_MARKUP_TMPL="""\
 <span foreground="black" font_desc="Sans 7.5">$encode($port.get_name())</span>"""
 
 
-class Port(QGraphicsRectItem):
+class Port(_Port, QGraphicsRectItem):
 
-    def __init__(self, parent=None):
+    def __init__(self, block, n, dir):
         """
         Port constructor.
         Add graphics related params to the block.
         """
-        self.W, self.H = 10, 10
 
-        QGraphicsRectItem.__init__(self, -self.W, -self.H, self.W, self.H, parent)
+        _Port.__init__(
+            self,
+            block=block,
+            n=n,
+            dir=dir,
+        )
+
+        self.W, self.H = 10, 10
+        QGraphicsRectItem.__init__(self, -self.W, -self.H, self.W, self.H, None)
         self.setFlags(QGraphicsItem.ItemIsMovable |
                       QGraphicsItem.ItemIsFocusable |
                       QGraphicsItem.ItemIsSelectable |

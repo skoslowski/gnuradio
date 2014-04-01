@@ -14,6 +14,7 @@ from Constants import \
     PORT_SEPARATION, LABEL_SEPARATION, \
     PORT_BORDER_SEPARATION, POSSIBLE_ROTATIONS
 
+from .. base.Block import Block as _Block
 
 
 BLOCK_MARKUP_TMPL="""\
@@ -21,14 +22,20 @@ BLOCK_MARKUP_TMPL="""\
 <span foreground="$foreground" font_desc="Sans 8"><b>$encode($block.get_name())</b></span>"""
 
 
-class Block(QGraphicsRectItem):
+class Block(_Block, QGraphicsRectItem):
     """The graphical signal block."""
 
-    def __init__(self, parent=None):
+    def __init__(self, flow_graph, n):
         """
         Block constructor.
         Add graphics related params to the block.
         """
+
+        _Block.__init__(
+            self,
+            flow_graph=flow_graph,
+            n=n,
+        )
 
         #add the position param
         self.get_params().append(self.get_parent().get_parent().Param(
@@ -51,7 +58,7 @@ class Block(QGraphicsRectItem):
                 'hide': 'all',
             })
         ))
-        QGraphicsRectItem.__init__(self, parent)
+        QGraphicsRectItem.__init__(self, None)
 
         if not isinstance(self.get_parent(), FlowGraph):
             return
@@ -68,7 +75,6 @@ class Block(QGraphicsRectItem):
 
         #self.setG (Qt.ActionsContextMenu)
         #self.addActions((parent.main_window.menuEdit.actions()))
-
 
     def updateLabel(self):
         #display the params
