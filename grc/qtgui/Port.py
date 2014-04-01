@@ -9,16 +9,14 @@ PORT_MARKUP_TMPL="""\
 
 class Port(QGraphicsRectItem):
 
-    def __init__(self, parent=None, scence=None):
+    def __init__(self, parent=None):
         """
-        Port contructor.
+        Port constructor.
         Add graphics related params to the block.
         """
-        PORT_H, PORT_W = 10, 10
+        self.W, self.H = 10, 10
 
-        QGraphicsRectItem.__init__(self, parent, scence)
-        #self.setRect(-PORT_W, -PORT_H, PORT_W, PORT_H)
-        self.setRect(100, 20, PORT_W, PORT_H)
+        QGraphicsRectItem.__init__(self, -self.W, -self.H, self.W, self.H, parent)
         self.setFlags(QGraphicsItem.ItemIsMovable |
                       QGraphicsItem.ItemIsFocusable |
                       QGraphicsItem.ItemIsSelectable |
@@ -26,7 +24,6 @@ class Port(QGraphicsRectItem):
         self.setBrush(QColor(255, 255, 0))
 
         self.text = QGraphicsTextItem(self)
-        #print "you should see something now!"
 
     def updateLabel(self):
         print "Port updateLabel"

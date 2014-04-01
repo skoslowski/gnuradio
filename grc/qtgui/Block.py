@@ -21,10 +21,10 @@ BLOCK_MARKUP_TMPL="""\
 <span foreground="$foreground" font_desc="Sans 8"><b>$encode($block.get_name())</b></span>"""
 
 
-class Block(Element, QGraphicsRectItem):
+class Block(QGraphicsRectItem):
     """The graphical signal block."""
 
-    def __init__(self, parent=None, scence=None):
+    def __init__(self, parent=None):
         """
         Block constructor.
         Add graphics related params to the block.
@@ -51,8 +51,7 @@ class Block(Element, QGraphicsRectItem):
                 'hide': 'all',
             })
         ))
-        Element.__init__(self)
-        QGraphicsRectItem.__init__(self, parent, scence)
+        QGraphicsRectItem.__init__(self, parent)
 
         if not isinstance(self.get_parent(), FlowGraph):
             return
@@ -69,25 +68,13 @@ class Block(Element, QGraphicsRectItem):
 
         #self.setG (Qt.ActionsContextMenu)
         #self.addActions((parent.main_window.menuEdit.actions()))
-        for port in self.get_ports_gui():
-            port.updateLabel()
 
-        #self.ports = []
-        #PORT_H = 20
-        #PORT_W = 20
-        #for i in range(3):
-        # y_port = (i + 0.5) * h / 3 - PORT_H / 2
-        # port = QGraphicsRectItem(self)
-        # #port.setBrush(QColor(255,255,255))
-        # #port.setPos(w, 0)
-        # port.setRect(0, y_port, PORT_W, PORT_H)
-        ## port.setFlag(QGraphicsItem.ItemIsFocusable)
-        ## self.ports.append(port)
-        self.testPorts()
 
     def updateLabel(self):
         #display the params
-        self.update()
+        for port in self.get_ports_gui():
+            port.updateLabel()
+            port.setParentItem(self)
 
         markups = [param.get_markup()
                    for param in self.get_params()
@@ -128,47 +115,3 @@ class Block(Element, QGraphicsRectItem):
 
     def set_highlighted(self, foo):
         pass
-
-    def testPorts(self):
-        x, y, w, h = 50, -40, 200, 150
-        PORT_H, PORT_W = 10, 10
-
-        ports = self.get_ports_gui()
-        print "ports: " + str(len(ports) )
-
-        for port in ports:
-            print "ports type is" + str(type(port))
-
-        #print "src ports = " + str()
-
-        self.source_ports = []
-        for port in ports:
-            self.source_ports.append(port)
-
-        return
-        # source port(s)
-        num_sink_ports = 3
-        self.source_ports = []
-        for i in range(num_sink_ports):
-            y_port = (i + 0.5) * h / num_sink_ports - PORT_H / 2
-            port = QGraphicsRectItem(self)
-            port.setBrush(QColor(255,255,255))
-            port.setRect(-PORT_W, y_port, PORT_W, PORT_H)
-            port.setFlag(QGraphicsItem.ItemIsFocusable)
-            self.source_ports.append(port)
-
-        # sink port(s)
-        num_source_ports = 4
-        self.sink_ports = []
-        for i in range(num_source_ports):
-            y_port = (i + 0.5) * h / num_source_ports - PORT_H / 2
-            port = QGraphicsRectItem(self)
-            port.setBrush(QColor(255,255,255))
-            port.setPos(w, 0)
-            port.setRect(0, y_port, PORT_W, PORT_H)
-            port.setFlag(QGraphicsItem.ItemIsFocusable)
-
-            self.sink_ports.append(port)
-
-
-        print port.parentItem()

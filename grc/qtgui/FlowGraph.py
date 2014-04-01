@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 from PyQt4.QtGui import *
 import PyQt4.QtCore as QtCore
 
+
 class FlowGraph(QGraphicsScene):
 
     def __init__(self):
@@ -60,7 +61,6 @@ class FlowGraph(QGraphicsScene):
             child.setRotation(eval(child.get_param('_rotation').get_value()))
 
         self.update()
-
 
     def update(self):
         """

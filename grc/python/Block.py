@@ -74,6 +74,7 @@ class Block(_Block, _GUIBlock):
             return clean_bus_structure
     
         except: return ''
+
     def throttle(self): return bool(self._throttle)
 
     def validate(self):
