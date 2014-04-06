@@ -22,7 +22,7 @@ BLOCK_MARKUP_TMPL="""\
 <span foreground="$foreground" font_desc="Sans 8"><b>$encode($block.get_name())</b></span>"""
 
 
-class Block(_Block, QGraphicsRectItem):
+class Block(QGraphicsRectItem, _Block):
     """The graphical signal block."""
 
     def __init__(self, flow_graph, n):
@@ -31,11 +31,8 @@ class Block(_Block, QGraphicsRectItem):
         Add graphics related params to the block.
         """
 
-        _Block.__init__(
-            self,
-            flow_graph=flow_graph,
-            n=n,
-        )
+        QGraphicsRectItem.__init__(self)
+        _Block.__init__(self, flow_graph,  n)
 
         #add the position param
         self.get_params().append(self.get_parent().get_parent().Param(
@@ -58,7 +55,6 @@ class Block(_Block, QGraphicsRectItem):
                 'hide': 'all',
             })
         ))
-        QGraphicsRectItem.__init__(self, None)
 
         if not isinstance(self.get_parent(), FlowGraph):
             return
@@ -80,7 +76,6 @@ class Block(_Block, QGraphicsRectItem):
         #display the params
         for port in self.get_ports_gui():
             port.updateLabel()
-            port.setParentItem(self)
 
         markups = [param.get_markup()
                    for param in self.get_params()
@@ -93,18 +88,31 @@ class Block(_Block, QGraphicsRectItem):
         self.updateSize()
 
     def updateSize(self):
+        text_height = self.text.shape().boundingRect().height()
+        sink_ports_height, source_ports_height = [
+            # padding top/bottom
+            2 * PORT_BORDER_SEPARATION +
+            # total height of all ports
+            sum(port.boundingRect().height() for port in ports) +
+            # space between ports
+            PORT_SEPARATION * (len(ports) - 1)
+
+            for ports in (self.get_sinks_gui(), self.get_sources_gui())
+        ]
+
         width = self.text.shape().boundingRect().width()
-        height = max(*(
-            # text height
-            [self.text.shape().boundingRect().height()] +
-            # port height
-            [2 * PORT_BORDER_SEPARATION +  # space above and below
-             sum(port.H for port in ports) +  # ports themselves
-             PORT_SEPARATION * (len(ports) - 1)  # port spacing
-                for ports in (self.get_sources_gui(), self.get_sinks_gui())]  # for ins and outs
-        ))
+        height = max(sink_ports_height, text_height, source_ports_height)
         self.setRect(0, 0, width, height)
-        # ToDo: Relocate Ports
+
+        port_y = PORT_BORDER_SEPARATION + (height - sink_ports_height) / 2.0
+        for sink_port in self.get_sinks_gui():
+            sink_port.updateSize(port_y)
+            port_y += sink_port.boundingRect().height() + PORT_SEPARATION
+
+        port_y = PORT_BORDER_SEPARATION + (height - source_ports_height) / 2.0
+        for source_port in self.get_sources_gui():
+            source_port.updateSize(port_y)
+            port_y += source_port.boundingRect().height() + PORT_SEPARATION
 
     def setPos(self, *args):
         QGraphicsRectItem.setPos(self, *args)

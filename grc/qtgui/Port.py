@@ -2,6 +2,7 @@ from PyQt4.QtGui import *
 from PyQt4.QtCore import Qt
 
 from .. base.Port import Port as _Port
+from . FlowGraph import FlowGraph
 
 import Utils
 
@@ -9,7 +10,7 @@ PORT_MARKUP_TMPL="""\
 <span foreground="black" font_desc="Sans 7.5">$encode($port.get_name())</span>"""
 
 
-class Port(_Port, QGraphicsRectItem):
+class Port(QGraphicsRectItem, _Port):
 
     def __init__(self, block, n, dir):
         """
@@ -17,17 +18,13 @@ class Port(_Port, QGraphicsRectItem):
         Add graphics related params to the block.
         """
 
-        _Port.__init__(
-            self,
-            block=block,
-            n=n,
-            dir=dir,
-        )
+        QGraphicsRectItem.__init__(self, block)
+        _Port.__init__(self, block, n, dir)
 
-        self.W, self.H = 10, 10
-        QGraphicsRectItem.__init__(self, -self.W, -self.H, self.W, self.H, None)
-        self.setFlags(QGraphicsItem.ItemIsMovable |
-                      QGraphicsItem.ItemIsFocusable |
+        if not isinstance(block.get_parent(), FlowGraph):
+            return
+
+        self.setFlags(QGraphicsItem.ItemIsFocusable |
                       QGraphicsItem.ItemIsSelectable |
                       QGraphicsItem.ItemIsPanel)
         self.setBrush(QColor(255, 255, 0))
@@ -35,32 +32,22 @@ class Port(_Port, QGraphicsRectItem):
         self.text = QGraphicsTextItem(self)
 
     def updateLabel(self):
-        print "Port updateLabel"
-        label = Utils.parse_template(PORT_MARKUP_TMPL, port=self)
-        print "this is the label = " + label
         self.text.setHtml('<b>{label}</b>'.format(
-            label=label
+            label=Utils.parse_template(PORT_MARKUP_TMPL, port=self)
         ))
-        print self.shape().boundingRect()
         rect = self.text.shape().boundingRect()
         self.setRect(0, 0, rect.width(), rect.height())
-        #
-        ##markups = [param.get_markup()
-        ## for param in self.get_params()
-        ## if param.get_hide() not in ('all', 'part')]
-        #
-        #self.text.setHtml('<b>{name}</b><br />{desc}'.format(
-        # name=Utils.parse_template(PORT_MARKUP_TMPL, block=self),
-        # desc='<br />'.join(markups)
-        #))
-        #rect = self.text.shape().boundingRect()
-        #self.setRect(0, 0, rect.width(), rect.height())
+
+    def updateSize(self, offset):
+        if self.is_sink():
+            x = -self.shape().boundingRect().width()
+        else:
+            x = self.parentItem().shape().boundingRect().width()
+
+        self.setPos(x, offset)
 
     def create_shapes(self):
         pass
-
-    def modify_height(self, start_height):
-        return 0
 
     def create_labels(self):
         pass
@@ -73,33 +60,33 @@ class Port(_Port, QGraphicsRectItem):
 
     def get_connector_direction(self):
         """
-Get the direction that the socket points: 0,90,180,270.
-This is the rotation degree if the socket is an output or
-the rotation degree + 180 if the socket is an input.
+        Get the direction that the socket points: 0,90,180,270.
+        This is the rotation degree if the socket is an output or
+        the rotation degree + 180 if the socket is an input.
 
-Returns:
-the direction in degrees
-"""
+        Returns:
+        the direction in degrees
+        """
         if self.is_source(): return self.get_rotation()
         elif self.is_sink(): return (self.get_rotation() + 180)%360
 
     def get_connector_length(self):
         """
-Get the length of the connector.
-The connector length increases as the port index changes.
+        Get the length of the connector.
+        The connector length increases as the port index changes.
 
-Returns:
-the length in pixels
-"""
+        Returns:
+        the length in pixels
+        """
         return self._connector_length
 
     def get_rotation(self):
         """
-Get the parent's rotation rather than self.
+        Get the parent's rotation rather than self.
 
-Returns:
-the parent's rotation
-"""
+        Returns:
+        the parent's rotation
+        """
         return self.get_parent().get_rotation()
 
     def move(self, delta_coor):
