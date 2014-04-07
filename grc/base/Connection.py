@@ -61,7 +61,7 @@ class Connection(Element):
             
             for i in range(len(sources)):
                 try:
-                    flow_graph.connect(sources[i], sinks[i]);
+                    flow_graph.make_connection(sources[i], sinks[i]);
                 except:
                     pass
 
@@ -84,7 +84,7 @@ class Connection(Element):
         source_type = self.get_source().get_type()
         sink_type = self.get_sink().get_type()
         if source_type != sink_type:
-            self.add_error_message('Source type "%s" does not match sink type "%s".'%(source_type, sink_type))
+            self.add_error_message('Source type "%s" does not match sink type "%s".' % (source_type, sink_type))
 
     def get_enabled(self):
         """

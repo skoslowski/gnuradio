@@ -181,7 +181,7 @@ class FlowGraph(Element):
             block.bussify({'name':'bus','type':'bus'}, 'source')
         return block;
 
-    def connect(self, porta, portb):
+    def make_connection(self, porta, portb):
         """
         Create a connection between porta and portb.
         
@@ -193,7 +193,7 @@ class FlowGraph(Element):
         Returns:
             the new connection
         """
-        connection = self.get_parent().Connection(flow_graph=self, porta=porta, portb=portb)
+        connection = self.get_parent().Connection(self, porta=porta, portb=portb)
         self.get_elements().append(connection)
         return connection
 
@@ -304,7 +304,7 @@ class FlowGraph(Element):
                 source = source_block.get_source(source_key)
                 sink = sink_block.get_sink(sink_key)
                 #build the connection
-                self.connect(source, sink)
+                self.make_connection(source, sink)
             except LookupError, e: Messages.send_error_load(
                 'Connection between %s(%s) and %s(%s) could not be made.\n\t%s'%(
                     source_block_id, source_key, sink_block_id, sink_key, e

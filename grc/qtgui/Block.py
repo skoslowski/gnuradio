@@ -19,7 +19,7 @@ from .. base.Block import Block as _Block
 
 BLOCK_MARKUP_TMPL="""\
 #set $foreground = $block.is_valid() and 'black' or 'red'
-<span foreground="$foreground" font_desc="Sans 8"><b>$encode($block.get_name())</b></span>"""
+<span foreground="$foreground" font_desc="Sans 7"><b>$encode($block.get_name())</b></span>"""
 
 
 class Block(QGraphicsRectItem, _Block):
@@ -60,34 +60,29 @@ class Block(QGraphicsRectItem, _Block):
             return
 
         self.setFlags(QGraphicsItem.ItemIsMovable |
-                      QGraphicsItem.ItemIsFocusable |
                       QGraphicsItem.ItemIsSelectable |
-                      QGraphicsItem.ItemIsPanel)
-        self.setBrush(QBrush(QColor(200, 200, 200)))
+                      QGraphicsItem.ItemSendsScenePositionChanges)
+        self.setBrush(QBrush(QColor(230, 230, 230)))
 
         self.text = QGraphicsTextItem(self)
-        #self.text.setTextWidth(w)
-        self.updateLabel()
+        self.refresh()
 
         #self.setG (Qt.ActionsContextMenu)
         #self.addActions((parent.main_window.menuEdit.actions()))
 
-    def updateLabel(self):
-        #display the params
-        for port in self.get_ports_gui():
-            port.updateLabel()
-
+    def refresh(self):
+        # display the params
         markups = [param.get_markup()
                    for param in self.get_params()
                    if param.get_hide() not in ('all', 'part')]
-
         self.text.setHtml('<b>{name}</b><br />{desc}'.format(
             name=Utils.parse_template(BLOCK_MARKUP_TMPL, block=self),
             desc='<br />'.join(markups)
         ))
-        self.updateSize()
+        # update port names
+        for port in self.get_ports_gui():
+            port.updateLabel()
 
-    def updateSize(self):
         text_height = self.text.shape().boundingRect().height()
         sink_ports_height, source_ports_height = [
             # padding top/bottom
@@ -102,6 +97,8 @@ class Block(QGraphicsRectItem, _Block):
 
         width = self.text.shape().boundingRect().width()
         height = max(sink_ports_height, text_height, source_ports_height)
+
+        self.prepareGeometryChange()
         self.setRect(0, 0, width, height)
 
         port_y = PORT_BORDER_SEPARATION + (height - sink_ports_height) / 2.0
@@ -114,18 +111,26 @@ class Block(QGraphicsRectItem, _Block):
             source_port.updateSize(port_y)
             port_y += source_port.boundingRect().height() + PORT_SEPARATION
 
-    def setPos(self, *args):
-        QGraphicsRectItem.setPos(self, *args)
-        # FixMe: detect drag and drop of blocks
-        #self.get_param('_coordinate').set_value(str(args))
+    def itemChange(self, change, value):
+        """Block change handler"""
+        if change == QGraphicsItem.ItemPositionChange and self.scene():
+            # update connections
+            for port in self.get_ports_gui():
+                for connection in port.get_connections():
+                    connection.refresh()
+        # propagate
+        return QGraphicsItem.itemChange(self, change, value)
+
+    def dropEvent(self, event):
+        self.get_param('_coordinate').set_value([self.pos().x(), self.pos().y()])
 
     def rotate(self, rotation):
         QGraphicsRectItem.rotate(self, rotation)
-        self.get_param('_rotation').set_value(str(self.rotation()))
+        self.get_param('_rotation').set_value(self.rotation())
 
-    def setRotation(self, rot):
-        QGraphicsRectItem.setRotation(self, rot)
-        self.get_param('_rotation').set_value(str(rot))
+    def setRotation(self, rotation):
+        QGraphicsRectItem.setRotation(self, rotation)
+        self.get_param('_rotation').set_value(self.rotation())
 
     def set_highlighted(self, foo):
         pass

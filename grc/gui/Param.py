@@ -96,7 +96,7 @@ class EnumParam(InputParam):
         self._input = gtk.combo_box_new_text()
         for option in self.param.get_options(): self._input.append_text(option.get_name())
         self._input.set_active(self.param.get_option_keys().index(self.param.get_value()))
-        self._input.connect('changed', self._handle_changed)
+        self._input.make_connection('changed', self._handle_changed)
         self.pack_start(self._input, False)
     def get_text(self): return self.param.get_option_keys()[self._input.get_active()]
     def set_tooltip_text(self, text): self._input.set_tooltip_text(text)

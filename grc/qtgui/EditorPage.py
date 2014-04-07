@@ -68,8 +68,12 @@ class EditorPage(QWidget):
         layout.setMargin(0)
 
         self.get_flow_graph().populate_scene()
-        #self.label = None
-        #self.get_flow_graph().drawing_area = self.get_drawing_area()
+
+        self.src = self._flow_graph.add_new_block("blocks_null_source", QtCore.QPointF(300, 400))
+        self.snk = self._flow_graph.add_new_block("blocks_null_sink", QtCore.QPointF(600, 260))
+
+        self.cn  = self._flow_graph.make_connection(self.src._sources[0], self.snk._sinks[0])
+
 
     def get_drawing_area(self):
         return self.drawing_area

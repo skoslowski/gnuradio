@@ -20,11 +20,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 from PyQt4.QtGui import *
 import PyQt4.QtCore as QtCore
 
+from .. base.FlowGraph import FlowGraph as _FlowGraph
 
-class FlowGraph(QGraphicsScene):
+class FlowGraph(QGraphicsScene, _FlowGraph):
 
-    def __init__(self):
+    def __init__(self, platform):
         QGraphicsScene.__init__(self)
+        _FlowGraph.__init__(self, platform)
+
 
     def add_new_block(self, key, coor=None):
         """
@@ -39,8 +42,7 @@ class FlowGraph(QGraphicsScene):
 
         #calculate the position coordinate
         if coor is None:
-            # ToDo: random position
-            coor = QtCore.QPointF(0, 0)
+            coor = self.sceneRect().center() + QtCore.QPointF(0, 0)
 
         #get the new block
         block = self.get_new_block(key)
@@ -49,8 +51,12 @@ class FlowGraph(QGraphicsScene):
         block.get_param('id').set_value(id)
 
         self.addItem(block)
-
         return block
+
+    def make_connection(self, porta, portb):
+        con = _FlowGraph.make_connection(self, porta, portb)
+        self.addItem(con)
+        return con
 
     def populate_scene(self):
         self.clear()
@@ -70,5 +76,5 @@ class FlowGraph(QGraphicsScene):
         self.rewrite()
         self.validate()
         for child in self.get_blocks():
-            child.updateLabel()
+            child.refresh()
         #self.create_shapes()

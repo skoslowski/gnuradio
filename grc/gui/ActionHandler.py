@@ -273,7 +273,7 @@ class ActionHandler:
                                     pad_block.type_controller_modify(1)
 
                                 # Connect the pad to the proper sinks
-                                new_connection = self.get_flow_graph().connect(source,pad_sink)
+                                new_connection = self.get_flow_graph().make_connection(source,pad_sink)
 
                             elif pad['direction'] == 'source':
                                 pad_id = self.get_flow_graph().add_new_block('pad_source', pad['coord'])
@@ -293,7 +293,7 @@ class ActionHandler:
                                     pad_block.type_controller_modify(1)
 
                                 # Connect the pad to the proper sinks
-                                new_connection = self.get_flow_graph().connect(pad_source,sink)
+                                new_connection = self.get_flow_graph().make_connection(pad_source,sink)
 
                         # update the new heir block flow graph 
                         self.get_flow_graph().update()

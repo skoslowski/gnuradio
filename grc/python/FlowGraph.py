@@ -18,7 +18,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import expr_utils
-from .. base.FlowGraph import FlowGraph as _FlowGraph
 from .. qtgui.FlowGraph import FlowGraph as _GUIFlowGraph
 from .. base.odict import odict
 import re
@@ -31,11 +30,10 @@ _bussrc_searcher = re.compile('^(bus_source)$')
 _bus_struct_sink_searcher = re.compile('^(bus_structure_sink)$')
 _bus_struct_src_searcher = re.compile('^(bus_structure_source)$')
 
-class FlowGraph(_FlowGraph, _GUIFlowGraph):
+class FlowGraph(_GUIFlowGraph):
 
     def __init__(self, **kwargs):
-        _FlowGraph.__init__(self, **kwargs)
-        _GUIFlowGraph.__init__(self)
+        _GUIFlowGraph.__init__(self, **kwargs)
         self._eval_cache = dict()
 
     def _eval(self, code, namespace, namespace_hash):
@@ -212,7 +210,7 @@ class FlowGraph(_FlowGraph, _GUIFlowGraph):
                             for j in sink:
                                 self.connect(source, j);
         self._renew_eval_ns = True
-        _FlowGraph.rewrite(self);
+        _GUIFlowGraph.rewrite(self);
         reconnect_bus_blocks();
 
     def evaluate(self, expr):

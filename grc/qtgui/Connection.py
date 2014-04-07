@@ -25,12 +25,12 @@ import Colors
 from Constants import CONNECTOR_ARROW_BASE, CONNECTOR_ARROW_HEIGHT
 
 from PyQt4.QtGui import *
-from PyQt4.QtCore import Qt
+from PyQt4.QtCore import Qt, QLineF, QPointF, QRectF
 
 from .. base.Connection import Connection as _Connection
+from . import Utils
 
-
-class Connection(QGraphicsLineItem, _Connection):
+class Connection(QGraphicsItem, _Connection):
     """
     A graphical connection for ports.
     The connection has 2 parts, the arrow and the wire.
@@ -41,13 +41,40 @@ class Connection(QGraphicsLineItem, _Connection):
     """
 
     def __init__(self, parent, **kwargs):
-        QGraphicsLineItem.__init__(self, parent)
+        QGraphicsItem.__init__(self)
         _Connection.__init__(self, parent, **kwargs)
 
-        self._sink_rot = None
-        self._source_rot = None
-        self._sink_coor = None
-        self._source_coor = None
+        self._source_xy = QPointF()
+        self._sink_xy = QPointF()
+        self._bounding_rect = QRectF()
+
+        self.lines = []
+        for i in range(3):
+            self.lines.append(_ConnectionLine(self))
+
+        self.refresh()
+
+    def refresh(self):
+        self.prepareGeometryChange()
+        self._source_xy = self.mapFromScene(self._source.connector_coordinate())
+        self._sink_xy = self.mapFromScene(self._sink.connector_coordinate())
+
+        x1, y1 = self._source_xy.x(), self._source_xy.y()
+        x3, y3 = self._sink_xy.x(), self._sink_xy.y()
+
+        x2 = (x1 + x3) / 2.0
+
+        self.lines[0].setLine(x1, y1, x2, y1)
+        self.lines[1].setLine(x2, y1, x2, y3)
+        self.lines[2].setLine(x2, y3, x3, y3)
+
+        self._bounding_rect.setRect(x1, y1, x3, y3)
+
+    def boundingRect(self):
+        return self._bounding_rect
+
+    def paint(self, painter, option, widget=None):
+        pass
 
     def create_shapes(self):
         """Precalculate relative coordinates."""
@@ -178,3 +205,18 @@ class Connection(QGraphicsLineItem, _Connection):
             window.draw_polygon(gc, True, self._arrow)
         except:
             return
+
+
+class _ConnectionLine(QGraphicsLineItem):
+
+    def __init__(self, parent, scene=None):
+        QGraphicsLineItem.__init__(self, parent, scene)
+
+        self.setFlags(QGraphicsItem.ItemIsMovable |
+                      QGraphicsItem.ItemIsSelectable |
+                      QGraphicsItem.ItemSendsScenePositionChanges)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemPositionChange and self.scene():
+            if not self.line().isNull():
+                self.parentItem().refresh()
