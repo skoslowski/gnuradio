@@ -32,9 +32,7 @@ class Port(QGraphicsRectItem, _Port):
         self.text = QGraphicsTextItem(self)
 
     def updateLabel(self):
-        self.text.setHtml('<b>{label}</b>'.format(
-            label=Utils.parse_template(PORT_MARKUP_TMPL, port=self)
-        ))
+        self.text.setHtml(Utils.parse_template(PORT_MARKUP_TMPL, port=self))
         rect = self.text.shape().boundingRect()
         self.setRect(0, 0, rect.width(), rect.height())
 
@@ -45,15 +43,6 @@ class Port(QGraphicsRectItem, _Port):
             x = self.parentItem().shape().boundingRect().width()
 
         self.setPos(x, offset)
-
-    def create_shapes(self):
-        pass
-
-    def create_labels(self):
-        pass
-
-    def draw(self):
-        print "this should be drawn"
 
     def get_connector_coordinate(self):
         return (10, 10)
