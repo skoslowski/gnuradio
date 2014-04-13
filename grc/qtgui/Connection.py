@@ -19,13 +19,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 from __future__ import division
 
+from collections import defaultdict
+
+from PyQt4.QtGui import *
+from PyQt4.QtCore import Qt, QLineF, QPointF, QRectF
+
 import Utils
 from Element import Element
 import Colors
 from Constants import CONNECTOR_ARROW_BASE, CONNECTOR_ARROW_HEIGHT
-
-from PyQt4.QtGui import *
-from PyQt4.QtCore import Qt, QLineF, QPointF, QRectF
 
 from .. base.Connection import Connection as _Connection
 from . import Utils
@@ -40,35 +42,53 @@ class Connection(QGraphicsItem, _Connection):
     The arrow coloring exposes the enabled and valid states.
     """
 
-    def __init__(self, parent, **kwargs):
+    def __init__(self, flow_graph, porta, portb):
         QGraphicsItem.__init__(self)
-        _Connection.__init__(self, parent, **kwargs)
+        _Connection.__init__(self, flow_graph, porta, portb)
 
         self._source_xy = QPointF()
         self._sink_xy = QPointF()
         self._bounding_rect = QRectF()
 
-        self.lines = []
-        for i in range(3):
-            self.lines.append(_ConnectionLine(self))
-
+        self.lines = defaultdict(lambda: _ConnectionLine(self))
         self.refresh()
 
-    def refresh(self):
+    def refresh(self, port=None, new_pos=None):
         self.prepareGeometryChange()
-        self._source_xy = self.mapFromScene(self._source.connector_coordinate())
-        self._sink_xy = self.mapFromScene(self._sink.connector_coordinate())
 
-        x1, y1 = self._source_xy.x(), self._source_xy.y()
-        x3, y3 = self._sink_xy.x(), self._sink_xy.y()
+        # if this was called on a block position change use the event's coordinates
+        source_pos = new_pos if port == self._source else None
+        sink_pos = new_pos if port == self._sink else None
 
-        x2 = (x1 + x3) / 2.0
+        self._source_xy = self.mapFromScene(self._source.connector_coordinate(source_pos))
+        self._sink_xy = self.mapFromScene(self._sink.connector_coordinate(sink_pos))
+        xs, ys = self._source_xy.x(), self._source_xy.y()
+        xe, ye = self._sink_xy.x(), self._sink_xy.y()
 
-        self.lines[0].setLine(x1, y1, x2, y1)
-        self.lines[1].setLine(x2, y1, x2, y3)
-        self.lines[2].setLine(x2, y3, x3, y3)
+        # center between source and sink
+        xm = (xs + xe) / 2.0
+        ym = (ys + ye) / 2.0
+        # min. space from ports
+        offset = 10
 
-        self._bounding_rect.setRect(x1, y1, x3, y3)
+        if xs + 2 * offset < xe:
+            # 3 lines
+            self.lines[0].setLine(xs, ys, xm, ys)
+            self.lines[1].setLine(xm, ys, xm, ye)
+            self.lines[2].setLine(xm, ye, xe, ye)
+            self.lines[3].setLine(xe, ye, xe, ye)
+            self.lines[4].setLine(xe, ye, xe, ye)
+            self._bounding_rect.setRect(xs, ys, xe, ye)
+        else:
+            # 5 lines
+            xso = xs + offset
+            xeo = xe - offset
+            self.lines[0].setLine(xs,  ys, xso, ys)
+            self.lines[1].setLine(xso, ys, xso, ym)
+            self.lines[2].setLine(xso, ym, xeo, ym)
+            self.lines[3].setLine(xeo, ym, xeo, ye)
+            self.lines[4].setLine(xeo, ye, xe, ye)
+            self._bounding_rect.setRect(xeo, ye, xso, ys)
 
     def boundingRect(self):
         return self._bounding_rect

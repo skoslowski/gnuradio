@@ -49,11 +49,15 @@ class Port(QGraphicsRectItem, _Port):
         for con in self.get_connections():
             con.refresh()
 
-    def connector_coordinate(self):
-        return self.mapToScene(
+    def connector_coordinate(self, block_pos=None):
+        connector_pos = QPointF(
             0.0 if self.is_sink() else self.shape().boundingRect().width(),
             self.shape().boundingRect().height() / 2.0
         )
+        if block_pos is not None:
+            return block_pos + self.pos() + connector_pos
+        else:
+            return self.mapToScene(connector_pos)
 
     def get_connector_direction(self):
         """

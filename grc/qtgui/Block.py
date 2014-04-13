@@ -114,10 +114,11 @@ class Block(QGraphicsRectItem, _Block):
     def itemChange(self, change, value):
         """Block change handler"""
         if change == QGraphicsItem.ItemPositionChange and self.scene():
+            new_pos = value.toPointF()
             # update connections
             for port in self.get_ports_gui():
                 for connection in port.get_connections():
-                    connection.refresh()
+                    connection.refresh(port, new_pos)
         # propagate
         return QGraphicsItem.itemChange(self, change, value)
 
