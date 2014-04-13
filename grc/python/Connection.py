@@ -18,7 +18,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import Constants
-from .. base.Element import Element
 from .. qtgui.Connection import Connection as _GUIConnection
 
 class Connection(_GUIConnection):
@@ -37,7 +36,7 @@ class Connection(_GUIConnection):
         Validate the connections.
         The ports must match in io size.
         """
-        Element.validate(self)
+        _GUIConnection.validate(self)
         source_size = Constants.TYPE_TO_SIZEOF[self.get_source().get_type()] * self.get_source().get_vlen()
         sink_size = Constants.TYPE_TO_SIZEOF[self.get_sink().get_type()] * self.get_sink().get_vlen()
         if source_size != sink_size:

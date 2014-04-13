@@ -55,6 +55,7 @@ def _extract(key):
     return '\n\n'.join(doc_strs)
 
 _docs_cache = dict()
+
 def extract(key):
     """
     Call the private extract and cache the result.
@@ -65,6 +66,7 @@ def extract(key):
     Returns:
         a string with documentation
     """
+    return ""
     if not _docs_cache.has_key(key):
         _docs_cache[key] = _extract(key)
     return _docs_cache[key]

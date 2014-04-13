@@ -17,29 +17,38 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
+import os
 import Utils
-from Element import Element
+
 import pygtk
 pygtk.require('2.0')
 import gtk
-import Colors
 
-class InputParam(gtk.HBox):
+from PyQt4.QtGui import *
+
+from . import Colors
+from .. base.Param import Param as _Param
+
+class InputParamBase(object):
     """The base class for an input parameter inside the input parameters dialog."""
 
     def __init__(self, param, callback=None):
-        gtk.HBox.__init__(self)
         self.param = param
         self._callback = callback
-        self.label = gtk.Label() #no label, markup is added by set_markup
-        self.label.set_size_request(150, -1)
-        self.pack_start(self.label, False)
-        self.set_markup = lambda m: self.label.set_markup(m)
+        self.label = QLabel(self)  # no label, markup is added by set_markup
+        self.setLabelText = lambda m: self.label.setText(m)
         self.tp = None
         #connect events
-        self.connect('show', self._update_gui)
-    def set_color(self, color): pass
-    def set_tooltip_text(self, text): pass
+        # self.connect('show', self._update_gui)
+
+    def set_color(self, color):
+        raise NotImplementedError
+
+    def set_tooltip_text(self, text):
+        raise NotImplementedError
+
+    def get_input_value(self):
+        raise NotImplementedError
 
     def _update_gui(self, *args):
         """
@@ -49,7 +58,7 @@ class InputParam(gtk.HBox):
         has_cb = \
             hasattr(self.param.get_parent(), 'get_callbacks') and \
             filter(lambda c: self.param.get_key() in c, self.param.get_parent()._callbacks)
-        self.set_markup(Utils.parse_template(PARAM_LABEL_MARKUP_TMPL, param=self.param, has_cb=has_cb))
+        self.setLabelText(Utils.parse_template(PARAM_LABEL_MARKUP_TMPL, param=self.param, has_cb=has_cb))
         #set the color
         self.set_color(self.param.get_color())
         #set the tooltip
@@ -57,55 +66,76 @@ class InputParam(gtk.HBox):
             Utils.parse_template(TIP_MARKUP_TMPL, param=self.param).strip(),
         )
         #show/hide
-        if self.param.get_hide() == 'all': self.hide_all()
-        else: self.show_all()
+        if self.param.get_hide() == 'all':
+            pass
+            #self.hide_all()
+        else:
+            pass
+            #self.show_all()
 
     def _handle_changed(self, *args):
         """
         Handle a gui change by setting the new param value,
         calling the callback (if applicable), and updating.
         """
-        #set the new value
-        self.param.set_value(self.get_text())
-        #call the callback
-        if self._callback: self._callback(*args)
-        else: self.param.validate()
+        # set the new value
+        self.param.set_value(self.get_input_value())
+        # call the callback or validate
+        if self._callback:
+            self._callback(*args)
+        else:
+            self.param.validate()
         #gui update
         self._update_gui()
 
-class EntryParam(InputParam):
+
+class EntryParam(QLineEdit, InputParamBase):
     """Provide an entry box for strings and numbers."""
 
     def __init__(self, *args, **kwargs):
-        InputParam.__init__(self, *args, **kwargs)
-        self._input = gtk.Entry()
-        self._input.set_text(self.param.get_value())
-        self._input.connect('changed', self._handle_changed)
-        self.pack_start(self._input, True)
-    def get_text(self): return self._input.get_text()
+        QLineEdit.__init__(self)
+        InputParamBase.__init__(self, *args, **kwargs)
+        self.setText(self.param.get_value())
+        #self._input.connect('changed', self._handle_changed)
+
+    def get_input_value(self):
+        return self.text()
+
     def set_color(self, color):
+        # ToDo: Color
         self._input.modify_base(gtk.STATE_NORMAL, gtk.gdk.color_parse(color))
         self._input.modify_text(gtk.STATE_NORMAL, Colors.PARAM_ENTRY_TEXT_COLOR)
-    def set_tooltip_text(self, text): self._input.set_tooltip_text(text)
 
-class EnumParam(InputParam):
+    def set_tooltip_text(self, text):
+        self.setToolTip(text)
+
+
+class EnumParam(QComboBox, InputParamBase):
     """Provide an entry box for Enum types with a drop down menu."""
 
     def __init__(self, *args, **kwargs):
-        InputParam.__init__(self, *args, **kwargs)
-        self._input = gtk.combo_box_new_text()
-        for option in self.param.get_options(): self._input.append_text(option.get_name())
-        self._input.set_active(self.param.get_option_keys().index(self.param.get_value()))
-        self._input.connect('changed', self._handle_changed)
-        self.pack_start(self._input, False)
-    def get_text(self): return self.param.get_option_keys()[self._input.get_active()]
-    def set_tooltip_text(self, text): self._input.set_tooltip_text(text)
+        QComboBox.__init__(self)
+        InputParamBase.__init__(self, *args, **kwargs)
 
-class EnumEntryParam(InputParam):
+        self.addItems(map(lambda o: o.get_name(), self.param.get_options()))
+        for option in self.param.get_options():
+            self.addItem(option.get_name())
+        # ToDo: set active item
+        #self._input.set_active(self.param.get_option_keys().index(self.param.get_value()))
+        self._input.connect('changed', self._handle_changed)
+
+    def get_input_value(self):
+        return self.param.get_option_keys()[self._input.get_active()]
+
+    def set_tooltip_text(self, text):
+        self.setToolTip(text)
+
+
+class EnumEntryParam(InputParamBase):
     """Provide an entry box and drop down menu for Raw Enum types."""
 
     def __init__(self, *args, **kwargs):
-        InputParam.__init__(self, *args, **kwargs)
+        InputParamBase.__init__(self, *args, **kwargs)
         self._input = gtk.combo_box_entry_new_text()
         for option in self.param.get_options(): self._input.append_text(option.get_name())
         try: self._input.set_active(self.param.get_option_keys().index(self.param.get_value()))
@@ -129,6 +159,43 @@ class EnumEntryParam(InputParam):
         else: #from enum, make pale background
             self._input.get_child().modify_base(gtk.STATE_NORMAL, Colors.ENTRYENUM_CUSTOM_COLOR)
             self._input.get_child().modify_text(gtk.STATE_NORMAL, Colors.PARAM_ENTRY_TEXT_COLOR)
+
+
+class FileParam(EntryParam):
+    """Provide an entry box for filename and a button to browse for a file."""
+
+    def __init__(self, *args, **kwargs):
+        EntryParam.__init__(self, *args, **kwargs)
+        input = gtk.Button('...')
+        input.connect('clicked', self._handle_clicked)
+        self.pack_start(input, False)
+
+    def _handle_clicked(self, widget=None):
+        """
+        If the button was clicked, open a file dialog in open/save format.
+        Replace the text in the entry with the new filename from the file dialog.
+        """
+        #get the paths
+        file_path = self.param.is_valid() and self.param.get_evaluated() or ''
+        (dirname, basename) = os.path.isfile(file_path) and os.path.split(file_path) or (file_path, '')
+        if not os.path.exists(dirname): dirname = os.getcwd() #fix bad paths
+        #build the dialog
+        if self.param.get_type() == 'file_open':
+            file_dialog = gtk.FileChooserDialog('Open a Data File...', None,
+                gtk.FILE_CHOOSER_ACTION_OPEN, ('gtk-cancel',gtk.RESPONSE_CANCEL,'gtk-open',gtk.RESPONSE_OK))
+        elif self.param.get_type() == 'file_save':
+            file_dialog = gtk.FileChooserDialog('Save a Data File...', None,
+                gtk.FILE_CHOOSER_ACTION_SAVE, ('gtk-cancel',gtk.RESPONSE_CANCEL, 'gtk-save',gtk.RESPONSE_OK))
+            file_dialog.set_do_overwrite_confirmation(True)
+            file_dialog.set_current_name(basename) #show the current filename
+        file_dialog.set_current_folder(dirname) #current directory
+        file_dialog.set_select_multiple(False)
+        file_dialog.set_local_only(True)
+        if gtk.RESPONSE_OK == file_dialog.run(): #run the dialog
+            file_path = file_dialog.get_filename() #get the file path
+            self._input.set_text(file_path)
+            self._handle_changed()
+        file_dialog.destroy() #destroy the dialog
 
 PARAM_MARKUP_TMPL="""\
 #set $foreground = $param.is_valid() and 'black' or 'red'
@@ -164,10 +231,9 @@ Error:
     #end for
 #end if"""
 
-class Param():
+
+class Param(_Param):
     """The graphical parameter."""
-    def __init__(self):
-        pass
 
     def get_input(self, *args, **kwargs):
         """
@@ -179,9 +245,14 @@ class Param():
         Returns:
             gtk input class
         """
-        if self.is_enum(): return EnumParam(self, *args, **kwargs)
-        if self.get_options(): return EnumEntryParam(self, *args, **kwargs)
-        return EntryParam(self, *args, **kwargs)
+        if self.is_enum():
+            return EnumParam(self, *args, **kwargs)
+        elif self.get_options():
+            return EnumEntryParam(self, *args, **kwargs)
+        elif self.get_type() in ('file_open', 'file_save'):
+            return FileParam(self, *args, **kwargs)
+        else:
+            return EntryParam(self, *args, **kwargs)
 
     def get_markup(self):
         """

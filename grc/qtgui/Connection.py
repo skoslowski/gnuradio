@@ -32,6 +32,7 @@ from Constants import CONNECTOR_ARROW_BASE, CONNECTOR_ARROW_HEIGHT
 from .. base.Connection import Connection as _Connection
 from . import Utils
 
+
 class Connection(QGraphicsItem, _Connection):
     """
     A graphical connection for ports.
@@ -43,15 +44,17 @@ class Connection(QGraphicsItem, _Connection):
     """
 
     def __init__(self, flow_graph, porta, portb):
-        QGraphicsItem.__init__(self)
+        QGraphicsItem.__init__(self, None, flow_graph)
         _Connection.__init__(self, flow_graph, porta, portb)
 
         self._source_xy = QPointF()
         self._sink_xy = QPointF()
         self._bounding_rect = QRectF()
 
-        self.lines = defaultdict(lambda: _ConnectionLine(self))
-        self.refresh()
+        self.lines = []
+        for i in range(5):
+            self.lines.append(_ConnectionLine(self))
+        #self.refresh()
 
     def refresh(self, port=None, new_pos=None):
         self.prepareGeometryChange()

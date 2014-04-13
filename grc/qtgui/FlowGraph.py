@@ -55,7 +55,7 @@ class FlowGraph(QGraphicsScene, _FlowGraph):
 
     def make_connection(self, porta, portb):
         con = _FlowGraph.make_connection(self, porta, portb)
-        self.addItem(con)
+        #self.addItem(con)
         return con
 
     def populate_scene(self):

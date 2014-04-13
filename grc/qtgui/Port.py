@@ -26,9 +26,7 @@ class Port(QGraphicsRectItem, _Port):
         if not isinstance(block.get_parent(), FlowGraph):
             return
 
-        self.setFlags(QGraphicsItem.ItemIsFocusable |
-                      QGraphicsItem.ItemIsSelectable |
-                      QGraphicsItem.ItemIsPanel)
+        self.setFlags(QGraphicsItem.ItemIsSelectable)
         self.text = QGraphicsTextItem(self)
 
 
@@ -58,6 +56,9 @@ class Port(QGraphicsRectItem, _Port):
             return block_pos + self.pos() + connector_pos
         else:
             return self.mapToScene(connector_pos)
+
+    def dragMoveEvent(self, event):
+        print test
 
     def get_connector_direction(self):
         """

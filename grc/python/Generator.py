@@ -26,7 +26,7 @@ import expr_utils
 from Constants import \
     TOP_BLOCK_FILE_MODE, HIER_BLOCK_FILE_MODE, HIER_BLOCKS_LIB_DIR, FLOW_GRAPH_TEMPLATE, XTERM_EXECUTABLE
 import convert_hier
-from .. gui import Messages
+from .. qtgui import Messages
 
 
 class Generator(object):
