@@ -59,11 +59,18 @@ class Generator(object):
 
     def write(self):
         #do throttle warning
-        throttled = any(map(lambda b: b.throttle(), self._flow_graph.get_enabled_blocks()))
+        throttling = filter(lambda b: b.throttle(), self._flow_graph.get_enabled_blocks())
+        throttled = (len(throttling) != 0)
         if not throttled and self._generate_options != 'hb':
             Messages.send_warning('''\
 This flow graph may not have flow control: no audio or usrp blocks found. \
 Add a Misc->Throttle block to your flow graph to avoid CPU congestion.''')
+        if len(throttling) > 1:
+            keys = set(map(lambda b: b.get_key(), throttling))
+            if len(keys) > 1 and 'blocks_throttle' in keys:
+                Messages.send_warning('''\
+This flow graph contains a throttle block and another rate limiting block. This is usually undesired. \
+If using an external rate limiting device, e.g. a hardware source or sink, don't use throttle in the same signal chain.''')
         #generate
         open(self.get_file_path(), 'w').write(str(self))
         if self._generate_options == 'hb':
