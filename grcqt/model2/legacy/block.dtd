@@ -26,10 +26,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
     A block contains a name, ...parameters list, and list of IO ports.
  -->
 <!ELEMENT block (
-        name, key, category?,
+        name, key,
+
+        category?,
         throttle?,
 
-        import*, var_make?, var_value?, make, callback*,
+        import*, var_make?, var_value?, make,
+
+        callback*,
 
         param_tab_order?, param*,
 

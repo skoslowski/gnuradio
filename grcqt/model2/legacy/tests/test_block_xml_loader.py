@@ -22,7 +22,7 @@ from os import path
 import glob
 
 from .. import load_block_xml
-from .. block_xml_loader import Resolver
+from .. block_xml_loader import Resolver, get_make
 
 
 def iter_resource_files():
@@ -35,7 +35,7 @@ def iter_resource_files():
 def test_category_tree_xml():
     for fp in iter_resource_files():
         BlockClass = load_block_xml(fp)
-        print BlockClass
+        #print BlockClass
 
 
 @pytest.fixture
@@ -63,7 +63,36 @@ def test_resolver_get_raw():
     assert Resolver.get_raw(dict(test=('a',)), 'test') == 'a'
     assert Resolver.get_raw(dict(test='a'), 'test') == 'a'
 
+
 def test_resolver_get(resolver):
     assert resolver.get(dict(test='$t1'), 'test', 't') == 't11'
     assert resolver.pop_rewrites() == dict(t='t1')
 
+
+def test_format():
+    class A():
+        value = "abc"
+        elements = [1, 2, 3, 4]
+
+        def __format__(self, spec):
+            return self.value
+
+        def __getitem__(self, key):
+            return self.elements[key]
+
+        def test(self):
+            return "asdf"
+
+    assert "{a} {a[0]}".format(a=A()) == "abc 1"
+
+
+def test_get_make():
+    class B:
+        cd = "h"
+
+    class Resolver():
+        params = {'a': '123', 'b': B}
+
+    block_n = lambda m: {'key': ['a'], 'make': [m]}
+    make = get_make(block_n("test$a $(a) ${a}a $[a]lk $(b.cd)"), Resolver)
+    assert make == "self.a = a = test{a} {a} {a}a {a}lk {b.cd}"

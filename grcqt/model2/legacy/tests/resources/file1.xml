@@ -2,7 +2,7 @@
 <block>
     <name>testname</name>
     <key>block_key</key>
-    <make>blocks.complex_to_mag_squared($vlen)</make>
+    <make>blocks.complex_to_mag_squared($(vlen))</make>
     <param>
         <name>Vec Length</name>
         <key>vlen</key>

@@ -134,14 +134,6 @@ class OptionsParam(Param):
             option = self.Option(name_or_option, value, extra or {})
         self.options.append(option)
 
-    def rewrite(self):
-        del self.options[:]
-        for option in self._options:
-            if not isinstance(option, self.Option):
-                self.options.append(self.Option(*option))
-
-        super(OptionsParam, self).rewrite()
-
     def validate(self):
         for error in super(OptionsParam, self).validate():
             yield error
@@ -150,3 +142,9 @@ class OptionsParam(Param):
             yield exceptions.ValidationException(
                 self, "Value '{}' not allowed".format(value)
             )
+
+    def __format__(self, format_spec):
+        return self.evaluated
+
+    def __getitem__(self, key):
+        return self.options[self.options.index(self.evaluated)].extra[key]

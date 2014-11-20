@@ -48,12 +48,6 @@ def to_func_args(kwargs):
         "{}={}".format(key, repr(value))
         for key, value in kwargs.iteritems()
     )
-
-def indent(s, level=1):
-    if isinstance(s, str):
-        s = s.split('\\n')
-    return ("\\n" + " " * 4 * level).join(s)
-
 %>
 <%def name="on_rewrite(rewrites)">\\
 % if rewrites:
@@ -63,19 +57,23 @@ def indent(s, level=1):
 % endif
 </%def>
 class XMLBlock(Block):
+    % if doc:
+    """
+    ${ indent(doc,1) }
+    """
+
+    % endif
     key = "${ key }"
     name = "${ name }"
-
     % if import_template:
+
     import_template = """
         ${ indent(import_template, 2) }
     """
     % endif
     % if make_template:
 
-    make_template = """
-        ${ indent(make_template, 2) }
-    """
+    make_template = ${ make_template }
     % endif
 
     def setup(self, **kwargs):
@@ -94,16 +92,20 @@ class XMLBlock(Block):
         self.add_param(${ to_func_args(kwargs) })${ on_rewrite(rewrites) }
         % endif
         % endfor
+        % if sinks:
 
         # sinks
         % for method, kwargs, rewrites in sinks:
         self.${ method }(${ to_func_args(kwargs) })${ on_rewrite(rewrites) }
         % endfor
+        % endif
+        % if sources:
 
         # sources
         % for method, kwargs, rewrites in sources:
         self.${ method }(${ to_func_args(kwargs) })${ on_rewrite(rewrites) }
         % endfor
+        % endif
 ''')
 
 
@@ -218,19 +220,73 @@ def get_ports(block_n, resolver, direction):
     return ports
 
 
+def get_make(block_n, resolver):
+    key = block_n['key'][0]
+
+    var_make = block_n.get('var_make', [''])[0]
+
+    make = block_n['make'][0]
+    if make:
+        make = "self.{0} = {0} = {1}".format(key, make)
+
+    make = ("\n" if var_make and make else "").join((var_make, make))
+
+    from Cheetah.Template import Template as CheetahTemplate
+    import re
+    try:
+        match_id = "(?P<arg>[_a-z][_a-z0-9]*(?:\.[_a-z][_a-z0-9]*)?)"
+        make2 = re.sub("\$" + match_id, "{\g<arg>}", make)
+        for delim in ("[]", "()", "{}"):
+            make2 = re.sub("\$\\{0[0]}{1}\\{0[1]}".format(delim, match_id), "{\g<arg>}", make2)
+        python_template = make2.format(**resolver.params)
+    except:
+        python_template = object()
+    try:
+        cheetah_template = str(CheetahTemplate(make, resolver.params))
+    except:
+        cheetah_template = object()
+
+    make = '"""\n        {}\n    """'.format(indent(make, 2))
+
+    if python_template != cheetah_template:
+        make = 'lambda params: CheetahTemplate({}, params)'.format(make)
+    else:
+        make = make2
+
+    return make
+
+
+def indent(s, level=1):
+    if isinstance(s, str):
+        s = s.strip().split('\n')
+        ind = s[0].index(s[0].strip())
+        s = [line[ind:] for line in s]
+    return ("\n" + " " * 4 * level).join(s)
+
+
 def construct_block_class_from_nested_data(nested_data):
     n = nested_data
     r = Resolver(n)
+
     return BLOCK_TEMPLATE.render(
-        key=r.get_raw(n,'key'),
+        key=r.get_raw(n, 'key'),
         name=r.get_raw(n, 'name'),
 
-        make_template=n['make'][0],
+        categories=r.get_raw(n, 'category'),
+        throttle=r.get_raw(n, 'throttle'),
+
+        make_template=get_make(n, r),
         import_template="\n".join(n.get('import', [])),
+
+        callbacks=r.get_raw(n, 'callback'),
 
         params=get_params(n, r),
         sinks=get_ports(n, r, 'sink'),
         sources=get_ports(n, r, 'source'),
+
+        doc=r.get_raw(n, 'doc'),
+
+        indent=indent
     )
 
 
