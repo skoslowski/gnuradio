@@ -52,8 +52,8 @@ class Param(BlockChildElement):
     def evaluated(self):
         return self._evaluated
 
-    def rewrite(self):
-        super(Param, self).rewrite()
+    def update(self):
+        super(Param, self).update()
         self._evaluated = self.parent_flowgraph.evaluate(self.value)
 
     def validate(self):
@@ -127,11 +127,11 @@ class OptionsParam(Param):
         self.options = []
         self.allow_arbitrary_values = allow_arbitrary_values
 
-    def add_option(self, name_or_option, value, extra=None):
-        if isinstance(name_or_option, self.option):
+    def add_option(self, name_or_option, value, **kwargs):
+        if isinstance(name_or_option, self.Option):
             option = name_or_option
         else:
-            option = self.Option(name_or_option, value, extra or {})
+            option = self.Option(name_or_option, value, kwargs)
         self.options.append(option)
 
     def validate(self):

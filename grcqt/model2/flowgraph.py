@@ -24,7 +24,9 @@ from itertools import chain
 
 from . import exceptions
 from . base import Element
-from . import Block, Connection, Variable
+from . blocks import Block
+from . connection import Connection
+from . variables import Variable
 
 
 class FlowGraph(Element):
@@ -79,7 +81,7 @@ class FlowGraph(Element):
             self.children.remove(element)
             del element
 
-    def rewrite(self):
+    def update(self):
         self.namespace.reset()
         # todo: decide if lazy var eval is better (if yes, skip and remove finalize
         for name, variable in self.variables.iteritems():
@@ -88,7 +90,7 @@ class FlowGraph(Element):
         self.namespace.finalize()
         # eval blocks first, then connections
         for element in chain(self.blocks, self.connections):
-            element.rewrite()
+            element.update()
 
     def evaluate(self, expr):
         """Evaluate an expr in the flow-graph namespace"""

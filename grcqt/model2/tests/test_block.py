@@ -29,7 +29,10 @@ from .. import exceptions
 
 @pytest.fixture
 def block():
-    return Block(FlowGraph())
+    class MyBlock(Block):
+        def setup(self, **kwargs):
+            pass
+    return MyBlock(FlowGraph())
 
 
 def test_block_add_param1(block):
@@ -100,4 +103,4 @@ def test_block_add_ports(block):
         pass
     else:
         assert False
-    block.rewrite()
+    block.update()

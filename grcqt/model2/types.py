@@ -21,7 +21,7 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
-from . platform import Platform
+from . import platform
 
 
 class PortDType(object):
@@ -34,7 +34,7 @@ class PortDType(object):
 
     @classmethod
     def register(cls, *args, **kwargs):
-        Platform.register_port_dtype(cls(*args, **kwargs))
+        platform.Platform.register_port_dtype(cls(*args, **kwargs))
 
 
 # build-in types

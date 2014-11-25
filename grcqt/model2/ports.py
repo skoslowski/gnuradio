@@ -67,7 +67,7 @@ class BasePort(BlockChildElement):
         for connection in self.connections:
             self.parent_flowgraph.remove(connection)
 
-    def rewrite(self):
+    def update(self):
         """adjust the number of clones"""
         if self.nports is not None:
             nports = max((self.nports, 1))

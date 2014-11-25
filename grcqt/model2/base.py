@@ -77,14 +77,14 @@ class Element(object):
     def children(self):
         return self._children
 
-    def rewrite(self):
+    def update(self):
         """Rewrite object and all child object in this tree
 
-        A rewrite shall be used to reevaluate variables, parameters, block surface (ports,...), ...
+        A update shall be used to reevaluate variables, parameters, block surface (ports,...), ...
         The resulting values shall be cached for fast access
         """
         for child in self.children:
-            child.rewrite()
+            child.update()
 
     def validate(self):
         """Validate object and all child object in this tree
@@ -98,17 +98,17 @@ class Element(object):
 
 
 class BlockChildElement(Element):
-    """Adds install rewrite callbacks for specific obt attributes"""
+    """Adds install update callbacks for specific obt attributes"""
 
     def __init__(self, parent):
         super(BlockChildElement, self).__init__(parent)
-        self.rewrite_actions = {}
+        self.update_actions = {}
 
-    def rewrite(self):
-        """Perform a rewrite based on a set of callbacks"""
-        super(BlockChildElement, self).rewrite()
+    def update(self):
+        """Perform a update based on a set of callbacks"""
+        super(BlockChildElement, self).update()
         params = self.parent_block.params_namespace
-        for target, callback_or_param_name in self.rewrite_actions.iteritems():
+        for target, callback_or_param_name in self.update_actions.iteritems():
             try:
                 if callable(callback_or_param_name):
                     value = callback_or_param_name(params)
@@ -120,12 +120,12 @@ class BlockChildElement(Element):
             except Exception as e:
                 raise exceptions.BlockException(e)
 
-    def on_rewrite(self, **kwargs):
-        """This installs a number of callbacks in the objects rewrite function
+    def on_update(self, **kwargs):
+        """This installs a number of callbacks in the objects update function
 
         The object must a child of a Block. The key of each argument must be a
         valid attribute of the object. The values are callables with a single
-        argument. On rewrite a dict of parameter keys and evaluated value is
+        argument. On update a dict of parameter keys and evaluated value is
         passed.
 
         As a shorthand a parameter key (string) can be passed instead of a
@@ -134,7 +134,7 @@ class BlockChildElement(Element):
         invalid_attr_names = []
         for attr_name, callback in kwargs.iteritems():
             if hasattr(self, attr_name):  #todo: exclude methods
-                self.rewrite_actions[attr_name] = callback
+                self.update_actions[attr_name] = callback
             else:
                 invalid_attr_names.append(attr_name)
         if invalid_attr_names:

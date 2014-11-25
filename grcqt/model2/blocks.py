@@ -32,13 +32,13 @@ from . ports import BasePort, StreamPort, MessagePort
 class BaseBlock(Element):
     __metaclass__ = ABCMeta
 
-    key = 'uid'     # a unique identifier for this block class
     name = 'label'  # the name of this block (label in the gui)
+    categories = []
+    throttling = False
 
     import_template = ''
     make_template = ''
 
-    categories = []
 
     def __init__(self, parent, **kwargs):
         super(BaseBlock, self).__init__(parent)
@@ -54,7 +54,7 @@ class BaseBlock(Element):
         self._sinks = []
 
         # lists of ports currently visible (think hidden ports, bus ports, nports)
-        self.sources = []  # filled / updated by rewrite()
+        self.sources = []  # filled / updated by update()
         self.sinks = []
 
         # call user defined init
@@ -130,7 +130,7 @@ class BaseBlock(Element):
         self.params[key] = param
         return param
 
-    def rewrite(self):
+    def update(self):
         """Update the blocks ports"""
         self.params_namespace.clear()
         for key, param in self.params.iteritems():
@@ -141,7 +141,7 @@ class BaseBlock(Element):
             ports_current = list(ports)  # keep current list of ports
             del ports[:]  # reset list
             for port in ports_raw:
-                port.rewrite()
+                port.update()
                 if port.enabled:
                     # re-add ports and their clones
                     ports.append(port)
@@ -151,13 +151,13 @@ class BaseBlock(Element):
                     port.disconnect()
 
         # todo: form busses
-        #super(BaseBlock, self).rewrite()  # todo: should I even call this?
+        #super(BaseBlock, self).update()  # todo: should I even call this?
 
     def load(self, state):
         for key, param in self.params.iteritems():
             try:
                 param.value = state[key]
-                self.rewrite()
+                self.update()
             except KeyError:
                 pass  # no sate info for this param
         # todo: parse GUI state info
@@ -182,11 +182,6 @@ class Block(BaseBlock):
         if self._sources:
             self.add_param(key='minoutbuf', name='Min Output Buffer', vtype=int, default=0)
             self.add_param(key='maxoutbuf', name='Max Output Buffer', vtype=int, default=0)
-
-    def setup(self, **kwargs):
-        """How to construct the block: sinks, sources, parameters"""
-        super(Block, self).setup(**kwargs)
-        # todo: allow emtpy setup function even useful?
 
 
 class PadBlock(BaseBlock):

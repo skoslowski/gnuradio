@@ -20,12 +20,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 from __future__ import absolute_import, division, print_function
 
 import os
+import imp
+import inspect
 from itertools import imap
 from collections import defaultdict
 
 from . _consts import BLOCK_CLASS_FILE_EXTENSION, BLOCK_XML_EXTENSION, BLOCK_TREE_EXTENSION
-from . import legacy, FlowGraph
-from . types import ParamVType, PortDType
+from . import legacy
+import types
+from . flowgraph import FlowGraph
+from . blocks import BaseBlock, Block
 
 
 class BlockLoadException(Exception):
@@ -40,7 +44,7 @@ class Platform(object):
 
     @classmethod
     def register_param_vtype(cls, param_type):
-        if not isinstance(param_type, ParamVType):
+        if not isinstance(param_type, types.ParamVType):
             raise Exception("")
 
         for name in param_type.names:
@@ -48,7 +52,7 @@ class Platform(object):
 
     @classmethod
     def register_port_dtype(cls, port_dtype):
-        if not isinstance(port_dtype, PortDType):
+        if not isinstance(port_dtype, types.PortDType):
             raise Exception("")
         for name in port_dtype.names:
             cls.port_dtypes[name] = port_dtype
@@ -64,7 +68,8 @@ class Platform(object):
             block_paths: the file paths to blocks in this platform
         """
         self.version = version
-        self.block_paths = block_paths
+        self.block_paths = block_paths if not isinstance(block_paths, str) \
+            else [block_paths]
 
         self.blocks = {}
 
@@ -90,16 +95,17 @@ class Platform(object):
         # then load block definitions
         self.blocks.clear()
         for block_file in self.iter_block_files(block_paths, (BLOCK_XML_EXTENSION, BLOCK_CLASS_FILE_EXTENSION)):
-            if not block_file.endswith(BLOCK_TREE_EXTENSION):
+            if block_file.endswith(BLOCK_TREE_EXTENSION):
                 continue
             try:
                 if block_file.endswith(BLOCK_XML_EXTENSION):
                     block = legacy.load_block_xml(block_file)
+                    extra_categories = categories[block.__name__].difference(block.categories)
+                    block.categories.append(extra_categories)
+                    self.blocks[block.__name__] = block
                 else:
-                    block = self.load_block_class_file(block_file)
+                    self.load_block_class_file(block_file)
 
-                block.categories.update(categories.get(block.key, dict()))
-                self.blocks[block.key] = block
             except BlockLoadException as e:
                 exceptions.append(e)
 
@@ -117,8 +123,18 @@ class Platform(object):
 
     def load_block_class_file(self, filename):
         """import filename and save all subclasses of Block in library"""
-        block = NotImplemented
-        return block
+        f = None
+        try:
+            path, module_name = os.path.split(filename.rsplit('.py', 1)[0])
+            f, filename, description = imp.find_module(module_name, [path] or None)
+            module = imp.load_module("__grc__", f, filename, description)
+            for key, value in vars(module).items():
+                if inspect.isclass(value) and issubclass(value, BaseBlock):
+                    # todo: check validity of Block class
+                    if not getattr(value.setup, '__isabstractmethod__', False):
+                        self.blocks[value.__name__] = value
+        finally:
+            if f: f.close()
 
     def flowgraph_from_nested_data(self, n):
         fg = FlowGraph(self)
