@@ -19,10 +19,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from os import path
 from collections import OrderedDict
+import re
+
 from lxml import etree
 from mako.template import Template
 
 from . block_category_loader import xml_to_nested_data
+from .. import exceptions
+from .. blocks import Block
 
 BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
 
@@ -38,8 +42,14 @@ def load_block_xml(xml_file):
     n = xml_to_nested_data(xml)[1]
     n['block_wrapper_path'] = xml_file  # inject block wrapper path
 
-    return construct_block_class_from_nested_data(n)
+    key, class_definition = construct_block_class_from_nested_data(n)
+    namespace = dict(__name__="__grc__", Block=Block)
+    try:
+        exec class_definition in namespace
+    except SyntaxError as e:
+        raise SyntaxError(e.message + ':\n' + class_definition)
 
+    return namespace[key]
 
 BLOCK_TEMPLATE = Template('''\
 <%!
@@ -49,61 +59,73 @@ def to_func_args(kwargs):
         for key, value in kwargs.iteritems()
     )
 %>
-<%def name="on_rewrite(rewrites)">\\
-% if rewrites:
-.on_rewrite(
-            ${ to_func_args(rewrites) }
+<%def name="on_update(on_update_kwargs)">\\
+% if updates:
+.on_update(
+            ${ to_func_args(on_update_kwargs) }
         )\\
 % endif
 </%def>
-class XMLBlock(Block):
+class ${ cls }(Block):
     % if doc:
     """
-    ${ indent(doc,1) }
+    ${ indent(doc) }
     """
-
     % endif
-    key = "${ key }"
-    name = "${ name }"
-    % if import_template:
+    name = ${ repr(name) }
+    % if categories:
+    categories = ${ repr(categories) }
+    % endif
+    % if throttling:
+    throttling = True
+    % endif
+    % if imports:
 
+    % if len(imports) > 1:
     import_template = """
-        ${ indent(import_template, 2) }
+        ${ indent(imports, 2) }
     """
+    % else:
+    import_template = ${ repr(imports[0]) }
+    % endif
     % endif
     % if make_template:
 
     make_template = ${ make_template }
+    % endif
+    % if callbacks:
+
+    callbacks = ${ repr(callbacks) }
     % endif
 
     def setup(self, **kwargs):
         super(XMLBlock, self).setup(**kwargs)
 
         # params
-        % for kwargs, rewrites in params:
+        % for kwargs, on_update_kwargs in params:
         % if 'options' in kwargs:
         <%
             options = kwargs.pop('options')
-        %>p = self.add_param(${ to_func_args(kwargs) })${ on_rewrite(rewrites) }
+        %>p = self.add_param(${ to_func_args(kwargs) })${ on_update(on_update_kwargs) }
         % for option in options:
         p.add_option(${ to_func_args(option) })
         % endfor
         % else:
-        self.add_param(${ to_func_args(kwargs) })${ on_rewrite(rewrites) }
+        self.add_param(${ to_func_args(kwargs) })${ on_update(on_update_kwargs) }
         % endif
         % endfor
         % if sinks:
 
         # sinks
-        % for method, kwargs, rewrites in sinks:
-        self.${ method }(${ to_func_args(kwargs) })${ on_rewrite(rewrites) }
+        % for method, kwargs, on_update_kwargs in sinks:
+        self.${ method }(${ to_func_args(kwargs) })${ on_update(on_update_kwargs) }
         % endfor
         % endif
         % if sources:
 
         # sources
-        % for method, kwargs, rewrites in sources:
-        self.${ method }(${ to_func_args(kwargs) })${ on_rewrite(rewrites) }
+        % for method, kwargs, on_update_kwargs in sources:
+        self.${ method }(${ to_func_args(kwargs) })${ on_update(on_update_kwargs) }
         % endfor
         % endif
 ''')
@@ -113,31 +135,31 @@ class Resolver(object):
 
     def __init__(self, block_n):
         self.params = dict()
-        self.collected_rewrites = {}
+        self.collected_on_update_kwargs = {}
         self.get_param_defaults(block_n)
 
     def get_param_defaults(self, block_n):
         for param_n in block_n.get('param', []):
-            key = param_n['key'][0]
-            value = param_n.get('value', [None])[0]
+            key = self.get_raw(param_n, 'key')
+            value = self.get_raw(param_n, 'value')
             if value is None:
                 options = param_n.get('option')
                 if options:
-                    value = options[0].get('key', None)
+                    value = self.get_raw(options[0], 'key')
             self.params[key] = value
 
 
-    def pop_rewrites(self):
-        rewrites = self.collected_rewrites
-        self.collected_rewrites = {}
-        return rewrites
+    def pop_on_update_kwargs(self):
+        on_update_kwargs = self.collected_on_update_kwargs
+        self.collected_on_update_kwargs = {}
+        return on_update_kwargs
 
     def eval(self, key, expr):
         if '$' in expr:  # template
             try:
                 param_key = expr[1:]
                 default = self.params[param_key] # simple subst
-                self.collected_rewrites[key] = param_key
+                self.collected_on_update_kwargs[key] = param_key
                 return default
             except KeyError:
                 pass
@@ -162,12 +184,11 @@ def get_param_options(param_n, resolver):
         kwargs = OrderedDict()
         kwargs['name'] = resolver.get_raw(option_n, 'name')
         kwargs['value'] = resolver.get_raw(option_n, 'key')
-        extras = dict(
+        kwargs.update(dict(
             opt_n.split(':', 2)
-            for opt_n in option_n.get('opt', []) if ':' in opt_n
-        )
-        if extras:
-            kwargs['extra'] = extras
+            for opt_n in option_n.get('opt', [])
+            if ':' in opt_n and not opt_n.startswith(tuple(kwargs.keys()))
+        ))
         options.append(kwargs)
     return options
 
@@ -195,7 +216,7 @@ def get_params(block_n, resolver):
             kwargs['cls'] = 'OptionsParam'
             kwargs['options'] = get_param_options(n, resolver)
 
-        params.append((kwargs, resolver.pop_rewrites()))
+        params.append((kwargs, resolver.pop_on_update_kwargs()))
     return params
 
 
@@ -216,45 +237,72 @@ def get_ports(block_n, resolver, direction):
             if vlen:
                 kwargs['vlen'] = int(vlen)
 
-        ports.append((method_name, kwargs, resolver.pop_rewrites()))
+        ports.append((method_name, kwargs, resolver.pop_on_update_kwargs()))
     return ports
+
+
+def convert_cheetah_template(expr):
+    """converts a basic Cheetah expr to python string formatting"""
+    markers = ('__!!start!!__', '__!!end!!__')
+    # match $abc123_a3, $[abc123.a3], $(abc123_a3), ${abc123_a3}
+    cheetah_subst = re.compile(
+        '\$\*?' \
+        '((?P<d1>\()|(?P<d2>\{)|(?P<d3>\[)|)' \
+        '(?P<arg>[_a-z][_a-z0-9]*)(?P<subarg>(\.[_a-z][_a-z0-9]*)?)' \
+        '(?(d1)\)|(?(d2)\}|(?(d3)\]|)))'
+    )
+    # replace and tag substitutions (only tag, because ${key} is valid Cheetah)
+    expr = cheetah_subst.sub(
+        lambda match: '{m[0]}{arg}{i}{m[1]}'.format(
+            m=markers,
+            arg=match.group('arg'),
+            i="[{!r}]".format(match.group('subarg')[1:]) if match.group("subarg") else ""
+        ), expr
+    )
+    # mask all curly braces (those left are not no substitutions)
+    expr = expr.replace("{", "{{").replace("}", "}}")
+    # finally, replace markers with curly braces
+    expr = expr.replace(markers[0], "{").replace(markers[1], "}")
+
+    if any(kw in expr for kw in ("#set", "#end", "$")):
+        raise exceptions.CheetahConversionException("Can't convert this expr")
+
+    return expr
 
 
 def get_make(block_n, resolver):
     key = block_n['key'][0]
-
     var_make = block_n.get('var_make', [''])[0]
-
     make = block_n['make'][0]
     if make:
         make = "self.{0} = {0} = {1}".format(key, make)
 
     make = ("\n" if var_make and make else "").join((var_make, make))
 
-    from Cheetah.Template import Template as CheetahTemplate
-    import re
     try:
-        match_id = "(?P<arg>[_a-z][_a-z0-9]*(?:\.[_a-z][_a-z0-9]*)?)"
-        make2 = re.sub("\$" + match_id, "{\g<arg>}", make)
-        for delim in ("[]", "()", "{}"):
-            make2 = re.sub("\$\\{0[0]}{1}\\{0[1]}".format(delim, match_id), "{\g<arg>}", make2)
-        python_template = make2.format(**resolver.params)
-    except:
-        python_template = object()
-    try:
-        cheetah_template = str(CheetahTemplate(make, resolver.params))
-    except:
-        cheetah_template = object()
+        make_format = convert_cheetah_template(make)
+        if "\n" in make_format:
+            make_template = '"""\n        {}\n    """'.format(
+                indent(make_format, 2))
+        else:
+            make_template = repr(make_format)
 
-    make = '"""\n        {}\n    """'.format(indent(make, 2))
+    except exceptions.CheetahConversionException:
+        make_template = 'lambda params: CheetahTemplate(' \
+                        '"""\n        {}\n    """, params)'.format(indent(make, 2))
 
-    if python_template != cheetah_template:
-        make = 'lambda params: CheetahTemplate({}, params)'.format(make)
-    else:
-        make = make2
+    return make_template
 
-    return make
 
+def get_callbacks(blocks_n, resolver):
+    callbacks = blocks_n.get('callback', [])
+    for i in xrange(len(callbacks)):
+        try:
+            callbacks[i] = convert_cheetah_template(callbacks[i])
+
+        except exceptions.CheetahConversionException:
+            callbacks[i] = 'lambda params: CheetahTemplate({!r}, params)'.format(callbacks[i])
+    return callbacks
 
 def indent(s, level=1):
     if isinstance(s, str):
@@ -264,37 +312,34 @@ def indent(s, level=1):
     return ("\n" + " " * 4 * level).join(s)
 
 
+def to_camel_case(key):
+    return re.sub("(^([a-z])|_([a-z])?)", lambda m:
+        (m.group(2) or m.group(3) or "").upper(), key)
+
+
 def construct_block_class_from_nested_data(nested_data):
     n = nested_data
     r = Resolver(n)
 
-    return BLOCK_TEMPLATE.render(
-        key=r.get_raw(n, 'key'),
-        name=r.get_raw(n, 'name'),
+    key = r.get_raw(n, 'key')
 
-        categories=r.get_raw(n, 'category'),
-        throttle=r.get_raw(n, 'throttle'),
+    return key, BLOCK_TEMPLATE.render(
+        cls=key,
+        base="Block",
+        doc=r.get_raw(n, 'doc'),
+
+        name=r.get_raw(n, 'name'),
+        categories=n.get('category', []),
+        throttling=r.get_raw(n, 'throttle'),
 
         make_template=get_make(n, r),
-        import_template="\n".join(n.get('import', [])),
-
-        callbacks=r.get_raw(n, 'callback'),
+        imports=n.get('import', []),
+        callbacks=get_callbacks(n, r),
 
         params=get_params(n, r),
         sinks=get_ports(n, r, 'sink'),
         sources=get_ports(n, r, 'source'),
 
-        doc=r.get_raw(n, 'doc'),
-
+        # helper functions
         indent=indent
     )
-
-
-def _parse_string_literal(value):
-    try:
-        evaluated = eval(value, [])
-        if isinstance(evaluated, str):
-            value = evaluated
-    except:
-        pass
-    return '"{}"'.format(value.replace('"', '\\"'))

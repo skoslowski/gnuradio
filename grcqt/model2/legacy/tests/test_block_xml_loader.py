@@ -22,7 +22,7 @@ from os import path
 import glob
 
 from .. import load_block_xml
-from .. block_xml_loader import Resolver, get_make
+from .. block_xml_loader import Resolver, convert_cheetah_template
 
 
 def iter_resource_files():
@@ -43,7 +43,7 @@ def resolver():
     return Resolver({'param': [
         dict(key=('t1',), value=('t11',)),
         dict(key=('t2',), value=('t21',)),
-        dict(key=('t3',), value=('t31',)),
+        dict(key=('t3',), option=(dict(key=('t31',)),)),
     ]})
 
 
@@ -53,10 +53,10 @@ def test_resolver_fixed_value(resolver):
 
 def test_resolver_simple_template(resolver):
     assert resolver.eval('test', "$t1") == 't11'
-    # pop the rewrite action
-    assert resolver.pop_rewrites() == dict(test='t1')
+    # pop the update action
+    assert resolver.pop_on_update_kwargs() == dict(test='t1')
     # make sure its gone
-    assert resolver.pop_rewrites() == dict()
+    assert resolver.pop_on_update_kwargs() == dict()
 
 
 def test_resolver_get_raw():
@@ -66,7 +66,7 @@ def test_resolver_get_raw():
 
 def test_resolver_get(resolver):
     assert resolver.get(dict(test='$t1'), 'test', 't') == 't11'
-    assert resolver.pop_rewrites() == dict(t='t1')
+    assert resolver.pop_on_update_kwargs() == dict(t='t1')
 
 
 def test_format():
@@ -86,13 +86,6 @@ def test_format():
     assert "{a} {a[0]}".format(a=A()) == "abc 1"
 
 
-def test_get_make():
-    class B:
-        cd = "h"
-
-    class Resolver():
-        params = {'a': '123', 'b': B}
-
-    block_n = lambda m: {'key': ['a'], 'make': [m]}
-    make = get_make(block_n("test$a $(a) ${a}a $[a]lk $(b.cd)"), Resolver)
-    assert make == "self.a = a = test{a} {a} {a}a {a}lk {b.cd}"
+def test_convert_cheetah_template():
+    make = convert_cheetah_template("{test$a} $(abc123_a3) ${a}a $[a]lk $(b.cd)")
+    assert make == "{{test{a}}} {abc123_a3} {a}a {a}lk {b['cd']}"

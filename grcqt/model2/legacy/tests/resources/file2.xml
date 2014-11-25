@@ -8,6 +8,8 @@
 <block>
 	<name>And Const</name>
 	<key>blocks_and_const_xx</key>
+	<category>test</category>
+	<throttle>1</throttle>
 	<import>from gnuradio import blocks</import>
 	<import>from gnuradio import blocks</import>
 	<make>blocks.and_const_$(type.fcn)($const)</make>
