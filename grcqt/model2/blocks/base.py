@@ -23,10 +23,10 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from inspect import isclass
 
-from . import exceptions
-from . base import Element
-from . params import Param, IdParam
-from . ports import BasePort, StreamPort, MessagePort
+from .. import exceptions
+from .. base import Element
+from .. params import Param, IdParam
+from .. ports import BasePort, StreamPort, MessagePort
 
 
 class BaseBlock(Element):
@@ -182,13 +182,3 @@ class Block(BaseBlock):
         if self._sources:
             self.add_param(key='minoutbuf', name='Min Output Buffer', vtype=int, default=0)
             self.add_param(key='maxoutbuf', name='Max Output Buffer', vtype=int, default=0)
-
-
-class PadBlock(BaseBlock):
-    pass
-    # todo: add custom stuff
-
-
-class VirtualSourceSinkBlock(BaseBlock):
-    pass
-    # todo: add custom stuff

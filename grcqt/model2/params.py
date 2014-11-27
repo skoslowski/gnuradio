@@ -118,7 +118,19 @@ class IdParam(Param):
 class OptionsParam(Param):
 
     # careful: same empty dict for all instances
-    Option = partial(namedtuple("Option", "name value extra"), extra={})
+    #Option = partial(namedtuple("Option", "name value extra"), extra={})
+    class Option(object):
+        """
+        Each option has a name and value. alternate values may be passed
+        """
+        def __init__(self, name, value, **kwargs):
+            self.name = name
+            self.value = value
+            for key in kwargs:
+                setattr(self, key, kwargs[key])
+
+        def __format__(self, format_spec):
+            return str(self.value)
 
     def __init__(self, parent, name, key, vtype, options, default=None, allow_arbitrary_values=False):
         super(OptionsParam, self).__init__(parent, name, key, vtype, default)
@@ -131,8 +143,12 @@ class OptionsParam(Param):
         if isinstance(name_or_option, self.Option):
             option = name_or_option
         else:
-            option = self.Option(name_or_option, value, kwargs)
+            option = self.Option(name_or_option, value, **kwargs)
         self.options.append(option)
+
+    def update(self):
+        super(Param, self).update()
+        self._evaluated = self.parent_flowgraph.evaluate(self.value)
 
     def validate(self):
         for error in super(OptionsParam, self).validate():
@@ -144,7 +160,7 @@ class OptionsParam(Param):
             )
 
     def __format__(self, format_spec):
-        return self.evaluated
+        return self.evaluated.__format__(format_spec)
 
     def __getitem__(self, key):
         return self.options[self.options.index(self.evaluated)].extra[key]

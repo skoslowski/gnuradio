@@ -24,12 +24,12 @@ import imp
 import inspect
 from itertools import imap
 from collections import defaultdict
+import types
 
 from . _consts import BLOCK_CLASS_FILE_EXTENSION, BLOCK_XML_EXTENSION, BLOCK_TREE_EXTENSION
 from . import legacy
-import types
 from . flowgraph import FlowGraph
-from . blocks import BaseBlock, Block
+from . blocks import BaseBlock
 
 
 class BlockLoadException(Exception):

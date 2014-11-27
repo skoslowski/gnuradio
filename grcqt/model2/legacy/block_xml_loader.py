@@ -28,6 +28,7 @@ from . block_category_loader import xml_to_nested_data
 from .. import exceptions
 from .. blocks import Block
 
+
 BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
 
 
