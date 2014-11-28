@@ -32,7 +32,7 @@ def iter_resource_files():
             yield fp
 
 
-def test_category_tree_xml():
+def test_block_xml():
     for fp in iter_resource_files():
         BlockClass = load_block_xml(fp)
         #print BlockClass
@@ -44,28 +44,28 @@ def resolver():
         dict(key=('t1',), value=('t11',)),
         dict(key=('t2',), value=('t21',)),
         dict(key=('t3',), option=(dict(key=('t31',)),)),
-    ]})
+    ], 'test1': ('a',), 'test2': 'a', 'test3': '$t1'})
 
 
 def test_resolver_fixed_value(resolver):
-    assert resolver.eval('p1', 'no dollar sign in here') == 'no dollar sign in here'
+    assert resolver._eval('p1', 'no dollar sign in here') == 'no dollar sign in here'
 
 
 def test_resolver_simple_template(resolver):
-    assert resolver.eval('test', "$t1") == 't11'
+    assert resolver._eval('test', "$t1") == 't11'
     # pop the update action
     assert resolver.pop_on_update_kwargs() == dict(test='t1')
     # make sure its gone
     assert resolver.pop_on_update_kwargs() == dict()
 
 
-def test_resolver_get_raw():
-    assert Resolver.get_raw(dict(test=('a',)), 'test') == 'a'
-    assert Resolver.get_raw(dict(test='a'), 'test') == 'a'
-
-
 def test_resolver_get(resolver):
-    assert resolver.get(dict(test='$t1'), 'test', 't') == 't11'
+    assert resolver.get('test1') == 'a'
+    assert resolver.get('test2') == 'a'
+
+
+def test_resolver_eval(resolver):
+    assert resolver.eval('test3', 't') == 't11'
     assert resolver.pop_on_update_kwargs() == dict(t='t1')
 
 
@@ -88,4 +88,4 @@ def test_format():
 
 def test_convert_cheetah_template():
     make = convert_cheetah_template("{test$a} $(abc123_a3) ${a}a $[a]lk $(b.cd)")
-    assert make == "{{test{a}}} {abc123_a3} {a}a {a}lk {b['cd']}"
+    assert make == "{{test{a}}} {abc123_a3} {a}a {a}lk {b.cd}"

@@ -20,6 +20,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 from os import path
 from collections import OrderedDict
 import re
+from itertools import imap
+
 
 from lxml import etree
 from mako.template import Template
@@ -30,6 +32,14 @@ from .. blocks import Block
 
 
 BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
+
+# match $abc123_a3, $[abc123.a3], $(abc123_a3), ${abc123_a3}
+cheetah_substitution = re.compile(
+    '\$\*?'
+    '((?P<d1>\()|(?P<d2>\{)|(?P<d3>\[)|)'
+    '(?P<arg>[_a-z][_a-z0-9]*(?:\.[_a-z][_a-z0-9]*)?)'
+    '(?(d1)\)|(?(d2)\}|(?(d3)\]|)))'
+)
 
 
 def load_block_xml(xml_file):
@@ -49,21 +59,22 @@ def load_block_xml(xml_file):
         exec class_definition in namespace
     except SyntaxError as e:
         raise SyntaxError(e.message + ':\n' + class_definition)
-
+    print class_definition
     return namespace[key]
+
 
 BLOCK_TEMPLATE = Template('''\
 <%!
-def to_func_args(kwargs):
-    return ", ".join(
+def to_func_args(kwargs, newline=False):
+    return (", \\n" if newline else ", ").join(
         "{}={}".format(key, repr(value))
         for key, value in kwargs.iteritems()
     )
 %>
 <%def name="on_update(on_update_kwargs)">\\
-% if updates:
+% if on_update_kwargs:
 .on_update(
-            ${ to_func_args(on_update_kwargs) }
+            ${ indent(to_func_args(on_update_kwargs, True), 3) }
         )\\
 % endif
 </%def>
@@ -132,31 +143,40 @@ class ${ cls }(Block):
 ''')
 
 
+class Raw(str):
+    """a String without quotes in repr(...)"""
+    def __repr__(self):
+        return self
+
+
 class Resolver(object):
 
-    def __init__(self, block_n):
-        self.params = dict()
+    def __init__(self, n, params=None):
+        self.n = n
+        self.params = params or self.get_param_defaults(n)
         self.collected_on_update_kwargs = {}
-        self.get_param_defaults(block_n)
 
-    def get_param_defaults(self, block_n):
+    @staticmethod
+    def get_param_defaults(block_n):
+        params = {}
         for param_n in block_n.get('param', []):
-            key = self.get_raw(param_n, 'key')
-            value = self.get_raw(param_n, 'value')
+            key = param_n.get('key')[0]
+            value = param_n.get('value', [None])[0]
             if value is None:
-                options = param_n.get('option')
-                if options:
-                    value = self.get_raw(options[0], 'key')
-            self.params[key] = value
-
+                options_n = param_n.get('option', [])
+                if options_n:
+                    value = options_n[0].get('key', [None])[0]
+            params[key] = value
+        return params
 
     def pop_on_update_kwargs(self):
         on_update_kwargs = self.collected_on_update_kwargs
         self.collected_on_update_kwargs = {}
         return on_update_kwargs
 
-    def eval(self, key, expr):
-        if '$' in expr:  # template
+    def _eval(self, key, expr):
+        """Convert Cheetah generated python to on_update callbacks"""
+        if expr.startswith('$'):  # template
             try:
                 param_key = expr[1:]
                 default = self.params[param_key] # simple subst
@@ -164,101 +184,110 @@ class Resolver(object):
                 return default
             except KeyError:
                 pass
-            # todo parse/eval advanced template
+
+        if '$' in expr:
+            used_params = []
+            def convert(match):
+                arg = match.group('arg')
+                used_params.append(arg)
+                return arg
+            eval_str = cheetah_substitution.sub(convert, expr)
+            print(expr, eval_str)
+            value = eval(eval_str, self.params)
+            self.collected_on_update_kwargs[key] = Raw(
+                "lambda {}, **p: ({})".format(', '.join(used_params), eval_str)
+            )
+            return value
         return expr
 
-    def get(self, namespace, key, key2=None):
-        expr = self.get_raw(namespace, key)
-        return self.eval(key2 or key, expr) if expr else expr
+    def eval(self, key, target_key=None):
+        expr = self.get(key)
+        return self._eval(target_key or key, expr) if expr else expr
 
-    @staticmethod
-    def get_raw(namespace, key):
-        items = namespace.get(key, [None])
-        if not isinstance(items, str):
-            items = items[0]
-        return items
+    def get(self, *keys):
+        """Get one or more string values for the specified keys"""
+        items = [item if isinstance(item, str) else item[0]
+                 for item in imap(lambda k: self.n.get(k, [None]), keys)]
+        return items if len(keys) > 1 else items[0]
+
+    def get_all(self, key):
+        """Get a list of value for a key"""
+        items = self.n.get(key, [])
+        return items if not isinstance(items, str) else [items]
+
+    def iter_sub_n(self, key):
+        """Yield every item for key as (sub-)Resolver"""
+        for n in self.get_all(key):
+            yield self.__class__(n, self.params)
 
 
-def get_param_options(param_n, resolver):
+
+def get_param_options(param_n):
     options = []
-    for option_n in param_n.get('option', []):
+    for option_n in param_n.iter_sub_n('option'):
         kwargs = OrderedDict()
-        kwargs['name'] = resolver.get_raw(option_n, 'name')
-        kwargs['value'] = resolver.get_raw(option_n, 'key')
+        kwargs['name'], kwargs['value'] = option_n.get('name', 'key')
         kwargs.update(dict(
             opt_n.split(':', 2)
-            for opt_n in option_n.get('opt', [])
+            for opt_n in option_n.get_all('opt')
             if ':' in opt_n and not opt_n.startswith(tuple(kwargs.keys()))
         ))
         options.append(kwargs)
     return options
 
 
-def get_params(block_n, resolver):
+def get_params(block_n):
     params = []
-    for n in block_n.get('param', []):
+    for param_n in block_n.iter_sub_n('param'):
         kwargs = OrderedDict()
-        kwargs['name'] = resolver.get_raw(n, 'name')
-        kwargs['key'] = resolver.get_raw(n, 'key')
+        kwargs['name'], kwargs['key'] = param_n.get('name', 'key')
 
-        vtype = resolver.get(n, 'type')
+        vtype = param_n.eval('type', 'vtype')
         kwargs['vtype'] = vtype if vtype != 'enum' else None
 
         #todo: parse hide tag
-        value = resolver.get_raw(n, 'value')
+        value = param_n.get('value')
         if value:
             kwargs['default'] = value
 
-        category = resolver.get_raw(n, 'tab')
+        category = param_n.get('tab')
         if category:
             kwargs['category'] = category
 
         if vtype == 'enum':
             kwargs['cls'] = 'OptionsParam'
-            kwargs['options'] = get_param_options(n, resolver)
+            kwargs['options'] = get_param_options(param_n)
 
-        params.append((kwargs, resolver.pop_on_update_kwargs()))
+        params.append((kwargs, param_n.pop_on_update_kwargs()))
     return params
 
 
-def get_ports(block_n, resolver, direction):
+def get_ports(block_n, direction):
     ports = []
-    for n in block_n.get(direction, []):
+    for port_n in block_n.iter_sub_n(direction):
         kwargs = OrderedDict()
-        kwargs['name'] = resolver.get_raw(n, 'name')
+        kwargs['name'] = port_n.get('name')
 
-        dtype = resolver.get(n, 'type', 'dtype')
+        dtype = port_n.eval('type', target_key='dtype')
         if dtype == 'message':
             method_name = "add_message_" + direction
             kwargs['key'] = kwargs['name']
         else:
             method_name = "add_stream_" + direction
             kwargs['dtype'] = dtype
-            vlen = resolver.get(n, 'vlen')
+            vlen = port_n.eval('vlen')
             if vlen:
                 kwargs['vlen'] = int(vlen)
 
-        ports.append((method_name, kwargs, resolver.pop_on_update_kwargs()))
+        ports.append((method_name, kwargs, port_n.pop_on_update_kwargs()))
     return ports
 
 
 def convert_cheetah_template(expr):
     """converts a basic Cheetah expr to python string formatting"""
     markers = ('__!!start!!__', '__!!end!!__')
-    # match $abc123_a3, $[abc123.a3], $(abc123_a3), ${abc123_a3}
-    cheetah_subst = re.compile(
-        '\$\*?' \
-        '((?P<d1>\()|(?P<d2>\{)|(?P<d3>\[)|)' \
-        '(?P<arg>[_a-z][_a-z0-9]*)(?P<subarg>(\.[_a-z][_a-z0-9]*)?)' \
-        '(?(d1)\)|(?(d2)\}|(?(d3)\]|)))'
-    )
     # replace and tag substitutions (only tag, because ${key} is valid Cheetah)
-    expr = cheetah_subst.sub(
-        lambda match: '{m[0]}{arg}{i}{m[1]}'.format(
-            m=markers,
-            arg=match.group('arg'),
-            i="[{!r}]".format(match.group('subarg')[1:]) if match.group("subarg") else ""
-        ), expr
+    expr = cheetah_substitution.sub('{}\g<arg>{}'.format(*markers), expr
     )
     # mask all curly braces (those left are not no substitutions)
     expr = expr.replace("{", "{{").replace("}", "}}")
@@ -271,12 +300,11 @@ def convert_cheetah_template(expr):
     return expr
 
 
-def get_make(block_n, resolver):
-    key = block_n['key'][0]
-    var_make = block_n.get('var_make', [''])[0]
-    make = block_n['make'][0]
+def get_make(block_n):
+    var_make = block_n.get('var_make') or ''
+    make = block_n.get('make')
     if make:
-        make = "self.{0} = {0} = {1}".format(key, make)
+        make = "self.{key} = {key} = " + make
 
     make = ("\n" if var_make and make else "").join((var_make, make))
 
@@ -289,14 +317,15 @@ def get_make(block_n, resolver):
             make_template = repr(make_format)
 
     except exceptions.CheetahConversionException:
-        make_template = 'lambda params: CheetahTemplate(' \
+
+        make_template = 'lambda **params: CheetahTemplate(' \
                         '"""\n        {}\n    """, params)'.format(indent(make, 2))
 
     return make_template
 
 
-def get_callbacks(blocks_n, resolver):
-    callbacks = blocks_n.get('callback', [])
+def get_callbacks(blocks_n):
+    callbacks = blocks_n.get_all('callback')
     for i in xrange(len(callbacks)):
         try:
             callbacks[i] = convert_cheetah_template(callbacks[i])
@@ -304,6 +333,7 @@ def get_callbacks(blocks_n, resolver):
         except exceptions.CheetahConversionException:
             callbacks[i] = 'lambda params: CheetahTemplate({!r}, params)'.format(callbacks[i])
     return callbacks
+
 
 def indent(s, level=1):
     if isinstance(s, str):
@@ -319,27 +349,26 @@ def to_camel_case(key):
 
 
 def construct_block_class_from_nested_data(nested_data):
-    n = nested_data
-    r = Resolver(n)
+    block_n = Resolver(nested_data)
 
-    key = r.get_raw(n, 'key')
+    key = block_n.get('key')
 
     return key, BLOCK_TEMPLATE.render(
         cls=key,
         base="Block",
-        doc=r.get_raw(n, 'doc'),
+        doc=block_n.get('doc'),
 
-        name=r.get_raw(n, 'name'),
-        categories=n.get('category', []),
-        throttling=r.get_raw(n, 'throttle'),
+        name=block_n.get('name'),
+        categories=block_n.get_all('category'),
+        throttling=block_n.get('throttle'),
 
-        make_template=get_make(n, r),
-        imports=n.get('import', []),
-        callbacks=get_callbacks(n, r),
+        make_template=get_make(block_n),
+        imports=block_n.get_all('import'),
+        callbacks=get_callbacks(block_n),
 
-        params=get_params(n, r),
-        sinks=get_ports(n, r, 'sink'),
-        sources=get_ports(n, r, 'source'),
+        params=get_params(block_n),
+        sinks=get_ports(block_n, 'sink'),
+        sources=get_ports(block_n, 'source'),
 
         # helper functions
         indent=indent

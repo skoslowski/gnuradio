@@ -111,7 +111,7 @@ class BlockChildElement(Element):
         for target, callback_or_param_name in self.update_actions.iteritems():
             try:
                 if callable(callback_or_param_name):
-                    value = callback_or_param_name(params)
+                    value = callback_or_param_name(**params)
                 else:
                     value = params[callback_or_param_name]
 
