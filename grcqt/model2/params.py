@@ -21,11 +21,9 @@ from __future__ import absolute_import, division, print_function
 
 import re
 from abc import ABCMeta
-from collections import namedtuple
-from functools import partial
 from itertools import imap, count
 
-from . import exceptions
+from . import exceptions, types
 from . base import BlockChildElement
 from . _consts import BLOCK_ID_BLACK_LIST
 
@@ -36,10 +34,11 @@ class Param(BlockChildElement):
     def __init__(self, parent, name, key, vtype=None, default=None, category=None, validator=None):
         super(Param, self).__init__(parent)
         self._key = key
-        self.name = name
-        self.category = category
+        self._vtype = None
         self._evaluated = None
 
+        self.name = name
+        self.category = category
         self.vtype = vtype
         self.validator = validator
         self.value = self.default = default  # todo get vtype default
@@ -47,6 +46,15 @@ class Param(BlockChildElement):
     @property
     def key(self):
         return self._key
+
+    @property
+    def vtype(self):
+        return self._vtype
+
+    @vtype.setter
+    def vtype(self, value):
+        assert value in types.param_vtypes, "Invalid vtype '{}'".format(value)
+        self._vtype = value
 
     @property
     def evaluated(self):
@@ -60,19 +68,14 @@ class Param(BlockChildElement):
         for error in super(Param, self).validate():
             yield error
 
-        if not self.vtype in self.platform.vtypes:
-            yield self, "Unknown param value type '{}' "
-
         try:
             # value type validation
-            self.platform.vtypes[self.vtype].validate(self.evaluated)
+            types.param_vtypes[self.vtype].validate(self.evaluated)
             # custom validator
             if callable(self.validator) and not self.validator(self.evaluated):
-                yield exceptions.ValidationException(
-                    self, "Validator failed: " + repr(self.validator)
-                )
+                self.logger.error("Validator failed: " + repr(self.validator))
         except Exception as e:
-            yield self, "Failed to validate " + e.args[0]
+            self.logger.error("Failed to validate " + e.args[0])
 
 
 class IdParam(Param):
@@ -118,7 +121,7 @@ class IdParam(Param):
 class OptionsParam(Param):
 
     # careful: same empty dict for all instances
-    #Option = partial(namedtuple("Option", "name value extra"), extra={})
+    # Option = partial(namedtuple("Option", "name value extra"), extra={})
     class Option(object):
         """
         Each option has a name and value. alternate values may be passed

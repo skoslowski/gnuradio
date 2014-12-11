@@ -93,13 +93,13 @@ def test_block_add_param6(block):
 def test_block_add_ports(block):
 
     block.add_message_sink("in1")
-    block.add_stream_sink("in2")
+    block.add_stream_sink("in2", complex)
     block.add_message_source("out1")
-    block.add_stream_source("out2")
+    block.add_stream_source("out2", complex)
 
-    block.add_port(StreamPort, 'sink', "in")
+    block.add_port(StreamPort, 'sink', "in", complex)
     try:
-        block.add_port(StreamPort, 'up', "in")
+        block.add_port(StreamPort, 'up', "in", complex)
     except exceptions.BlockSetupException:
         pass
     else:

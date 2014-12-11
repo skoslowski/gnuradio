@@ -24,7 +24,6 @@ import imp
 import inspect
 from itertools import imap
 from collections import defaultdict
-import types
 
 from . _consts import BLOCK_CLASS_FILE_EXTENSION, BLOCK_XML_EXTENSION, BLOCK_TREE_EXTENSION
 from . import legacy
@@ -38,27 +37,6 @@ class BlockLoadException(Exception):
 
 class Platform(object):
 
-    # Class stuff
-    param_vtypes = {}
-    port_dtypes = {}
-
-    @classmethod
-    def register_param_vtype(cls, param_type):
-        if not isinstance(param_type, types.ParamVType):
-            raise Exception("")
-
-        for name in param_type.names:
-            cls.param_vtypes[name] = param_type
-
-    @classmethod
-    def register_port_dtype(cls, port_dtype):
-        if not isinstance(port_dtype, types.PortDType):
-            raise Exception("")
-        for name in port_dtype.names:
-            cls.port_dtypes[name] = port_dtype
-
-
-    # object stuff
     def __init__(self, version, block_paths):
         """
         A platform object holds block classes.
@@ -82,7 +60,6 @@ class Platform(object):
         block_paths = block_paths or self.block_paths
         categories = defaultdict(set)
         exceptions = []
-
 
         # first, load category tree files
         for block_tree_file in self.iter_block_files(block_paths, BLOCK_TREE_EXTENSION):

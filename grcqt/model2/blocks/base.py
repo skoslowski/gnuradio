@@ -90,21 +90,19 @@ class BaseBlock(Element):
             raise exceptions.BlockSetupException("Unknown port direction")
         return port
 
-    def add_stream_sink(self, name, enabled=True, nports=None, dtype=None, vlen=1):
-        return self.add_port(
-            StreamPort, 'sink', name, enabled, nports, dtype, vlen
-        )
+    def add_stream_sink(self, name, dtype, vlen=1, nports=None, active=True):
+        return self.add_port(StreamPort, 'sink',
+                             name, dtype, vlen, nports, active)
 
-    def add_stream_source(self, name, enabled=True, nports=None, dtype=None, vlen=1):
-        return self.add_port(
-            StreamPort, 'source', name, enabled, nports, dtype, vlen
-        )
+    def add_stream_source(self, name, dtype, vlen=1, nports=None, active=True):
+        return self.add_port(StreamPort, 'source',
+                              name, dtype, vlen, nports, active)
 
-    def add_message_sink(self, name, enabled=True, nports=None, key=None):
-        return self.add_port(MessagePort, 'sink', name, enabled, nports, key)
+    def add_message_sink(self, name, key=None, nports=1, active=True):
+        return self.add_port(MessagePort, 'sink', name, key, nports, active)
 
-    def add_message_source(self, name, enabled=True, nports=None, key=None):
-        return self.add_port(MessagePort, 'source', name, enabled, nports, key)
+    def add_message_source(self, name, key=None, nports=1, active=True):
+        return self.add_port(MessagePort, 'source', name, key, nports, active)
 
     def add_param(self, *args, **kwargs):
         """Add a param to this block
@@ -142,7 +140,7 @@ class BaseBlock(Element):
             del ports[:]  # reset list
             for port in ports_raw:
                 port.update()
-                if port.enabled:
+                if port.active:
                     # re-add ports and their clones
                     ports.append(port)
                     ports += port.clones

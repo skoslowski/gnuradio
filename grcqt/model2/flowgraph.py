@@ -82,12 +82,7 @@ class FlowGraph(Element):
             del element
 
     def update(self):
-        self.namespace.reset()
-        # todo: decide if lazy var eval is better (if yes, skip and remove finalize
-        for name, variable in self.variables.iteritems():
-            if name not in self.namespace:
-                self.namespace[name] = variable.evaluate()
-        self.namespace.finalize()
+        self.namespace.repopulate()
         # eval blocks first, then connections
         for element in chain(self.blocks, self.connections):
             element.update()
@@ -136,12 +131,17 @@ class _FlowGraphNamespace(MutableMapping):
     def __iter__(self):
         return iter(self._namespace)
 
-    def finalize(self):
-        del self._dependency_chain[:]
-        self._finalized = True
-
     def reset(self):
         del self._dependency_chain[:]
         self._namespace.clear()
         self._namespace.update(self.defaults)
         self._finalized = False
+
+    def repopulate(self):
+        self.reset()
+        # todo: decide if lazy var eval is better (if yes, skip and remove finalize
+        for name, variable in self.variables.iteritems():
+            if name not in self:
+                self[name] = variable.evaluate()
+        del self._dependency_chain[:]
+        self._finalized = True

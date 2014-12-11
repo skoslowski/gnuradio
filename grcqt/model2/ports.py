@@ -23,6 +23,7 @@ from abc import ABCMeta, abstractmethod
 from itertools import islice
 
 from . base import Element, BlockChildElement
+from . import types
 
 
 class BasePort(BlockChildElement):
@@ -30,11 +31,11 @@ class BasePort(BlockChildElement):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def __init__(self, parent, name, enabled=True, nports=None):
+    def __init__(self, parent, name, nports=None, active=True):
         super(BasePort, self).__init__(parent)
         self._name = name
-        self.enabled = enabled
-        self.nports = nports
+        self._nports = nports
+        self.active = active
 
     @property
     def name(self):
@@ -47,6 +48,17 @@ class BasePort(BlockChildElement):
     @name.setter
     def name(self, name):
         self._name = name
+
+    @property
+    def nports(self):
+        """Get nports, None means no cloning"""
+        return self._nports
+
+    @nports.setter
+    def nports(self, nports):
+        nports = int(nports)  # Can't go back to None
+        assert nports is None or nports > 0, "Need nports > 0"
+        self._nports = nports
 
     @property
     def connections(self):
@@ -70,22 +82,23 @@ class BasePort(BlockChildElement):
     def update(self):
         """adjust the number of clones"""
         if self.nports is not None:
-            nports = max((self.nports, 1))
             clones = list(self.clones)
             # remove excess clones
-            for clone in islice(clones, nports - 1, 1000000):
+            for clone in islice(clones, self.nports-1, 1000000):
                 clone.disconnect()
                 self.children.remove(clone)
             # add new clones
-            for i in range(len(clones), nports-1):
-                PortClone(master_port=self, clone_id=i+1)  # ref kept in self.children
+            # since we only either remove or add clones, len(clones) is valid
+            nports_current = len(clones) + 1
+            for clone_id in range(nports_current, self.nports):
+                PortClone(self, clone_id)  # ref kept in self.children
 
 
 class PortClone(Element):
     """Acts as a clone of its parent object, but adds and index to its name"""
 
     def __init__(self, master_port, clone_id):
-        super(PortClone, self).__init__(parent=master_port)
+        super(PortClone, self).__init__(master_port)
         self.clone_id = clone_id
 
     @property
@@ -97,7 +110,7 @@ class PortClone(Element):
     def key(self):
         """The key of a cloned port gets its index appended"""
         if isinstance(self.parent, MessagePort):
-             return self.parent.key + str(self.clone_id)
+            return self.parent.key + str(self.clone_id)
 
     def __getattr__(self, item):
         """Get all other attributes from parent (Port) object"""
@@ -111,19 +124,36 @@ BasePort.register(PortClone)
 class StreamPort(BasePort):
     """Stream ports have a data type and vector length"""
 
-    def __init__(self, parent, name, enabled=True, nports=None, dtype=None, vlen=1):
-        super(StreamPort, self).__init__(parent, name, enabled, nports)
+    def __init__(self, parent, name, dtype, vlen=1, nports=None, active=True):
+        """Create a new stream port"""
+        super(StreamPort, self).__init__(parent, name, nports, active)
+        self._dtype = None
+        self._vlen = None
         self.dtype = dtype
         self.vlen = vlen
 
-    def validate(self):
-        # todo: check dtype and vlen
-        super(StreamPort, self).validate()
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, value):
+        assert value in types.port_dtypes, "Invalid dtype '{}'".format(value)
+        self._dtype = value
+
+    @property
+    def vlen(self):
+        return self._vlen
+
+    @vlen.setter
+    def vlen(self, value):
+        vlen = int(value)
+        assert vlen > 0, "Invalid value '{}' for vlen".format(value)
 
 
 class MessagePort(BasePort):
     """Message ports usually have a fixed key"""
 
-    def __init__(self, parent, name, enabled=True, nports=1, key=None):
-        super(MessagePort, self).__init__(parent, name, enabled, nports)
+    def __init__(self, parent, name, key=None, nports=1, active=True):
+        super(MessagePort, self).__init__(parent, name, nports, active)
         self.key = key or name
