@@ -21,43 +21,33 @@ from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from inspect import isclass
+import inspect
 
 from .. import exceptions
 from .. base import Element
 from .. params import Param, IdParam
-from .. ports import BasePort, StreamPort, MessagePort
+from .. ports import (BasePort, StreamPort, MessagePort,
+                      SINK, SOURCE, PORT_DIRECTIONS)
 
 
 class BaseBlock(Element):
+    """Basic element with parameters and import/make template"""
     __metaclass__ = ABCMeta
 
     name = 'label'  # the name of this block (label in the gui)
-    categories = []
-    throttling = False
+    categories = []  # categories put put this block under
 
     import_template = ''
     make_template = ''
-
 
     def __init__(self, parent, **kwargs):
         super(BaseBlock, self).__init__(parent)
 
         self.params = OrderedDict()
-        self.add_param(IdParam(self))
-        self.add_param(name='Enabled', key='_enabled', vtype=bool, default=True)
+        self.namespace = {}  # dict of evaluated params
 
-        self.params_namespace = {}  # dict of evaluated params
-
-        # the raw/unexpanded/hidden port objects are held here
-        self._sources = []
-        self._sinks = []
-
-        # lists of ports currently visible (think hidden ports, bus ports, nports)
-        self.sources = []  # filled / updated by update()
-        self.sinks = []
-
-        # call user defined init
+        self.add_param(cls=IdParam)
+        self.add_param('Enabled', '_enabled', vtype=bool, default=True)
         self.setup(**kwargs)
 
     @abstractmethod
@@ -70,40 +60,6 @@ class BaseBlock(Element):
         """unique identifier for this block within the flow-graph"""
         return self.params['id'].value
 
-    def add_port(self, cls, direction, *args, **kwargs):
-        """Add a port to this block
-
-        Args:
-            - port_object_or_class: instance or subclass of BasePort
-            - args, kwargs: arguments to pass the the port
-        """
-        if issubclass(cls, BasePort):
-            port = cls(self, *args, **kwargs)
-        elif isinstance(cls, BasePort):
-            port = cls
-        else:
-            raise ValueError("Excepted an instance of BasePort")
-
-        try:
-            {'sink': self._sinks,'source': self._sources}[direction].append(port)
-        except KeyError:
-            raise exceptions.BlockSetupException("Unknown port direction")
-        return port
-
-    def add_stream_sink(self, name, dtype, vlen=1, nports=None, active=True):
-        return self.add_port(StreamPort, 'sink',
-                             name, dtype, vlen, nports, active)
-
-    def add_stream_source(self, name, dtype, vlen=1, nports=None, active=True):
-        return self.add_port(StreamPort, 'source',
-                              name, dtype, vlen, nports, active)
-
-    def add_message_sink(self, name, key=None, nports=1, active=True):
-        return self.add_port(MessagePort, 'sink', name, key, nports, active)
-
-    def add_message_source(self, name, key=None, nports=1, active=True):
-        return self.add_port(MessagePort, 'source', name, key, nports, active)
-
     def add_param(self, *args, **kwargs):
         """Add a param to this block
 
@@ -115,41 +71,26 @@ class BaseBlock(Element):
         if args and isinstance(args[0], Param):
             param = args[0]
         elif 'cls' in kwargs:
-            if isclass(kwargs.get('cls')) and issubclass(kwargs['cls'], Param):
-                param = kwargs.pop('cls')(self, *args, **kwargs)
+            cls = kwargs.pop('cls')  # remove cls from kwargs
+            if inspect.isclass(cls) and issubclass(cls, Param):
+                param = cls(self, *args, **kwargs)
             else:
                 raise exceptions.BlockSetupException("Invalid param class")
         else:
             param = Param(self, *args, **kwargs)
 
-        key = str(param.key)
-        if key in self.params:
-            raise exceptions.BlockSetupException("Param key '{}' not unique".format(key))
-        self.params[key] = param
+        if param.key in self.params:
+            raise exceptions.BlockSetupException(
+                "Param key '{}' not unique".format(param.key))
+        self.params[param.key] = param
         return param
 
     def update(self):
-        """Update the blocks ports"""
-        self.params_namespace.clear()
+        """Update the blocks params and (re-)build the local namespace"""
+        self.namespace.clear()
         for key, param in self.params.iteritems():
-            self.params_namespace[key] = param.evaluated
-
-        port_lists_map = ((self.sinks, self._sinks), (self.sources, self._sources))
-        for ports, ports_raw in port_lists_map:
-            ports_current = list(ports)  # keep current list of ports
-            del ports[:]  # reset list
-            for port in ports_raw:
-                port.update()
-                if port.active:
-                    # re-add ports and their clones
-                    ports.append(port)
-                    ports += port.clones
-                elif port in ports_current:
-                    # remove connections from ports that were disabled
-                    port.disconnect()
-
-        # todo: form busses
-        #super(BaseBlock, self).update()  # todo: should I even call this?
+            param.update()
+            self.namespace[key] = param.evaluated
 
     def load(self, state):
         for key, param in self.params.iteritems():
@@ -171,12 +112,73 @@ class BaseBlock(Element):
 class Block(BaseBlock):
     """A regular block (not a pad, virtual sink/source, variable)"""
 
+    throttling = False  # is this a throttling block?
+
     def __init__(self, parent, **kwargs):
         super(Block, self).__init__(parent, **kwargs)
 
-        self.add_param(key='alias', name='Block Alias', vtype=str, default=self.id)
-        if self._sources or self._sinks:
-            self.add_param(key='affinity', name='Core Affinity', vtype=list, default=[])
-        if self._sources:
-            self.add_param(key='minoutbuf', name='Min Output Buffer', vtype=int, default=0)
-            self.add_param(key='maxoutbuf', name='Max Output Buffer', vtype=int, default=0)
+        # the raw/unexpanded port objects are held here
+        self._ports = []
+        self._sources = []
+        self._sinks = []
+        # lists of active/expanded ports (think hidden ports, bus ports, nports)
+        self.sources = []  # filled / updated by update()
+        self.sinks = []
+
+        self.add_param('alias', 'Block Alias', vtype=str, default=self.id)
+        if self._ports:
+            self.add_param('affinity', 'Core Affinity', vtype=list, default=[])
+            # todo: hide these for sink-only blocks
+            self.add_param('minoutbuf', 'Min Output Buffer', vtype=int, default=0)
+            self.add_param('maxoutbuf', 'Max Output Buffer', vtype=int, default=0)
+
+    def add_port(self, cls, *args, **kwargs):
+        """Add a port to this block
+
+        Args:
+            - cls: instance or subclass of BasePort
+            - args, kwargs: arguments to pass the the port
+        """
+        if inspect.isclass(cls) and issubclass(cls, BasePort):
+            port = cls(self, *args, **kwargs)
+        elif isinstance(cls, BasePort):
+            port = cls
+        else:
+            raise ValueError("Excepted an instance or subclass of BasePort")
+
+        if port.direction in PORT_DIRECTIONS:
+            self._ports.append(port)
+        else:
+            raise exceptions.BlockSetupException("Unknown port direction")
+        return port
+
+    def update(self):
+        """Update the blocks ports"""
+        super(Block, self).update()  # update und evaluate params first
+        ports_current = {SINK: list(self.sinks), SOURCE: list(self.sources)}
+        port_lists = {SINK: self.sinks, SOURCE: self.sources}
+        del self.sinks[:]
+        del self.sources[:]
+        for port in self._ports:
+            port.update()  # todo: handle exceptions
+            if port.active:
+                # re-add ports and their clones
+                ports = port_lists.get(port.direction, [])
+                ports.append(port)
+                ports += port.clones
+            elif port in ports_current.get(port.direction, []):
+                # remove connections from ports that were disabled
+                port.disconnect()
+        # todo: form busses
+
+    def add_stream_sink(self, name, dtype, vlen=1, nports=None):
+        return self.add_port(StreamPort, 'sink', name, dtype, vlen, nports)
+
+    def add_stream_source(self, name, dtype, vlen=1, nports=None):
+        return self.add_port(StreamPort, 'source', name, dtype, vlen, nports)
+
+    def add_message_sink(self, name, key=None, nports=1):
+        return self.add_port(MessagePort, 'sink', name, key, nports)
+
+    def add_message_source(self, name, key=None, nports=1):
+        return self.add_port(MessagePort, 'source', name, key, nports)

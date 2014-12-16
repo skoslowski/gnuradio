@@ -29,7 +29,8 @@ class Variable(Element):
 
         self.name = name
         self.value = self.default = default
-        self.dependencies = set()  # filled on update, used to figure out variable order
+        # filled on evaluate, used to figure out variable order
+        self.dependencies = set()
 
     def evaluate(self):
         self.dependencies.clear()

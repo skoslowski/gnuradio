@@ -26,22 +26,24 @@ class Element(object):
 
     def __init__(self, parent):
         super(Element, self).__init__()
-        self._parent = parent
-        self._children = []
+        self.children = []
+        self.parent = parent
+        self.error_messages = []
         try:
             parent.children.append(self)
         except AttributeError:
             pass
 
+    def __str__(self):
+        """Most elements have a name (blocks, ports, params, ...)"""
+        return getattr(self, 'name', self.__class__.__name__)
+
+    ###########################################################################
+
     def get_parent_by_class(self, cls):
         parent = self.parent
         return parent if isinstance(parent, cls) else \
-            parent.get_parent_by_class(cls) if parent else None
-
-    @property
-    def parent(self):
-        """Get the parent object"""
-        return self._parent
+            parent.get_parent_by_class(cls) if parent is not None else None
 
     @property
     def parent_block(self):
@@ -73,52 +75,56 @@ class Element(object):
         from . platform import Platform
         return self.get_parent_by_class(Platform)
 
-    @property
-    def children(self):
-        return self._children
-
-    def update(self):
-        """Rewrite object and all child object in this tree
-
-        A update shall be used to reevaluate variables, parameters, block surface (ports,...), ...
-        The resulting values shall be cached for fast access
-        """
-        for child in self.children:
-            child.update()
+    ###########################################################################
 
     def validate(self):
         """Validate object and all child object in this tree
 
-        Validation shall only check the validity of the flow-graph, not change any values
+        Validation shall only check the validity of the flow-graph, not change
+        any values
         """
         for child in self.children:
-            # py3.3: yield from
-            for error in child.validate():
-                yield error
+            child.validate()
+
+    def add_error_message(self, msg):
+        """Format and add an error message for this element"""
+        if msg:
+            self.error_messages.append(msg.format(self=self))
+
+    @property
+    def is_valid(self):
+        """Check if this element is valid"""
+        return (not self.error_messages and
+                all(child.is_valid for child in self.children))
+
+    def clear_error_messages(self):
+        """Clear error messages in this and all child objects"""
+        del self.error_messages[:]
+        for child in self.children:
+            child.clear_error_messages()
 
 
-class BlockChildElement(Element):
-    """Adds install update callbacks for specific obt attributes"""
+class ElementWithUpdate(Element):
+    """Adds installable update callbacks for specific attributes"""
 
     def __init__(self, parent):
-        super(BlockChildElement, self).__init__(parent)
+        super(ElementWithUpdate, self).__init__(parent)
         self.update_actions = {}
 
     def update(self):
-        """Perform a update based on a set of callbacks"""
-        super(BlockChildElement, self).update()
-        params = self.parent_block.params_namespace
+        """Perform an update of this object using a set of callbacks"""
+        params = self.parent_block.namespace
         for target, callback_or_param_name in self.update_actions.iteritems():
             try:
                 if callable(callback_or_param_name):
                     value = callback_or_param_name(**params)
                 else:
                     value = params[callback_or_param_name]
-
                 setattr(self, target, value)
-
-            except Exception as e:
-                raise exceptions.BlockException(e)
+            except Exception as e:  # Never throw during update
+                self.add_error_message("Failed to update '{}.{}': {}".format(
+                    self, target, e.args[0]
+                ))
 
     def on_update(self, **kwargs):
         """This installs a number of callbacks in the objects update function
@@ -133,11 +139,10 @@ class BlockChildElement(Element):
         """
         invalid_attr_names = []
         for attr_name, callback in kwargs.iteritems():
-            if hasattr(self, attr_name):  #todo: exclude methods
+            if hasattr(self, attr_name):  # todo: exclude methods
                 self.update_actions[attr_name] = callback
             else:
                 invalid_attr_names.append(attr_name)
         if invalid_attr_names:
             raise exceptions.BlockSetupException(
-                "No port attribute(s) founds for " + str(invalid_attr_names)
-            )
+                "No attribute(s) founds for " + str(invalid_attr_names))

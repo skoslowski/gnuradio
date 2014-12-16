@@ -57,7 +57,8 @@ class FlowGraph(Element):
             try:
                 block = self.platform.blocks[key_or_block](parent=self)
             except KeyError:
-                raise exceptions.BlockException("Failed to add block '{}'".format(key_or_block))
+                raise exceptions.BlockException(
+                    "Failed to add block '{}'".format(key_or_block))
         elif isinstance(key_or_block, Block):
             block = key_or_block
         else:
@@ -81,15 +82,15 @@ class FlowGraph(Element):
             self.children.remove(element)
             del element
 
+    def evaluate(self, expr):
+        """Evaluate an expr in the flow-graph namespace"""
+        return eval(str(expr), None, self.namespace)
+
     def update(self):
         self.namespace.repopulate()
         # eval blocks first, then connections
         for element in chain(self.blocks, self.connections):
             element.update()
-
-    def evaluate(self, expr):
-        """Evaluate an expr in the flow-graph namespace"""
-        return eval(str(expr), None, self.namespace)
 
 
 class _FlowGraphNamespace(MutableMapping):
@@ -107,8 +108,8 @@ class _FlowGraphNamespace(MutableMapping):
     def __getitem__(self, key):
         if key in self._dependency_chain:
             raise RuntimeError("Circular dependency")
-
-        if not self._finalized and key not in self._namespace and key in self.variables:
+        need_this_key = not self._finalized and key not in self._namespace
+        if need_this_key and key in self.variables:
             self._dependency_chain.append(key)
             self[key] = self.variables[key].evaluate()
             self._dependency_chain.remove(key)
@@ -139,7 +140,7 @@ class _FlowGraphNamespace(MutableMapping):
 
     def repopulate(self):
         self.reset()
-        # todo: decide if lazy var eval is better (if yes, skip and remove finalize
+        # todo: decide if lazy var eval is better (skip and remove finalize)
         for name, variable in self.variables.iteritems():
             if name not in self:
                 self[name] = variable.evaluate()

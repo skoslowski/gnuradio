@@ -82,16 +82,16 @@ def test_reduce_size(block):
 
 
 def test_active(block):
-    block._sinks[0].active = False
+    block._ports[0].active = False
     block.update()
     assert [sink.name for sink in block.sinks] == \
            ["in20", "in21", "in22", "in3"]
 
 
 def test_active2(block):
-    block._sinks[1].active = False
+    block._ports[1].active = False
     block.update()
     assert [sink.name for sink in block.sinks] == \
            ["in", "in3"]
-    block._sinks[1].enabled = True
+    block._ports[1].enabled = True
     block.update()

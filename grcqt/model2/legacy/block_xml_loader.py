@@ -59,7 +59,7 @@ def load_block_xml(xml_file):
         exec class_definition in namespace
     except SyntaxError as e:
         raise SyntaxError(e.message + ':\n' + class_definition)
-    print class_definition
+    # print class_definition
     return namespace[key]
 
 
@@ -187,12 +187,13 @@ class Resolver(object):
 
         if '$' in expr:
             used_params = []
+
             def convert(match):
                 arg = match.group('arg')
                 used_params.append(arg)
                 return arg
             eval_str = cheetah_substitution.sub(convert, expr)
-            print(expr, eval_str)
+            # print(expr, eval_str)
             value = eval(eval_str, self.params)
             self.collected_on_update_kwargs[key] = Raw(
                 "lambda {}, **p: ({})".format(', '.join(used_params), eval_str)
@@ -219,7 +220,6 @@ class Resolver(object):
         """Yield every item for key as (sub-)Resolver"""
         for n in self.get_all(key):
             yield self.__class__(n, self.params)
-
 
 
 def get_param_options(param_n):
@@ -287,8 +287,7 @@ def convert_cheetah_template(expr):
     """converts a basic Cheetah expr to python string formatting"""
     markers = ('__!!start!!__', '__!!end!!__')
     # replace and tag substitutions (only tag, because ${key} is valid Cheetah)
-    expr = cheetah_substitution.sub('{}\g<arg>{}'.format(*markers), expr
-    )
+    expr = cheetah_substitution.sub('{}\g<arg>{}'.format(*markers), expr)
     # mask all curly braces (those left are not no substitutions)
     expr = expr.replace("{", "{{").replace("}", "}}")
     # finally, replace markers with curly braces

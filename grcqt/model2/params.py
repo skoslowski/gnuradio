@@ -24,11 +24,11 @@ from abc import ABCMeta
 from itertools import imap, count
 
 from . import exceptions, types
-from . base import BlockChildElement
+from . base import ElementWithUpdate
 from . _consts import BLOCK_ID_BLACK_LIST
 
 
-class Param(BlockChildElement):
+class Param(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
     def __init__(self, parent, name, key, vtype=None, default=None, category=None, validator=None):
@@ -60,22 +60,27 @@ class Param(BlockChildElement):
     def evaluated(self):
         return self._evaluated
 
+    def reset(self):
+        self.value = self.default
+
     def update(self):
+        # first update type, name, visibility, ..
         super(Param, self).update()
-        self._evaluated = self.parent_flowgraph.evaluate(self.value)
+        # then get evaluated value. 'parse' adds quotes or puts it in a list
+        self._evaluated = types.param_vtypes[self.vtype].parse(
+            self.parent_flowgraph.evaluate(self.value))
 
     def validate(self):
-        for error in super(Param, self).validate():
-            yield error
-
         try:
             # value type validation
             types.param_vtypes[self.vtype].validate(self.evaluated)
             # custom validator
             if callable(self.validator) and not self.validator(self.evaluated):
-                self.logger.error("Validator failed: " + repr(self.validator))
+                self.add_error_message("Custom validator for parameter"
+                                       " '{self.name}' failed")
         except Exception as e:
-            self.logger.error("Failed to validate " + e.args[0])
+            self.add_error_message("Failed to validate '{self.name}': " +
+                                   e.args[0])
 
 
 class IdParam(Param):
@@ -85,43 +90,34 @@ class IdParam(Param):
 
     def __init__(self, parent):
         super(IdParam, self).__init__(parent, 'ID', 'id', str)
-        self.default = self._get_unique_block_id()
+        self.value = self.default = self._get_unique_block_id()
 
     def _get_unique_block_id(self):
         """get a unique block id within the flow-graph by trail&error"""
-        block = self.parent_block
         blocks = self.parent_flowgraph.blocks
-        for block_id in imap(lambda key: "{}_{}".format(key, block), count()):
+        block_name = self.parent_block.__class__.__name__
+        get_block_id = lambda key: "{}_{}".format(block_name, key)
+        for block_id in imap(get_block_id, count()):
             if block_id not in blocks:
-                return block_id
+                return repr(block_id)
 
     def validate(self):
-        for error in super(IdParam, self).validate():
-            yield error
-
         id_value = self.evaluated
         is_duplicate_id = any(
             block.id == id_value
             for block in self.parent_flowgraph.blocks if block is not self
         )
         if not self._id_matcher.match(id_value):
-            yield exceptions.ValidationException(
-                self, "Invalid ID"
-            )
+            self.add_error_message("Invalid ID")
         elif id_value in BLOCK_ID_BLACK_LIST:
-            yield exceptions.ValidationException(
-                self, "ID is blacklisted"
-            )
+            self.add_error_message("ID is blacklisted")
         elif is_duplicate_id:
-            yield exceptions.ValidationException(
-                self, "Duplicate ID"
-            )
+            self.add_error_message("Duplicate ID")
+        super(IdParam, self).validate()
 
 
 class OptionsParam(Param):
 
-    # careful: same empty dict for all instances
-    # Option = partial(namedtuple("Option", "name value extra"), extra={})
     class Option(object):
         """
         Each option has a name and value. alternate values may be passed
@@ -135,12 +131,10 @@ class OptionsParam(Param):
         def __format__(self, format_spec):
             return str(self.value)
 
-    def __init__(self, parent, name, key, vtype, options, default=None, allow_arbitrary_values=False):
+    def __init__(self, parent, name, key, vtype, default=None):
         super(OptionsParam, self).__init__(parent, name, key, vtype, default)
-
-        self._options = options
         self.options = []
-        self.allow_arbitrary_values = allow_arbitrary_values
+        self.allow_arbitrary_values = False
 
     def add_option(self, name_or_option, value, **kwargs):
         if isinstance(name_or_option, self.Option):
@@ -154,13 +148,10 @@ class OptionsParam(Param):
         self._evaluated = self.parent_flowgraph.evaluate(self.value)
 
     def validate(self):
-        for error in super(OptionsParam, self).validate():
-            yield error
+        super(OptionsParam, self).validate()
         value = self.evaluated
         if not self.allow_arbitrary_values and value not in imap(lambda o: o.value, self.options):
-            yield exceptions.ValidationException(
-                self, "Value '{}' not allowed".format(value)
-            )
+            self.add_error_message("Value '{}' not allowed".format(value))
 
     def __format__(self, format_spec):
         return self.evaluated.__format__(format_spec)

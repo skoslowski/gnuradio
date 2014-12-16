@@ -85,8 +85,13 @@ class ParamVType(object):
     def register(cls, *args, **kwargs):
         vtype = cls(*args, **kwargs)
         for key in itertools.chain(vtype.names, vtype.valid_types):
-            if key in param_vtypes:
+            if key not in param_vtypes:
                 param_vtypes[key] = vtype
+
+
+class ParamRawVType(ParamVType):
+    def validate(self, evaluated):
+        pass
 
 
 class ParamStringVType(ParamVType):
@@ -128,6 +133,7 @@ VECTOR_TYPES = (tuple, list, set, np.ndarray)
 
 ParamVType.register('bool', bool)
 ParamStringVType.register('string', str)
+ParamRawVType.register('raw', None)
 
 # the order if import here!
 ParamNumericVType.register('int', INT_TYPES)

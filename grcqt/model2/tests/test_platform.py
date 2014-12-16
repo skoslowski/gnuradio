@@ -26,7 +26,7 @@ from .. platform import Platform
 def test_block_load():
     test_file_dir = path.join(path.dirname(__file__), 'resources')
 
-    p = Platform((3,8,0), test_file_dir)
+    p = Platform((3, 8, 0), test_file_dir)
     p.load_blocks()
 
     assert 'block_key' in p.blocks

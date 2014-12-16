@@ -24,5 +24,7 @@ BLOCK_XML_EXTENSION = '.xml'
 BLOCK_TREE_EXTENSION = 'block_tree.xml'
 
 
-BLOCK_ID_BLACK_LIST = ['self', 'options', 'gr', 'blks2', 'wxgui', 'wx', 'math', 'forms', 'firdes'] #+ filter(lambda x: not x.startswith('_'), dir(gr.top_block())) + dir(__builtin__)
+BLOCK_ID_BLACK_LIST = [
+    'self', 'options', 'gr', 'blks2', 'wxgui', 'wx', 'math', 'forms', 'firdes'
+] #+ filter(lambda x: not x.startswith('_'), dir(gr.top_block())) + dir(__builtin__)
 
