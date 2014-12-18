@@ -65,7 +65,7 @@ class Platform(object):
         for block_tree_file in self.iter_block_files(block_paths, BLOCK_TREE_EXTENSION):
             try:
                 for key, category in legacy.load_category_tree_xml(block_tree_file):
-                    categories[key] += category
+                    categories[key].update(category)
             except BlockLoadException as e:
                 exceptions.append(e)
 
@@ -77,8 +77,7 @@ class Platform(object):
             try:
                 if block_file.endswith(BLOCK_XML_EXTENSION):
                     block = legacy.load_block_xml(block_file)
-                    extra_categories = categories[block.__name__].difference(block.categories)
-                    block.categories.append(extra_categories)
+                    block.categories = categories[block.__name__].union(block.categories)
                     self.blocks[block.__name__] = block
                 else:
                     self.load_block_class_file(block_file)

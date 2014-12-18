@@ -21,6 +21,9 @@ import pytest
 from os import path
 import glob
 
+from lxml import etree
+from StringIO import StringIO
+
 from .. import load_block_xml
 from .. block_xml_loader import Resolver, convert_cheetah_template
 
@@ -40,12 +43,24 @@ def test_block_xml():
 
 @pytest.fixture
 def resolver():
-    return Resolver({'param': [
-        dict(key=('t1',), value=('t11',)),
-        dict(key=('t2',), value=('t21',)),
-        dict(key=('t3',), option=(dict(key=('t31',)),)),
-    ], 'test1': ('a',), 'test2': 'a', 'test3': '$t1'})
+    xml = etree.parse(StringIO("""
+        <block>
+            <param><key>t1</key><value>t11</value></param>
+            <param><key>t2</key><value>t21</value></param>
+            <param><key>t3</key><option>
+                <key>t31</key>
+                <opt>a:123</opt><opt>bb:456</opt>
+            </option></param>
+            <test1>a</test1><test3>$t1</test3>
+        </block>
+    """))
+    return Resolver(xml)
 
+
+def test_resolver_param_defaults(resolver):
+    assert str(resolver.params['t3']) == 't31'
+    assert resolver.params['t3'].a == '123'
+    assert resolver.params['t3'].bb == '456'
 
 def test_resolver_fixed_value(resolver):
     assert resolver._eval('p1', 'no dollar sign in here') == 'no dollar sign in here'
@@ -60,8 +75,7 @@ def test_resolver_simple_template(resolver):
 
 
 def test_resolver_get(resolver):
-    assert resolver.get('test1') == 'a'
-    assert resolver.get('test2') == 'a'
+    assert resolver.findtext('test1') == 'a'
 
 
 def test_resolver_eval(resolver):

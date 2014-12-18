@@ -25,9 +25,11 @@ class test_block(Block):
     name = "test"
 
     def setup(self, **kwargs):
-        super(Block, self).setup(**kwargs)
+        super(test_block, self).setup(**kwargs)
+
 
 if __name__ == '__grc__':
     pass
+
 else:
     print("from elsewhere")

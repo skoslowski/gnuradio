@@ -33,3 +33,21 @@ def test_block_load():
     assert p.blocks['block_key'].name == "testname"
 
     assert 'test_block' in p.blocks
+
+
+def test_block_load_for_real():
+    return
+    try:
+        from gnuradio import gr
+        prefs = gr.prefs()
+        block_dir = prefs.get_string('grc', 'global_blocks_path', '')
+    except ImportError:
+        return
+
+    p = Platform((3, 8, 0), block_dir)
+    p.load_blocks()
+
+    assert 'block_key' in p.blocks
+    assert p.blocks['block_key'].name == "testname"
+
+    assert 'test_block' in p.blocks

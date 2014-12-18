@@ -46,6 +46,6 @@
 	</sink>
 	<source>
 		<name>out</name>
-		<type>$type</type>
+		<type>$(type.fcn)</type>
 	</source>
 </block>
