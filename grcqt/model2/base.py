@@ -1,38 +1,45 @@
-"""
-Copyright 2014 Free Software Foundation, Inc.
-This file is part of GNU Radio
-
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-"""
+# Copyright 2014 Free Software Foundation, Inc.
+# This file is part of GNU Radio
+#
+# GNU Radio Companion is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# GNU Radio Companion is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, division, print_function
+import weakref
 
 from . import exceptions
 
 
+class lazyproperty(object):
+    def __init__(self, func):
+        self.func = func
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return self
+        else:
+            value = self.func(instance)
+            setattr(instance, self.func.__name__, value)
+            return value
+
+
 class Element(object):
 
-    def __init__(self, parent):
+    def __init__(self):
         super(Element, self).__init__()
         self.children = []
-        self.parent = parent
         self.error_messages = []
-        try:
-            parent.children.append(self)
-        except AttributeError:
-            pass
 
     def __str__(self):
         """Most elements have a name (blocks, ports, params, ...)"""
@@ -40,12 +47,29 @@ class Element(object):
 
     ###########################################################################
 
-    def get_parent_by_class(self, cls):
-        parent = self.parent
-        return parent if isinstance(parent, cls) else \
-            parent.get_parent_by_class(cls) if parent is not None else None
+    def add_child(self, child):
+        self.children.append(child)
+        try:
+            child.parent = self
+        except AttributeError:
+            pass
 
     @property
+    def parent(self):
+        return vars(self).get('parent', lambda: None)()
+
+    @parent.setter
+    def parent(self, value):
+        vars(self)['parent'] = weakref.ref(value)
+
+    def get_parent_by_class(self, cls):
+        try:
+            return self.parent if isinstance(self.parent, cls) else \
+                self.parent.get_parent_by_class(cls)
+        except AttributeError:
+            return None
+
+    @lazyproperty
     def parent_block(self):
         """Get the first block object in the ancestry
 
@@ -55,7 +79,7 @@ class Element(object):
         from . blocks import BaseBlock
         return self.get_parent_by_class(BaseBlock)
 
-    @property
+    @lazyproperty
     def parent_flowgraph(self):
         """Get the first flow-graph object in the ancestry
 
@@ -65,7 +89,7 @@ class Element(object):
         from . flowgraph import FlowGraph
         return self.get_parent_by_class(FlowGraph)
 
-    @property
+    @lazyproperty
     def platform(self):
         """Get the platform object from the ancestry
 
@@ -74,6 +98,13 @@ class Element(object):
         """
         from . platform import Platform
         return self.get_parent_by_class(Platform)
+
+    def reset_lazyproperties(self):
+        """Reset all lazy properties"""
+        # todo: use case?
+        for name, obj in vars(Element):
+            if isinstance(obj, lazyproperty):
+                delattr(self, name)
 
     ###########################################################################
 
@@ -107,8 +138,8 @@ class Element(object):
 class ElementWithUpdate(Element):
     """Adds installable update callbacks for specific attributes"""
 
-    def __init__(self, parent):
-        super(ElementWithUpdate, self).__init__(parent)
+    def __init__(self):
+        super(ElementWithUpdate, self).__init__()
         self.update_actions = {}
 
     def update(self):

@@ -1,21 +1,19 @@
-"""
-Copyright 2014 Free Software Foundation, Inc.
-This file is part of GNU Radio
-
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-"""
+# Copyright 2014 Free Software Foundation, Inc.
+# This file is part of GNU Radio
+#
+# GNU Radio Companion is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# GNU Radio Companion is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, division, print_function
 
@@ -36,8 +34,8 @@ class BasePort(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def __init__(self, parent, direction, name, nports=None):
-        super(BasePort, self).__init__(parent)
+    def __init__(self, direction, name, nports=None):
+        super(BasePort, self).__init__()
         self._name = name
         self._nports = nports
         self.direction = direction
@@ -52,8 +50,8 @@ class BasePort(ElementWithUpdate):
         return name
 
     @name.setter
-    def name(self, name):
-        self._name = name
+    def name(self, value):
+        self._name = value
 
     @property
     def nports(self):
@@ -106,7 +104,7 @@ class BasePort(ElementWithUpdate):
             # since we only either remove or add clones, len(clones) is valid
             nports_current = len(clones) + 1
             for clone_id in range(nports_current, self.nports):
-                PortClone(self, clone_id)  # ref kept in self.children
+                self.add_child(PortClone(clone_id))
 
     def validate(self):
         """Assert that the port is connected correctly"""
@@ -124,8 +122,8 @@ class BasePort(ElementWithUpdate):
 class PortClone(Element):
     """Acts as a clone of its parent object, but adds and index to its name"""
 
-    def __init__(self, master_port, clone_id):
-        super(PortClone, self).__init__(master_port)
+    def __init__(self, clone_id):
+        super(PortClone, self).__init__()
         self.clone_id = clone_id
 
     @property
@@ -151,9 +149,9 @@ BasePort.register(PortClone)
 class StreamPort(BasePort):
     """Stream ports have a data type and vector length"""
 
-    def __init__(self, parent, direction, name, dtype, vlen=1, nports=None):
+    def __init__(self, direction, name, dtype, vlen=1, nports=None):
         """Create a new stream port"""
-        super(StreamPort, self).__init__(parent, direction, name, nports)
+        super(StreamPort, self).__init__(direction, name, nports)
         self._dtype = self._vlen = None
         # call setters
         self.dtype = dtype
@@ -184,8 +182,8 @@ class MessagePort(BasePort):
     allow_multiple_connections = {SINK: False, SOURCE: True}
     connections_optimal = True
 
-    def __init__(self, parent, direction, name, key=None, nports=1):
-        super(MessagePort, self).__init__(parent, direction, name, nports)
+    def __init__(self, direction, name, key=None, nports=1):
+        super(MessagePort, self).__init__(direction, name, nports)
         self.key = key or name
 
     @property

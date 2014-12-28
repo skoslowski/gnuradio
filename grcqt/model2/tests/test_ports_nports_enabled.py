@@ -28,8 +28,9 @@ def block():
     class MyBlock(Block):
         def setup(self, **kwargs):
             pass
-    fg = FlowGraph()
-    b = MyBlock(fg)
+    b = MyBlock()
+    b.fg = FlowGraph()
+    b.fg.add_child(b)
     b.add_stream_sink("in", complex)
     b.add_stream_sink("in2", dtype="int", nports=3)
     b.add_stream_sink("in3", complex)
@@ -82,16 +83,16 @@ def test_reduce_size(block):
 
 
 def test_active(block):
-    block._ports[0].active = False
+    block.sinks[0].active = False
     block.update()
     assert [sink.name for sink in block.sinks] == \
            ["in20", "in21", "in22", "in3"]
 
 
 def test_active2(block):
-    block._ports[1].active = False
+    block.sinks[1].active = False
     block.update()
     assert [sink.name for sink in block.sinks] == \
            ["in", "in3"]
-    block._ports[1].enabled = True
+    block.children[1].enabled = True
     block.update()

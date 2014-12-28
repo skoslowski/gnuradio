@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 from __future__ import absolute_import, division, print_function
+from itertools import ifilter as filter  # py3k default
 
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
@@ -40,13 +41,14 @@ class BaseBlock(Element):
     import_template = ''
     make_template = ''
 
-    def __init__(self, parent, **kwargs):
-        super(BaseBlock, self).__init__(parent)
+    def __init__(self, **kwargs):
+        super(BaseBlock, self).__init__()
 
         self.params = OrderedDict()
         self.namespace = {}  # dict of evaluated params
 
         self.add_param(cls=IdParam)
+        # self.params['id'].set_unique_block_id()
         self.add_param('Enabled', '_enabled', vtype=bool, default=True)
         self.setup(**kwargs)
 
@@ -73,16 +75,17 @@ class BaseBlock(Element):
         elif 'cls' in kwargs:
             cls = kwargs.pop('cls')  # remove cls from kwargs
             if inspect.isclass(cls) and issubclass(cls, Param):
-                param = cls(self, *args, **kwargs)
+                param = cls(*args, **kwargs)
             else:
                 raise exceptions.BlockSetupException("Invalid param class")
         else:
-            param = Param(self, *args, **kwargs)
+            param = Param(*args, **kwargs)
 
         if param.key in self.params:
             raise exceptions.BlockSetupException(
                 "Param key '{}' not unique".format(param.key))
         self.params[param.key] = param
+        self.add_child(param)  # double bookkeeping =(
         return param
 
     def update(self):
@@ -98,7 +101,7 @@ class BaseBlock(Element):
                 param.value = state[key]
                 self.update()
             except KeyError:
-                pass  # no sate info for this param
+                pass  # no state info for this param
         # todo: parse GUI state info
 
     def save(self):
@@ -114,23 +117,19 @@ class Block(BaseBlock):
 
     throttling = False  # is this a throttling block?
 
-    def __init__(self, parent, **kwargs):
-        super(Block, self).__init__(parent, **kwargs)
+    def __init__(self, **kwargs):
+        super(Block, self).__init__(**kwargs)
 
-        # the raw/unexpanded port objects are held here
-        self._ports = []
-        self._sources = []
-        self._sinks = []
         # lists of active/expanded ports (think hidden ports, bus ports, nports)
         self.sources = []  # filled / updated by update()
         self.sinks = []
 
         self.add_param('alias', 'Block Alias', vtype=str, default=self.id)
-        if self._ports:
-            self.add_param('affinity', 'Core Affinity', vtype=list, default=[])
-            # todo: hide these for sink-only blocks
-            self.add_param('minoutbuf', 'Min Output Buffer', vtype=int, default=0)
-            self.add_param('maxoutbuf', 'Max Output Buffer', vtype=int, default=0)
+        # todo: hide these for blocks w/o ports (shouldn't be the case in this class)
+        self.add_param('affinity', 'Core Affinity', vtype=list, default=[])
+        # todo: hide these for sink-only blocks
+        self.add_param('minoutbuf', 'Min Output Buffer', vtype=int, default=0)
+        self.add_param('maxoutbuf', 'Max Output Buffer', vtype=int, default=0)
 
     def add_port(self, cls, *args, **kwargs):
         """Add a port to this block
@@ -140,17 +139,20 @@ class Block(BaseBlock):
             - args, kwargs: arguments to pass the the port
         """
         if inspect.isclass(cls) and issubclass(cls, BasePort):
-            port = cls(self, *args, **kwargs)
+            port = cls(*args, **kwargs)
         elif isinstance(cls, BasePort):
             port = cls
         else:
             raise ValueError("Excepted an instance or subclass of BasePort")
-
-        if port.direction in PORT_DIRECTIONS:
-            self._ports.append(port)
-        else:
+        if port.direction not in PORT_DIRECTIONS:
             raise exceptions.BlockSetupException("Unknown port direction")
+        self.add_child(port)
         return port
+
+    def iter_ports(self, direction=None):
+        for port in filter(lambda p: isinstance(p, BasePort), self.children):
+            if direction is None or port.direction == direction:
+                yield port
 
     def update(self):
         """Update the blocks ports"""
@@ -159,7 +161,7 @@ class Block(BaseBlock):
         port_lists = {SINK: self.sinks, SOURCE: self.sources}
         del self.sinks[:]
         del self.sources[:]
-        for port in self._ports:
+        for port in self.iter_ports():
             port.update()  # todo: handle exceptions
             if port.active:
                 # re-add ports and their clones

@@ -28,11 +28,11 @@ def test_element():
     class T2(Element):
         pass
 
-    a = T(None)
-    b = T2(a)
-    c = T2(a)
-    d = T(c)
-    e = T(d)
+    a, b, c, d, e = T(), T2(), T2(), T(), T()
+    a.add_child(b)
+    a.add_child(c)
+    c.add_child(d)
+    d.add_child(e)
 
     assert isinstance(a, Element)
     assert b.parent == a
@@ -65,8 +65,9 @@ def test_element_update():
                 self._b = value
             else:
                 raise ValueError("wrong type")
-    b = Block(None)
-    a = A(b)
+    b = Block()
+    a = A()
+    b.add_child(a)
     a.on_update(a=lambda test, **kwargs: test+1, b='on')
 
     assert a.a == 3 and not a.b

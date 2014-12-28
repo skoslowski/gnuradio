@@ -33,12 +33,15 @@ def block():
     class MyBlock(Block):
         def setup(self, **kwargs):
             pass
-    return MyBlock(FlowGraph())
+    b = MyBlock()
+    b.fg = FlowGraph()  # keep fg ref around
+    b.fg.add_child(b)
+    return b
 
 
 def test_block_add_param1(block):
     # add an instance
-    block.add_param(Param(block, "test name", "t1", vtype=int))
+    block.add_param(Param("test name", "t1", vtype=int))
     assert "t1" in block.params
     assert block.params["t1"].name == "test name"
     assert block.params["t1"].vtype == int
@@ -54,7 +57,7 @@ def test_block_add_param2(block):
 def test_block_add_param3(block):
     # add with custom class through ABC register
     class MyParam2(object):
-        def __init__(self, parent, name, key):
+        def __init__(self, name, key):
             self.key = key
     Param.register(MyParam2)
 
@@ -81,7 +84,7 @@ def test_block_add_param5(block):
 
 
 def test_block_add_param6(block):
-    block.add_param(Param(block, "test name", "t1"))
+    block.add_param(Param("test name", "t1"))
     try:
         block.add_param("another name", "t1")
     except exceptions.BlockSetupException as e:

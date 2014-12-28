@@ -24,8 +24,8 @@ from . base import Element
 
 class Variable(Element):
 
-    def __init__(self, parent, name, default=None):
-        super(Variable, self).__init__(parent)
+    def __init__(self, name, default=None):
+        super(Variable, self).__init__()
 
         self.name = name
         self.value = self.default = default

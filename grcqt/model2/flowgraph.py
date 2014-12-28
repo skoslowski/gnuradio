@@ -31,8 +31,8 @@ from . variables import Variable
 
 class FlowGraph(Element):
 
-    def __init__(self, parent=None):
-        super(FlowGraph, self).__init__(parent)
+    def __init__(self):
+        super(FlowGraph, self).__init__()
 
         self.blocks = []
         self.connections = []
@@ -42,7 +42,8 @@ class FlowGraph(Element):
         self.namespace = _FlowGraphNamespace(self.variables)
 
     def add_variable(self, name, default=None):
-        self.variables[name] = Variable(self, name, default)
+        self.variables[name] = var = Variable(name, default)
+        self.add_child(var)
 
     def add_block(self, key_or_block):
         """Add a new block to the flow-graph
@@ -55,7 +56,7 @@ class FlowGraph(Element):
         """
         if isinstance(key_or_block, str):
             try:
-                block = self.platform.blocks[key_or_block](parent=self)
+                block = self.platform.blocks[key_or_block]()
             except KeyError:
                 raise exceptions.BlockException(
                     "Failed to add block '{}'".format(key_or_block))
@@ -63,12 +64,14 @@ class FlowGraph(Element):
             block = key_or_block
         else:
             raise exceptions.BlockException("")
+        self.add_child(block)
         self.blocks.append(block)
         return block
 
     def make_connection(self, endpoint_a, endpoint_b):
         """Add a connection between the ports of two blocks"""
-        connection = Connection(self, endpoint_a, endpoint_b)
+        connection = Connection(endpoint_a, endpoint_b)
+        self.add_child(connection)
         self.connections.append(connection)
         return connection
 

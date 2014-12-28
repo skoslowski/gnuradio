@@ -18,12 +18,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 from __future__ import absolute_import, division, print_function
+from itertools import imap as map
 
 import re
+import itertools
 from abc import ABCMeta
-from itertools import imap, count
 
-from . import exceptions, types
+from . import types
 from . base import ElementWithUpdate
 from . _consts import BLOCK_ID_BLACK_LIST
 
@@ -31,8 +32,8 @@ from . _consts import BLOCK_ID_BLACK_LIST
 class Param(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
-    def __init__(self, parent, name, key, vtype=None, default=None, category=None, validator=None):
-        super(Param, self).__init__(parent)
+    def __init__(self, name, key, vtype=None, default=None, category=None, validator=None):
+        super(Param, self).__init__()
         self._key = key
         self._vtype = None
         self._evaluated = None
@@ -87,19 +88,19 @@ class IdParam(Param):
     """Parameter of a block used as a unique parameter within a flow-graph"""
 
     _id_matcher = re.compile('^[a-z|A-Z]\w*$')
+    _id_factory = map(lambda c: repr("block_{}".format(c)), itertools.count())
 
-    def __init__(self, parent):
-        super(IdParam, self).__init__(parent, 'ID', 'id', str)
-        self.value = self.default = self._get_unique_block_id()
+    def __init__(self):
+        super(IdParam, self).__init__('ID', 'id', str)
+        self.value = self.default = self._id_factory.next()
 
-    def _get_unique_block_id(self):
+    def set_unique_block_id(self):
         """get a unique block id within the flow-graph by trail&error"""
         blocks = self.parent_flowgraph.blocks
         block_name = self.parent_block.__class__.__name__
-        get_block_id = lambda key: "{}_{}".format(block_name, key)
-        for block_id in imap(get_block_id, count()):
-            if block_id not in blocks:
-                return repr(block_id)
+        block_ids = map(lambda key: "{}_{}".format(block_name, key), itertools.count())
+        block_id = itertools.dropwhile(lambda id_: id_ in blocks, block_ids).next()
+        return repr(block_id)
 
     def validate(self):
         id_value = self.evaluated
@@ -131,8 +132,8 @@ class OptionsParam(Param):
         def __format__(self, format_spec):
             return str(self.value)
 
-    def __init__(self, parent, name, key, vtype, default=None):
-        super(OptionsParam, self).__init__(parent, name, key, vtype, default)
+    def __init__(self, name, key, vtype, default=None):
+        super(OptionsParam, self).__init__(name, key, vtype, default)
         self.options = []
         self.allow_arbitrary_values = False
 
@@ -150,7 +151,7 @@ class OptionsParam(Param):
     def validate(self):
         super(OptionsParam, self).validate()
         value = self.evaluated
-        if not self.allow_arbitrary_values and value not in imap(lambda o: o.value, self.options):
+        if not self.allow_arbitrary_values and value not in map(lambda o: o.value, self.options):
             self.add_error_message("Value '{}' not allowed".format(value))
 
     def __format__(self, format_spec):

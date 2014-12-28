@@ -24,8 +24,8 @@ from . base import Element
 
 class Connection(Element):
 
-    def __init__(self, parent, port_a, port_b):
-        super(Connection, self).__init__(parent)
+    def __init__(self, port_a, port_b):
+        super(Connection, self).__init__()
         if port_a.is_sink:
             port_a, port_b = port_b, port_a
         if not (port_a.is_source and port_b.is_source):
