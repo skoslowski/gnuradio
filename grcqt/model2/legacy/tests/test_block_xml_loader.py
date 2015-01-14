@@ -103,3 +103,8 @@ def test_format():
 def test_convert_cheetah_template():
     make = convert_cheetah_template("{test$a} $(abc123_a3) ${a}a $[a]lk $(b.cd)")
     assert make == "{{test{a}}} {abc123_a3} {a}a {a}lk {b.cd}"
+
+
+def test_convert_cheetah_template2():
+    make = convert_cheetah_template("[$abc] $test]")
+    assert make == "[{abc}] {test}]"

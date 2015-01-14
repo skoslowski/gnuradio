@@ -1,32 +1,36 @@
+# Copyright 2014 Free Software Foundation, Inc.
+# This file is part of GNU Radio
+#
+# GNU Radio Companion is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# GNU Radio Companion is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
-Copyright 2014 Free Software Foundation, Inc.
-This file is part of GNU Radio
+Converter for legacy block definitions in XML format
 
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+- Cheetah expressions that can not be converted are passed to Cheetah for now
+- Instead of generating a Block subclass directly a string representation is
+  used and evaluated. This is slower / lamer but allows us to show the user
+  how a converted definition would look like
 """
 
+from __future__ import absolute_import, division, print_function
 from os import path
 from collections import OrderedDict
 import re
-from itertools import imap
-
 
 from lxml import etree
 from mako.template import Template
 
-from . block_category_loader import xml_to_nested_data
 from .. import exceptions
 from .. blocks import Block
 
@@ -35,12 +39,14 @@ BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
 
 # match $abc123_a3, $[abc123.a3], $(abc123_a3), ${abc123_a3}
 cheetah_substitution = re.compile(
-    '\$\*?'
-    '((?P<d1>\()|(?P<d2>\{)|(?P<d3>\[)|)'
-    '(?P<arg>[_a-z][_a-z0-9]*(?:\.[_a-z][_a-z0-9]*)?)'
-    '(?(d1)\)|(?(d2)\}|(?(d3)\]|)))'
-    '(?<!\.)'
+    r'\$\*?'
+    r'((?P<d1>\()|(?P<d2>\{)|(?P<d3>\[)|)'
+    r'(?P<arg>[_a-zA-Z][_a-zA-Z0-9]*(?:\.[_a-zA-Z][_a-zA-Z0-9]*)?)'
+    r'(?(d1)\)|(?(d2)\}|(?(d3)\]|)))'
+    r'(?<!\.)'
 )
+
+reserved_block_keys = ('import', )  # todo: add more keys
 
 
 def load_block_xml(xml_file):
@@ -187,36 +193,37 @@ class Resolver(object):
 
     def _eval(self, key, expr):
         """Convert Cheetah generated python to on_update callbacks"""
-        if expr.startswith('$'):  # template
+        if not expr or '$' not in expr:  # skip empty and text-only expressions
+            return expr, False
+
+        if expr.startswith('$'):  # simple subst
             try:
-                param_key = expr[1:].split('.', 2)
-                default = self.params[param_key[0]] # simple subst
-                if len(param_key) > 1:
-                    default = getattr(default, param_key[1])
-                self.collected_on_update_kwargs[key] = param_key[0]
-                return default
+                param_key = expr[1:]
+                evaluated = self.params[param_key]  # raises KeyError
+                self.collected_on_update_kwargs[key] = param_key
+                return evaluated, True
             except KeyError:
-                pass
+                pass  # no param for this key. Go to full mode
 
-        if '$' in expr:
-            used_params = []
+        params_used = []
 
-            def convert(match):
-                arg = match.group('arg')
-                used_params.append(arg.split('.')[0])
-                return arg
-            eval_str = cheetah_substitution.sub(convert, expr)
-            print(eval_str)
-            value = eval(eval_str, self.params)
-            self.collected_on_update_kwargs[key] = Raw(
-                "lambda {}, **p: ({})".format(', '.join(used_params), eval_str)
-            )
-            return value
-        return expr
+        def convert(match):
+            arg = match.group('arg')
+            params_used.append(arg.split('.')[0])
+            return arg
+        eval_str = cheetah_substitution.sub(convert, expr)
+
+        self.collected_on_update_kwargs[key] = Raw(
+            "lambda {}, **p: ({})".format(', '.join(params_used), eval_str)
+        )
+        try:
+            return eval(eval_str, self.params), True
+        except:
+            return None, True
 
     def eval(self, key, target_key=None):
         expr = self.findtext(key)
-        return self._eval(target_key or key, expr) if expr else expr
+        return self._eval(target_key or key, expr)
 
     def findtext(self, *keys):
         """Get one or more string values for the specified keys"""
@@ -362,6 +369,8 @@ def construct_block_class(xml):
     block_e = Resolver(xml)
 
     key = block_e.findtext('key')
+    if key in reserved_block_keys:
+        key += '_'
 
     return key, BLOCK_TEMPLATE.render(
         cls=key,

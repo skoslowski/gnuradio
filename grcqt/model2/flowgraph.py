@@ -19,7 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, division, print_function
 
-from collections import MutableMapping
+from collections import OrderedDict
 from itertools import chain
 
 from . import exceptions
@@ -39,7 +39,7 @@ class FlowGraph(Element):
         self.variables = {}
 
         self.options = None
-        self.namespace = _FlowGraphNamespace(self.variables)
+        self.namespace = _Namespace(self.variables)
 
     def add_variable(self, name, default=None):
         self.variables[name] = var = Variable(name, default)
@@ -96,56 +96,43 @@ class FlowGraph(Element):
             element.update()
 
 
-class _FlowGraphNamespace(MutableMapping):
+class _Namespace(OrderedDict):
     """A dict class that auto-calls variables for missing names"""
 
     def __init__(self, variables, defaults=None):
-
         self.variables = variables
         self.defaults = defaults if defaults else {}
+        super(_Namespace, self).__init__(self.defaults)
 
-        self._namespace = dict(self.defaults)
         self._dependency_chain = []
         self._finalized = False
 
     def __getitem__(self, key):
         if key in self._dependency_chain:
-            raise RuntimeError("Circular dependency")
-        need_this_key = not self._finalized and key not in self._namespace
+            raise NameError("name '{}' is not defined".format(key))
+        need_this_key = not self._finalized and key not in self
         if need_this_key and key in self.variables:
             self._dependency_chain.append(key)
             self[key] = self.variables[key].evaluate()
             self._dependency_chain.remove(key)
+        return super(_Namespace, self).__getitem__(key)
 
-        if self._dependency_chain:
-            self.variables[self._dependency_chain[-1]].dependencies.add(key)
-
-        return self._namespace[key]
-
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value, dict_setitem=dict.__setitem__):
         if not self._finalized:
-            self._namespace[key] = value
+            super(_Namespace, self).__setitem__(key, value, dict_setitem)
 
-    def __delitem__(self, key):
-        del self._namespace[key]
-
-    def __len__(self):
-        return len(self._namespace)
-
-    def __iter__(self):
-        return iter(self._namespace)
-
-    def reset(self):
+    def clear(self):
+        super(_Namespace, self).clear()
+        self.update(self.defaults)
         del self._dependency_chain[:]
-        self._namespace.clear()
-        self._namespace.update(self.defaults)
         self._finalized = False
 
     def repopulate(self):
-        self.reset()
-        # todo: decide if lazy var eval is better (skip and remove finalize)
+        self.clear()
+        # todo: decide if lazy var eval is better (skip this and remove finalize)
         for name, variable in self.variables.iteritems():
-            if name not in self:
+            if name not in self:  # __getitem__ might have set that already
                 self[name] = variable.evaluate()
+        # clean-up
         del self._dependency_chain[:]
         self._finalized = True
