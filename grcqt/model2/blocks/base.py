@@ -39,8 +39,11 @@ class BaseBlock(Element):
     import_template = ''
     make_template = ''
 
+    value = "object()"  # design-time value (as string) of this block
+
     def __init__(self, **kwargs):
         super(BaseBlock, self).__init__()
+        self._evaluated = None
 
         self.params = OrderedDict()
         self.namespace = {}  # dict of evaluated params
@@ -54,11 +57,6 @@ class BaseBlock(Element):
     def setup(self, **kwargs):
         """here block designers add code for ports and params"""
         pass
-
-    @property
-    def id(self):
-        """unique identifier for this block within the flow-graph"""
-        return self.params['id'].value
 
     def add_param(self, *args, **kwargs):
         """Add a param to this block
@@ -86,12 +84,23 @@ class BaseBlock(Element):
         self.add_child(param)  # double bookkeeping =(
         return param
 
+    @property
+    def id(self):
+        """unique identifier for this block within the flow-graph"""
+        return self.params['id'].value
+
+    @property
+    def evaluated(self):
+        return self._evaluated
+
     def update(self):
         """Update the blocks params and (re-)build the local namespace"""
         self.namespace.clear()
         for key, param in self.params.iteritems():
             param.update()
             self.namespace[key] = param.evaluated
+        self._evaluated = self.parent_flowgraph.evaluate(self.value) \
+            if isinstance(self.value, str) else self.value
 
     def load(self, state):
         for key, param in self.params.iteritems():

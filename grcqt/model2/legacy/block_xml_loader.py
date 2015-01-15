@@ -62,7 +62,7 @@ def load_block_xml(xml_file):
     try:
         exec class_definition in namespace
     except SyntaxError as e:
-        raise SyntaxError(e.message + ':\n' + class_definition)
+        raise SyntaxError(repr(e) + ':\n' + class_definition)
     # print class_definition
     return namespace[key]
 
@@ -153,16 +153,18 @@ class Raw(str):
         return self
 
 
-class NestedString(str):
-
-    def __new__(cls, string, extra={}):
-        ob = super(NestedString, cls).__new__(cls, string)
-        for key, value in extra.iteritems():
-            setattr(cls, key, value)
+class OptionsString(str):
+    """a string with custom attributes (for opt values)"""
+    def __new__(cls, string, extra=None):
+        """overriding new to get the extra argument"""
+        ob = super(OptionsString, cls).__new__(cls, string)
         return ob
 
-    def __init__(self, string, extra={}):
-        super(NestedString, self).__init__(string)
+    def __init__(self, string, extra=None):
+        """set all key/values in dict extra ass instance attributes"""
+        super(OptionsString, self).__init__(string)
+        for key, value in (extra or {}).iteritems():
+            setattr(self, key, value)
 
 
 class Resolver(object):
@@ -177,12 +179,13 @@ class Resolver(object):
         params = {}
         for param_e in block_e.getiterator('param'):
             key = param_e.findtext('key')
-            value = param_e.findtext('value')
+            value = param_e.findtext('value') or ''
             options_e = param_e.findall('option')
             if options_e:
-                value = options_e[0].findtext('key')
-                extra = dict(opt_e.text.split(':',2) for opt_e in options_e[0].findall('opt'))
-                value = NestedString(value, extra)
+                value = OptionsString(
+                    string=options_e[0].findtext('key'),
+                    extra=dict(opt_e.text.split(':', 2)
+                               for opt_e in options_e[0].findall('opt')))
             params[key] = value
         return params
 
@@ -221,7 +224,7 @@ class Resolver(object):
         except:
             return None, True
 
-    def eval(self, key, target_key=None):
+    def evaltext(self, key, target_key=None):
         expr = self.findtext(key)
         return self._eval(target_key or key, expr)
 
@@ -260,10 +263,11 @@ def get_params(block_e):
         kwargs = OrderedDict()
         kwargs['name'], kwargs['key'] = param_e.findtext('name', 'key')
 
-        vtype = param_e.eval('type', 'vtype')
-        kwargs['vtype'] = vtype if vtype != 'enum' else None
+        vtype, gets_updated = param_e.evaltext('type', 'vtype')
+        if not gets_updated:
+            kwargs['vtype'] = vtype if vtype != 'enum' else None
 
-        #todo: parse hide tag
+        # todo: parse hide tag
         value = param_e.findtext('value')
         if value:
             kwargs['default'] = value
@@ -286,16 +290,17 @@ def get_ports(block_e, direction):
         kwargs = OrderedDict()
         kwargs['name'] = port_e.findtext('name')
 
-        dtype = port_e.eval('type', target_key='dtype')
+        dtype, dtype_gets_updated = port_e.evaltext('type', target_key='dtype')
         if dtype == 'message':
             method_name = "add_message_" + direction
             kwargs['key'] = kwargs['name']
         else:
             method_name = "add_stream_" + direction
-            kwargs['dtype'] = dtype
-            vlen = port_e.eval('vlen')
-            if vlen:
-                kwargs['vlen'] = int(vlen)
+            if not dtype_gets_updated:
+                kwargs['dtype'] = dtype
+            vlen, vlen_gets_updated = port_e.evaltext('vlen')
+            if not vlen_gets_updated and vlen:
+                kwargs['vlen'] = vlen
 
         ports.append((method_name, kwargs, port_e.pop_on_update_kwargs()))
     return ports
@@ -321,7 +326,7 @@ def get_make(block_e):
     var_make = block_e.findtext('var_make') or ''
     make = block_e.findtext('make')
     if make:
-        make = "self.{key} = {key} = " + make
+        make = "self.$key = $key = " + make
 
     make = ("\n" if var_make and make else "").join((var_make, make))
 
@@ -335,8 +340,9 @@ def get_make(block_e):
 
     except exceptions.CheetahConversionException:
 
-        make_template = 'lambda **params: CheetahTemplate(' \
-                        '"""\n        {}\n    """, params)'.format(indent(make, 2))
+        make_template = ('lambda **params: CheetahTemplate("""\n'
+                         '        {}\n'
+                         '    """, params)').format(indent(make, 2))
 
     return make_template
 
@@ -346,9 +352,9 @@ def get_callbacks(blocks_e):
     for i in xrange(len(callbacks)):
         try:
             callbacks[i] = convert_cheetah_template(callbacks[i])
-
         except exceptions.CheetahConversionException:
-            callbacks[i] = 'lambda params: CheetahTemplate({!r}, params)'.format(callbacks[i])
+            callbacks[i] = 'lambda **params: CheetahTemplate({!r}, params)' \
+                           ''.format(callbacks[i])
     return callbacks
 
 
@@ -358,11 +364,6 @@ def indent(s, level=1):
         ind = s[0].index(s[0].strip())
         s = [line[ind:] for line in s]
     return ("\n" + " " * 4 * level).join(s)
-
-
-def to_camel_case(key):
-    return re.sub("(^([a-z])|_([a-z])?)", lambda m:
-        (m.group(2) or m.group(3) or "").upper(), key)
 
 
 def construct_block_class(xml):

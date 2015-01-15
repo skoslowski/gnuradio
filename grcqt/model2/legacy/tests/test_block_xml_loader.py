@@ -35,8 +35,7 @@ def iter_resource_files():
 
 def test_block_xml():
     for fp in iter_resource_files():
-        BlockClass = load_block_xml(fp)
-        #print BlockClass
+        load_block_xml(fp)
 
 
 @pytest.fixture
@@ -60,12 +59,14 @@ def test_resolver_param_defaults(resolver):
     assert resolver.params['t3'].a == '123'
     assert resolver.params['t3'].bb == '456'
 
+
 def test_resolver_fixed_value(resolver):
-    assert resolver._eval('p1', 'no dollar sign in here') == 'no dollar sign in here'
+    assert resolver._eval('p1', 'no dollar sign in here') == \
+           ('no dollar sign in here', False)
 
 
 def test_resolver_simple_template(resolver):
-    assert resolver._eval('test', "$t1") == 't11'
+    assert resolver._eval('test', "$t1") == ('t11', True)
     # pop the update action
     assert resolver.pop_on_update_kwargs() == dict(test='t1')
     # make sure its gone
@@ -77,7 +78,7 @@ def test_resolver_get(resolver):
 
 
 def test_resolver_eval(resolver):
-    assert resolver.eval('test3', 't') == 't11'
+    assert resolver.evaltext('test3', 't') == ('t11', True)
     assert resolver.pop_on_update_kwargs() == dict(t='t1')
 
 
