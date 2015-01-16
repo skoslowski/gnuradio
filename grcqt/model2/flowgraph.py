@@ -17,14 +17,30 @@
 
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict
-from itertools import chain
+import collections
+import functools
 
 from . import exceptions
 from . base import Element
-from . blocks import Block
+from . blocks import BaseBlock
 from . connection import Connection
-from . variables import Variable
+
+
+def functools_lru_cache(func):
+    """very simplified back-port of functools.lru_cache in py3k"""
+    result_cache = {}
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        key = str(args[0])
+        try:
+            result = result_cache[key]
+        except KeyError:
+            result = result_cache[key] = func(self, *args, **kwargs)
+        return result
+
+    wrapper.cache_clear = result_cache.clear
+    return wrapper
 
 
 class FlowGraph(Element):
@@ -34,14 +50,9 @@ class FlowGraph(Element):
 
         self.blocks = []
         self.connections = []
-        self.variables = {}
 
-        self.options = None
-        self.namespace = _Namespace(self.variables)
-
-    def add_variable(self, name, default=None):
-        self.variables[name] = var = Variable(name, default)
-        self.add_child(var)
+        self.options = {}  # do we want a dict here?
+        self.namespace = _Namespace(self.blocks)
 
     def add_block(self, key_or_block):
         """Add a new block to the flow-graph
@@ -57,8 +68,8 @@ class FlowGraph(Element):
                 block = self.platform.blocks[key_or_block]()
             except KeyError:
                 raise exceptions.BlockException(
-                    "Failed to add block '{}'".format(key_or_block))
-        elif isinstance(key_or_block, Block):
+                    "Failed to add block {!r}".format(key_or_block))
+        elif isinstance(key_or_block, BaseBlock):
             block = key_or_block
         else:
             raise exceptions.BlockException("")
@@ -75,7 +86,7 @@ class FlowGraph(Element):
 
     def remove(self, elements):
         for element in elements:
-            if isinstance(element, Block):
+            if isinstance(element, BaseBlock):
                 # todo: remove connections to this block?
                 self.blocks.remove(element)
             elif isinstance(element, Connection):
@@ -83,54 +94,48 @@ class FlowGraph(Element):
             self.children.remove(element)
             del element
 
+    @functools_lru_cache
     def evaluate(self, expr):
         """Evaluate an expr in the flow-graph namespace"""
         return eval(str(expr), None, self.namespace)
 
     def update(self):
-        self.namespace.repopulate()
+        self.evaluate.cache_clear()
+        self.namespace.clear()
+        self.namespace.update(self.options.get('imports', {}))
         # eval blocks first, then connections
-        for element in chain(self.blocks, self.connections):
-            element.update()
+        for block in self.blocks:
+            if block.id in self.namespace:
+                continue  # already evaluated for some other block
+            block.update()
+        for connection in self.connections:
+            connection.update()
 
 
-class _Namespace(OrderedDict):
+class _Namespace(collections.OrderedDict):
     """A dict class that auto-calls variables for missing names"""
 
-    def __init__(self, variables, defaults=None):
-        self.variables = variables
-        self.defaults = defaults if defaults else {}
-        super(_Namespace, self).__init__(self.defaults)
+    def __init__(self, blocks):
+        super(_Namespace, self).__init__()
+        self.blocks = blocks
+        self._getitem_recursion_keys = []
 
-        self._dependency_chain = []
-        self._finalized = False
+    def _set_value_from_block(self, key):
+        for block in self.blocks:
+            if block.id == key:
+                block.update()
+                self[key] = block.evaluated
+                break
 
     def __getitem__(self, key):
-        if key in self._dependency_chain:
-            raise NameError("name '{}' is not defined".format(key))
-        need_this_key = not self._finalized and key not in self
-        if need_this_key and key in self.variables:
-            self._dependency_chain.append(key)
-            self[key] = self.variables[key].evaluate()
-            self._dependency_chain.remove(key)
+        if key in self._getitem_recursion_keys:
+            raise NameError("name {!r} is not defined".format(key))
+        if key not in self:
+            self._getitem_recursion_keys.append(key)
+            self._set_value_from_block(key)
+            self._getitem_recursion_keys.remove(key)
         return super(_Namespace, self).__getitem__(key)
-
-    def __setitem__(self, key, value, dict_setitem=dict.__setitem__):
-        if not self._finalized:
-            super(_Namespace, self).__setitem__(key, value, dict_setitem)
 
     def clear(self):
         super(_Namespace, self).clear()
-        self.update(self.defaults)
-        del self._dependency_chain[:]
-        self._finalized = False
-
-    def repopulate(self):
-        self.clear()
-        # todo: decide if lazy var eval is better (skip this and remove finalize)
-        for name, variable in self.variables.iteritems():
-            if name not in self:  # __getitem__ might have set that already
-                self[name] = variable.evaluate()
-        # clean-up
-        del self._dependency_chain[:]
-        self._finalized = True
+        del self._getitem_recursion_keys[:]

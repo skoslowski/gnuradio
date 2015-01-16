@@ -21,4 +21,3 @@ from . platform import Platform
 from . flowgraph import FlowGraph
 from . blocks import Block
 from . connection import Connection
-from . variables import Variable

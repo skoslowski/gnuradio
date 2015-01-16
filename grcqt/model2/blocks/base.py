@@ -39,24 +39,28 @@ class BaseBlock(Element):
     import_template = ''
     make_template = ''
 
-    value = "object()"  # design-time value (as string) of this block
-
     def __init__(self, **kwargs):
         super(BaseBlock, self).__init__()
         self._evaluated = None
 
         self.params = OrderedDict()
         self.namespace = {}  # dict of evaluated params
+        self.enabled = True
 
         self.add_param(cls=IdParam)
         # self.params['id'].set_unique_block_id()
-        self.add_param('Enabled', '_enabled', vtype=bool, default=True)
         self.setup(**kwargs)
 
     @abstractmethod
     def setup(self, **kwargs):
         """here block designers add code for ports and params"""
         pass
+
+    @staticmethod
+    def value(**params):
+        """design-time value (as string) of this block/variable"""
+        # todo: find a better way to spec a value a to signal NotImplemented
+        return object()
 
     def add_param(self, *args, **kwargs):
         """Add a param to this block
@@ -99,8 +103,9 @@ class BaseBlock(Element):
         for key, param in self.params.iteritems():
             param.update()
             self.namespace[key] = param.evaluated
-        self._evaluated = self.parent_flowgraph.evaluate(self.value) \
-            if isinstance(self.value, str) else self.value
+        value = self.value(**self.namespace)
+        self._evaluated = self.parent_flowgraph.evaluate(value) \
+            if isinstance(value, str) else value
 
     def load(self, state):
         for key, param in self.params.iteritems():
@@ -109,12 +114,14 @@ class BaseBlock(Element):
                 self.update()
             except KeyError:
                 pass  # no state info for this param
+        self.enabled = state['enabled']
         # todo: parse GUI state info
 
     def save(self):
         state = {
             key: param.value for key, param in self.params.iteritems()
         }
+        state['enabeld'] = self.enabled
         # ToDo: add gui stuff
         return state
 
@@ -163,7 +170,7 @@ class Block(BaseBlock):
 
     def update(self):
         """Update the blocks ports"""
-        super(Block, self).update()  # update und evaluate params first
+        evaluated = super(Block, self).update()  # update param und evaluate first
         ports_current = {SINK: list(self.sinks), SOURCE: list(self.sources)}
         port_lists = {SINK: self.sinks, SOURCE: self.sources}
         del self.sinks[:]
@@ -179,6 +186,7 @@ class Block(BaseBlock):
                 # remove connections from ports that were disabled
                 port.disconnect()
         # todo: form busses
+        return evaluated
 
     def add_stream_sink(self, name, dtype, vlen=1, nports=None):
         return self.add_port(StreamPort, 'sink', name, dtype, vlen, nports)

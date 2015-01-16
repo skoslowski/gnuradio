@@ -31,8 +31,11 @@ import re
 from lxml import etree
 from mako.template import Template
 
-from .. import exceptions
 from .. blocks import Block
+
+
+class CheetahConversionException(Exception):
+    pass
 
 
 BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
@@ -317,7 +320,7 @@ def convert_cheetah_template(expr):
     expr = expr.replace(markers[0], "{").replace(markers[1], "}")
 
     if any(kw in expr for kw in ("#set", "#end", "$")):
-        raise exceptions.CheetahConversionException("Can't convert this expr")
+        raise CheetahConversionException("Can't convert this expr")
 
     return expr
 
@@ -338,7 +341,7 @@ def get_make(block_e):
         else:
             make_template = repr(make_format)
 
-    except exceptions.CheetahConversionException:
+    except CheetahConversionException:
 
         make_template = ('lambda **params: CheetahTemplate("""\n'
                          '        {}\n'
@@ -352,7 +355,7 @@ def get_callbacks(blocks_e):
     for i in xrange(len(callbacks)):
         try:
             callbacks[i] = convert_cheetah_template(callbacks[i])
-        except exceptions.CheetahConversionException:
+        except CheetahConversionException:
             callbacks[i] = 'lambda **params: CheetahTemplate({!r}, params)' \
                            ''.format(callbacks[i])
     return callbacks

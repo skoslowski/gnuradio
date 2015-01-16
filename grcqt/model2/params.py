@@ -30,7 +30,7 @@ from . _consts import BLOCK_ID_BLACK_LIST
 class Param(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, key, vtype=None, default=None, category=None, validator=None):
+    def __init__(self, name, key, vtype='raw', default=None, category=None, validator=None):
         super(Param, self).__init__()
         self._key = key
         self._vtype = None
@@ -99,6 +99,12 @@ class IdParam(Param):
         block_ids = map(lambda key: "{}_{}".format(block_name, key), itertools.count())
         block_id = itertools.dropwhile(lambda id_: id_ in blocks, block_ids).next()
         return repr(block_id)
+
+
+    def update(self):
+        # first update type, name, visibility, ..
+        # then get evaluated value. 'parse' adds quotes or puts it in a list
+        self._evaluated = self.value
 
     def validate(self):
         id_value = self.evaluated

@@ -20,6 +20,7 @@ from __future__ import absolute_import, division, print_function
 import itertools
 import numpy as np
 
+
 port_dtypes = {}
 param_vtypes = {}
 
@@ -67,8 +68,7 @@ class ParamVType(object):
 
     def __init__(self, names, valid_types):
         self.names = names if isinstance(names, (list, set, tuple)) else (names,)
-        self.valid_types = (
-            valid_types if isinstance(names, (list, set, tuple)) else (valid_types,))
+        self.valid_types = valid_types
 
     def parse(self, evaluated):
         return evaluated
@@ -89,14 +89,16 @@ class ParamVType(object):
 
 class ParamRawVType(ParamVType):
     def validate(self, evaluated):
-        pass
+        return evaluated
 
 
 class ParamStringVType(ParamVType):
 
     def parse(self, evaluated):
+        if evaluated is None:
+            return ''
         if not isinstance(evaluated, str):
-            '"{}"'.format(evaluated.replace('"', '\\"'))
+            return '"{}"'.format(evaluated.replace('"', '\"'))
 
 
 class ParamNumericVType(ParamVType):
@@ -129,9 +131,9 @@ REAL_TYPES = (float, np.float, np.float32, np.float64) + INT_TYPES
 COMPLEX_TYPES = (complex, np.complex, np.complex64, np.complex128) + REAL_TYPES
 VECTOR_TYPES = (tuple, list, set, np.ndarray)
 
-ParamVType.register('bool', bool)
-ParamStringVType.register('string', str)
-ParamRawVType.register('raw', None)
+ParamVType.register('bool', (bool,))
+ParamStringVType.register(('string', 'str'), (str,))
+ParamRawVType.register('raw', (None,))
 
 # the order if import here!
 ParamNumericVType.register('int', INT_TYPES)

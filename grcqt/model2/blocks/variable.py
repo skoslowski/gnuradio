@@ -18,15 +18,13 @@
 from __future__ import absolute_import, division, print_function
 
 from . base import BaseBlock
-from .. variables import Variable
 
 
 class VariableBlock(BaseBlock):
 
-    def __init__(self, parent, **kwargs):
-        super(VariableBlock, self).__init__(parent, **kwargs)
+    def setup(self, **kwargs):
+        self.add_param("Value", "value", "raw")
 
-        self.variable = Variable(self, self.id)
-
-    def update(self):
-        super(VariableBlock, self).update()
+    @staticmethod
+    def value(value, **other_params):
+        return value

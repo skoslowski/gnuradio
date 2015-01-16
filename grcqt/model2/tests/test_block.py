@@ -68,7 +68,7 @@ def test_block_add_param4(block):
     p = block.add_param("My test", "t3", default="test")
     assert "t3" in block.params
     assert isinstance(p, Param)
-    assert p.vtype is None
+    assert p.vtype is 'raw'
 
 
 def test_block_add_param5(block):
