@@ -98,7 +98,7 @@ class ParamStringVType(ParamVType):
         if evaluated is None:
             return ''
         if not isinstance(evaluated, str):
-            return '"{}"'.format(evaluated.replace('"', '\"'))
+            return repr(str(evaluated))
 
 
 class ParamNumericVType(ParamVType):

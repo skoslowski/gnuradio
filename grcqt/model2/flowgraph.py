@@ -17,11 +17,10 @@
 
 from __future__ import absolute_import, division, print_function
 
-import collections
 import functools
 
 from . import exceptions
-from . base import Element
+from . import base
 from . blocks import BaseBlock
 from . connection import Connection
 
@@ -43,7 +42,7 @@ def functools_lru_cache(func):
     return wrapper
 
 
-class FlowGraph(Element):
+class FlowGraph(base.Element):
 
     def __init__(self):
         super(FlowGraph, self).__init__()
@@ -52,7 +51,7 @@ class FlowGraph(Element):
         self.connections = []
 
         self.options = {}  # do we want a dict here?
-        self.namespace = _Namespace(self.blocks)
+        self.namespace = base.Namespace(self.blocks)
 
     def add_block(self, key_or_block):
         """Add a new block to the flow-graph
@@ -102,40 +101,16 @@ class FlowGraph(Element):
     def update(self):
         self.evaluate.cache_clear()
         self.namespace.clear()
-        self.namespace.update(self.options.get('imports', {}))
+        try:
+            with self.namespace.auto_resolve_off():
+                exec(self.options.get('imports', ''), None, self.namespace)
+        except Exception as e:
+            self.add_error(e)
+
         # eval blocks first, then connections
         for block in self.blocks:
-            if block.id in self.namespace:
+            if block.id in self.namespace.auto_resolved_keys:
                 continue  # already evaluated for some other block
             block.update()
         for connection in self.connections:
             connection.update()
-
-
-class _Namespace(collections.OrderedDict):
-    """A dict class that auto-calls variables for missing names"""
-
-    def __init__(self, blocks):
-        super(_Namespace, self).__init__()
-        self.blocks = blocks
-        self._getitem_recursion_keys = []
-
-    def _set_value_from_block(self, key):
-        for block in self.blocks:
-            if block.id == key:
-                block.update()
-                self[key] = block.evaluated
-                break
-
-    def __getitem__(self, key):
-        if key in self._getitem_recursion_keys:
-            raise NameError("name {!r} is not defined".format(key))
-        if key not in self:
-            self._getitem_recursion_keys.append(key)
-            self._set_value_from_block(key)
-            self._getitem_recursion_keys.remove(key)
-        return super(_Namespace, self).__getitem__(key)
-
-    def clear(self):
-        super(_Namespace, self).clear()
-        del self._getitem_recursion_keys[:]

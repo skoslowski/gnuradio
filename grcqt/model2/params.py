@@ -30,9 +30,9 @@ from . _consts import BLOCK_ID_BLACK_LIST
 class Param(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, key, vtype='raw', default=None, category=None, validator=None):
+    def __init__(self, name, id, vtype='raw', default=None, category=None, validator=None):
         super(Param, self).__init__()
-        self._key = key
+        self._id = id
         self._vtype = None
         self._evaluated = None
 
@@ -42,9 +42,12 @@ class Param(ElementWithUpdate):
         self.validator = validator
         self.value = self.default = default  # todo get vtype default
 
+    def __repr__(self):
+        return "<Param '{}.{}'>".format(self.parent_block.id, self.id)
+
     @property
-    def key(self):
-        return self._key
+    def id(self):
+        return self._id
 
     @property
     def vtype(self):
@@ -66,8 +69,15 @@ class Param(ElementWithUpdate):
         # first update type, name, visibility, ..
         super(Param, self).update()
         # then get evaluated value. 'parse' adds quotes or puts it in a list
-        self._evaluated = types.param_vtypes[self.vtype].parse(
-            self.parent_flowgraph.evaluate(self.value))
+        if not self.is_valid:
+            self.add_error("Can't evaluate invalid param")
+            return
+        try:
+            self._evaluated = types.param_vtypes[self.vtype].parse(
+                self.parent_flowgraph.evaluate(self.value))
+        except Exception as e:
+            self.add_error(e)
+
 
     def validate(self):
         try:
@@ -75,11 +85,10 @@ class Param(ElementWithUpdate):
             types.param_vtypes[self.vtype].validate(self.evaluated)
             # custom validator
             if callable(self.validator) and not self.validator(self.evaluated):
-                self.add_error_message("Custom validator for parameter"
+                self.add_error("Custom validator for parameter"
                                        " '{self.name}' failed")
         except Exception as e:
-            self.add_error_message("Failed to validate '{self.name}': " +
-                                   e.args[0])
+            self.add_error("Failed to validate '{self.name}': " + repr(e))
 
 
 class IdParam(Param):
@@ -113,11 +122,11 @@ class IdParam(Param):
             for block in self.parent_flowgraph.blocks if block is not self
         )
         if not self._id_matcher.match(id_value):
-            self.add_error_message("Invalid ID")
+            self.add_error("Invalid ID")
         elif id_value in BLOCK_ID_BLACK_LIST:
-            self.add_error_message("ID is blacklisted")
+            self.add_error("ID is blacklisted")
         elif is_duplicate_id:
-            self.add_error_message("Duplicate ID")
+            self.add_error("Duplicate ID")
         super(IdParam, self).validate()
 
 
@@ -136,8 +145,8 @@ class OptionsParam(Param):
         def __format__(self, format_spec):
             return str(self.value)
 
-    def __init__(self, name, key, vtype, default=None):
-        super(OptionsParam, self).__init__(name, key, vtype, default)
+    def __init__(self, name, id, vtype, default=None):
+        super(OptionsParam, self).__init__(name, id, vtype, default)
         self.options = []
         self.allow_arbitrary_values = False
 
@@ -156,7 +165,7 @@ class OptionsParam(Param):
         super(OptionsParam, self).validate()
         value = self.evaluated
         if not self.allow_arbitrary_values and value not in map(lambda o: o.value, self.options):
-            self.add_error_message("Value '{}' not allowed".format(value))
+            self.add_error("Value {self.evaluated!r} not allowed")
 
     def __format__(self, format_spec):
         return self.evaluated.__format__(format_spec)

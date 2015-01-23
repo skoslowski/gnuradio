@@ -17,6 +17,8 @@
 
 from __future__ import absolute_import, division, print_function
 import weakref
+import collections
+import contextlib
 
 from . import exceptions
 
@@ -39,7 +41,7 @@ class Element(object):
     def __init__(self):
         super(Element, self).__init__()
         self.children = []
-        self.error_messages = []
+        self.collected_errors = []
 
     def __str__(self):
         """Most elements have a name (blocks, ports, params, ...)"""
@@ -117,22 +119,34 @@ class Element(object):
         for child in self.children:
             child.validate()
 
-    def add_error_message(self, msg):
+    def add_error(self, err_or_msg):
         """Format and add an error message for this element"""
-        if msg:
-            self.error_messages.append(msg.format(self=self))
+        if isinstance(err_or_msg, str):
+            err_or_msg = Exception(err_or_msg.format(self=self))
+        if not isinstance(err_or_msg, Exception):
+            err_or_msg = Exception(err_or_msg)
+        self.collected_errors.append(err_or_msg)
 
     @property
     def is_valid(self):
         """Check if this element is valid"""
-        return (not self.error_messages and
+        return (not self.collected_errors and
                 all(child.is_valid for child in self.children))
 
-    def clear_error_messages(self):
+    def iter_error_messages(self, recursive=True):
+        for err in self.collected_errors:
+            yield self, err
+        if recursive:
+            for child in self.children:
+                for err in child.iter_error_messages():
+                    yield err
+
+    def clear_error_messages(self, recursive=True):
         """Clear error messages in this and all child objects"""
-        del self.error_messages[:]
-        for child in self.children:
-            child.clear_error_messages()
+        del self.collected_errors[:]
+        if recursive:
+            for child in self.children:
+                child.clear_error_messages()
 
 
 class ElementWithUpdate(Element):
@@ -153,7 +167,7 @@ class ElementWithUpdate(Element):
                     value = params[callback_or_param_name]
                 setattr(self, target, value)
             except Exception as e:  # Never throw during update
-                self.add_error_message("Failed to update '{}.{}': {}".format(
+                self.add_error("Failed to update '{}.{}': {}".format(
                     self, target, e.args[0]
                 ))
 
@@ -177,3 +191,53 @@ class ElementWithUpdate(Element):
         if invalid_attr_names:
             raise exceptions.BlockSetupException(
                 "No attribute(s) founds for " + str(invalid_attr_names))
+
+
+class Namespace(collections.OrderedDict):
+    """A dict class that auto-calls variables for missing names"""
+
+    def __init__(self, items):
+        super(Namespace, self).__init__()
+        self.elements = items
+        self.auto_resolved_keys = []
+        self._auto_resolve = True
+        self._getitem_recursion_keys = []
+
+    @contextlib.contextmanager
+    def auto_resolve_off(self):
+        try:
+            self._auto_resolve = False
+            yield
+        finally:
+            self._auto_resolve = True
+
+    def _set_value_from_element(self, key):
+        if isinstance(self.elements, list):
+            for element in self.elements:
+                if element.id == key:
+                    break
+            else:
+                return
+        else:
+            try:
+                element = self.elements[key]
+            except KeyError:
+                return
+        element.update()
+        self.auto_resolved_keys.append(key)
+        if element.is_valid:
+            self[key] = element.evaluated
+
+    def __getitem__(self, key):
+        if key in self._getitem_recursion_keys:
+            raise NameError("name {!r} is not defined".format(key))
+        if self._auto_resolve and key not in self:
+            self._getitem_recursion_keys.append(key)
+            self._set_value_from_element(key)
+            self._getitem_recursion_keys.remove(key)
+        return super(Namespace, self).__getitem__(key)
+
+    def clear(self):
+        super(Namespace, self).clear()
+        del self.auto_resolved_keys[:]
+        del self._getitem_recursion_keys[:]

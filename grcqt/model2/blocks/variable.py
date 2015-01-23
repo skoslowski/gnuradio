@@ -22,9 +22,17 @@ from . base import BaseBlock
 
 class VariableBlock(BaseBlock):
 
+    name = "Variable"
+
+    def __repr__(self):
+        return "<{} {!r}>".format(self.name, self.id)
+
     def setup(self, **kwargs):
         self.add_param("Value", "value", "raw")
 
     @staticmethod
-    def value(value, **other_params):
-        return value
+    def value(valid_params):
+        try:
+            return valid_params['value']
+        except KeyError:
+            raise ValueError("Value undefined")

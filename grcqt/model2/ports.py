@@ -116,7 +116,7 @@ class BasePort(ElementWithUpdate):
             error_message = "Port '{self.name}' has to many connections."
         else:
             error_message = ''
-        self.add_error_message(error_message)
+        self.add_error(error_message)
 
 
 class PortClone(Element):
@@ -135,7 +135,7 @@ class PortClone(Element):
     def key(self):
         """The key of a cloned port gets its index appended"""
         if isinstance(self.parent, MessagePort):
-            return self.parent.key + str(self.clone_id)
+            return self.parent.id + str(self.clone_id)
 
     def __getattr__(self, item):
         """Get all other attributes from parent (Port) object"""

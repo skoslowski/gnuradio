@@ -23,7 +23,7 @@ from collections import OrderedDict
 import inspect
 
 from .. import exceptions
-from .. base import Element
+from .. base import Element, Namespace
 from .. params import Param, IdParam
 from .. ports import (BasePort, StreamPort, MessagePort,
                       SINK, SOURCE, PORT_DIRECTIONS)
@@ -44,7 +44,7 @@ class BaseBlock(Element):
         self._evaluated = None
 
         self.params = OrderedDict()
-        self.namespace = {}  # dict of evaluated params
+        self.namespace = Namespace(self.params)  # dict of evaluated params
         self.enabled = True
 
         self.add_param(cls=IdParam)
@@ -57,7 +57,7 @@ class BaseBlock(Element):
         pass
 
     @staticmethod
-    def value(**params):
+    def value(valid_params):
         """design-time value (as string) of this block/variable"""
         # todo: find a better way to spec a value a to signal NotImplemented
         return object()
@@ -81,10 +81,10 @@ class BaseBlock(Element):
         else:
             param = Param(*args, **kwargs)
 
-        if param.key in self.params:
+        if param.id in self.params:
             raise exceptions.BlockSetupException(
-                "Param key '{}' not unique".format(param.key))
-        self.params[param.key] = param
+                "Param key '{}' not unique".format(param.id))
+        self.params[param.id] = param
         self.add_child(param)  # double bookkeeping =(
         return param
 
@@ -101,11 +101,18 @@ class BaseBlock(Element):
         """Update the blocks params and (re-)build the local namespace"""
         self.namespace.clear()
         for key, param in self.params.iteritems():
+            if key in self.namespace.auto_resolved_keys:
+                continue  # already evaluated for some other param
             param.update()
-            self.namespace[key] = param.evaluated
-        value = self.value(**self.namespace)
-        self._evaluated = self.parent_flowgraph.evaluate(value) \
-            if isinstance(value, str) else value
+            if param.is_valid:
+                self.namespace[key] = param.evaluated
+        if self.is_valid:
+            try:
+                value = self.value(self.namespace)
+                self._evaluated = self.parent_flowgraph.evaluate(value) \
+                    if isinstance(value, str) else value
+            except Exception as e:
+                self.add_error(e)
 
     def load(self, state):
         for key, param in self.params.iteritems():
@@ -121,7 +128,7 @@ class BaseBlock(Element):
         state = {
             key: param.value for key, param in self.params.iteritems()
         }
-        state['enabeld'] = self.enabled
+        state['enabled'] = self.enabled
         # ToDo: add gui stuff
         return state
 

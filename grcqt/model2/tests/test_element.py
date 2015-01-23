@@ -75,4 +75,4 @@ def test_element_update():
     b.namespace['on'] = 1
     a.update()
     assert not a.is_valid and a.b
-    assert 'wrong type' in a.error_messages[-1]
+    assert 'wrong type' in a.collected_errors[-1].args[0]
