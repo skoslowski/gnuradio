@@ -30,24 +30,20 @@ from . _consts import BLOCK_ID_BLACK_LIST
 class Param(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
-    def __init__(self, name, id, vtype='raw', default=None, category=None, validator=None):
+    def __init__(self, uid, label, vtype='raw', default=None, category=None, validator=None):
         super(Param, self).__init__()
-        self._id = id
         self._vtype = None
         self._evaluated = None
 
-        self.name = name
+        self.uid = uid
+        self.label = label if label is not None else uid
         self.category = category
         self.vtype = vtype
         self.validator = validator
         self.value = self.default = default  # todo get vtype default
 
     def __repr__(self):
-        return "<Param '{}.{}'>".format(self.parent_block.id, self.id)
-
-    @property
-    def id(self):
-        return self._id
+        return "<Param '{}.{}'>".format(self.parent_block.id, self.uid)
 
     @property
     def vtype(self):
@@ -78,7 +74,6 @@ class Param(ElementWithUpdate):
         except Exception as e:
             self.add_error(e)
 
-
     def validate(self):
         try:
             # value type validation
@@ -86,9 +81,9 @@ class Param(ElementWithUpdate):
             # custom validator
             if callable(self.validator) and not self.validator(self.evaluated):
                 self.add_error("Custom validator for parameter"
-                                       " '{self.name}' failed")
+                               " '{self.label}' failed")
         except Exception as e:
-            self.add_error("Failed to validate '{self.name}': " + repr(e))
+            self.add_error("Failed to validate '{self.label}': " + repr(e))
 
 
 class IdParam(Param):
@@ -98,7 +93,7 @@ class IdParam(Param):
     _id_factory = map(lambda c: repr("block_{}".format(c)), itertools.count())
 
     def __init__(self):
-        super(IdParam, self).__init__('ID', 'id', str)
+        super(IdParam, self).__init__('uid', label='ID', vtype=str)
         self.value = self.default = self._id_factory.next()
 
     def set_unique_block_id(self):
@@ -109,7 +104,6 @@ class IdParam(Param):
         block_id = itertools.dropwhile(lambda id_: id_ in blocks, block_ids).next()
         return repr(block_id)
 
-
     def update(self):
         # first update type, name, visibility, ..
         # then get evaluated value. 'parse' adds quotes or puts it in a list
@@ -118,7 +112,7 @@ class IdParam(Param):
     def validate(self):
         id_value = self.evaluated
         is_duplicate_id = any(
-            block.id == id_value
+            block.uid == id_value
             for block in self.parent_flowgraph.blocks if block is not self
         )
         if not self._id_matcher.match(id_value):
@@ -134,10 +128,10 @@ class OptionsParam(Param):
 
     class Option(object):
         """
-        Each option has a name and value. alternate values may be passed
+        Each option has a label and value. alternate values may be passed
         """
-        def __init__(self, name, value, **kwargs):
-            self.name = name
+        def __init__(self, label, value, **kwargs):
+            self.label = label
             self.value = value
             for key in kwargs:
                 setattr(self, key, kwargs[key])
@@ -145,8 +139,8 @@ class OptionsParam(Param):
         def __format__(self, format_spec):
             return str(self.value)
 
-    def __init__(self, name, id, vtype, default=None):
-        super(OptionsParam, self).__init__(name, id, vtype, default)
+    def __init__(self, uid, label=None, vtype='raw', default=None):
+        super(OptionsParam, self).__init__(uid, label, vtype, default)
         self.options = []
         self.allow_arbitrary_values = False
 

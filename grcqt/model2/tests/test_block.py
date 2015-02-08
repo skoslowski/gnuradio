@@ -39,33 +39,33 @@ def block():
 
 def test_block_add_param1(block):
     # add an instance
-    block.add_param(Param("test name", "t1", vtype=int))
+    block.add_param(Param("t1", "test label", vtype=int))
     assert "t1" in block.params
-    assert block.params["t1"].name == "test name"
+    assert block.params["t1"].label == "test label"
     assert block.params["t1"].vtype == int
 
 
 def test_block_add_param2(block):
     # add with custom class
     class MyParam(Param): pass
-    block.add_param("t", "t2", cls=MyParam)
+    block.add_param("t2", "t label", cls=MyParam)
     assert "t2" in block.params
 
 
 def test_block_add_param3(block):
     # add with custom class through ABC register
     class MyParam2(object):
-        def __init__(self, name, id):
-            self.id = id
+        def __init__(self, uid, name):
+            self.uid = uid
     Param.register(MyParam2)
 
-    block.add_param("t", "t2", cls=MyParam2)
+    block.add_param("t2", "t label", cls=MyParam2)
     assert "t2" in block.params
 
 
 def test_block_add_param4(block):
     # add a normal param
-    p = block.add_param("My test", "t3", default="test")
+    p = block.add_param("t3", "My test", default="test")
     assert "t3" in block.params
     assert isinstance(p, Param)
     assert p.vtype is 'raw'
@@ -82,9 +82,9 @@ def test_block_add_param5(block):
 
 
 def test_block_add_param6(block):
-    block.add_param(Param("test name", "t1"))
+    block.add_param(Param("t1", "test label"))
     try:
-        block.add_param("another name", "t1")
+        block.add_param("t1", "another label")
     except exceptions.BlockSetupException as e:
         assert "not unique" in e.message
     else:

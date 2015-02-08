@@ -33,7 +33,7 @@ class BaseBlock(Element):
     """Basic element with parameters and import/make template"""
     __metaclass__ = ABCMeta
 
-    name = 'label'  # the name of this block (label in the gui)
+    label = 'Block'  # the label of this block (for the gui)
     categories = []  # categories put put this block under
 
     import_template = ''
@@ -48,7 +48,7 @@ class BaseBlock(Element):
         self.enabled = True
 
         self.add_param(cls=IdParam)
-        # self.params['id'].set_unique_block_id()
+        # self.params['uid'].set_unique_block_id()
         self.setup(**kwargs)
 
     @abstractmethod
@@ -81,17 +81,17 @@ class BaseBlock(Element):
         else:
             param = Param(*args, **kwargs)
 
-        if param.id in self.params:
+        if param.uid in self.params:
             raise exceptions.BlockSetupException(
-                "Param key '{}' not unique".format(param.id))
-        self.params[param.id] = param
+                "Param key '{}' not unique".format(param.uid))
+        self.params[param.uid] = param
         self.add_child(param)  # double bookkeeping =(
         return param
 
     @property
-    def id(self):
+    def uid(self):
         """unique identifier for this block within the flow-graph"""
-        return self.params['id'].value
+        return self.params['uid'].value
 
     @property
     def evaluated(self):
@@ -145,7 +145,7 @@ class Block(BaseBlock):
         self.sources = []  # filled / updated by update()
         self.sinks = []
 
-        self.add_param('alias', 'Block Alias', vtype=str, default=self.id)
+        self.add_param('alias', 'Block Alias', vtype=str, default=self.uid)
         # todo: hide these for blocks w/o ports (shouldn't be the case in this class)
         self.add_param('affinity', 'Core Affinity', vtype=list, default=[])
         # todo: hide these for sink-only blocks
@@ -195,14 +195,14 @@ class Block(BaseBlock):
         # todo: form busses
         return evaluated
 
-    def add_stream_sink(self, name, dtype, vlen=1, nports=None):
-        return self.add_port(StreamPort, 'sink', name, dtype, vlen, nports)
+    def add_stream_sink(self, label, dtype, vlen=1, nports=None):
+        return self.add_port(StreamPort, 'sink', label, dtype, vlen, nports)
 
-    def add_stream_source(self, name, dtype, vlen=1, nports=None):
-        return self.add_port(StreamPort, 'source', name, dtype, vlen, nports)
+    def add_stream_source(self, label, dtype, vlen=1, nports=None):
+        return self.add_port(StreamPort, 'source', label, dtype, vlen, nports)
 
-    def add_message_sink(self, name, key=None, nports=1):
-        return self.add_port(MessagePort, 'sink', name, key, nports)
+    def add_message_sink(self, label, key=None, nports=1):
+        return self.add_port(MessagePort, 'sink', label, key, nports)
 
-    def add_message_source(self, name, key=None, nports=1):
-        return self.add_port(MessagePort, 'source', name, key, nports)
+    def add_message_source(self, label, key=None, nports=1):
+        return self.add_port(MessagePort, 'source', label, key, nports)

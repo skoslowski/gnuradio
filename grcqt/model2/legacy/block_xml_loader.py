@@ -91,7 +91,7 @@ class ${ cls }(Block):
     ${ indent(doc) }
     """
     % endif
-    name = ${ repr(name) }
+    label = ${ repr(label) }
     % if categories:
     categories = ${ repr(categories) }
     % endif
@@ -250,7 +250,7 @@ def get_param_options(param_e):
     options = []
     for option_n in param_e.getiterator('option'):
         kwargs = OrderedDict()
-        kwargs['name'], kwargs['value'] = option_n.findtext('name', 'key')
+        kwargs['label'], kwargs['value'] = option_n.findtext('name', 'key')
         kwargs.update(dict(
             opt_n.split(':', 2)
             for opt_n in option_n.findtext_all('opt')
@@ -264,7 +264,7 @@ def get_params(block_e):
     params = []
     for param_e in block_e.getiterator('param'):
         kwargs = OrderedDict()
-        kwargs['name'], kwargs['key'] = param_e.findtext('name', 'key')
+        kwargs['label'], kwargs['uid'] = param_e.findtext('label', 'key')
 
         vtype, gets_updated = param_e.evaltext('type', 'vtype')
         if not gets_updated:
@@ -381,7 +381,7 @@ def construct_block_class(xml):
         base="Block",
         doc=block_e.findtext('doc'),
 
-        name=block_e.findtext('name'),
+        label=block_e.findtext('name'),
         categories=block_e.findtext_all('category'),
         throttling=block_e.findtext('throttle'),
 

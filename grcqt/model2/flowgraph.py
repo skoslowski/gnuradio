@@ -109,7 +109,7 @@ class FlowGraph(base.Element):
 
         # eval blocks first, then connections
         for block in self.blocks:
-            if block.id in self.namespace.auto_resolved_keys:
+            if block.uid in self.namespace.auto_resolved_keys:
                 continue  # already evaluated for some other block
             block.update()
         for connection in self.connections:

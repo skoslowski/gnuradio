@@ -16,6 +16,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, division, print_function
+import abc
 
 from . base import BaseBlock
 
@@ -24,17 +25,24 @@ class PadBlock(BaseBlock):
     """
     Used to define the external IO of a generated hier block
     """
-    name = 'Pad Block'  # the name of this block (label in the gui)
+    label = 'Pad Block'  # the label of this block (label in the gui)
     categories = []
 
-    def setup(self, pad_port_direction='source', **kwargs):
-        self.add_param(name="Number of ports", key="nports", vtype=int, default=1)
-        self.add_param(name="Port type", key="dtype", vtype=str, default="complex")
-        self.add_param(name="VLEN", key="vlen", vtype=int, default=1)
+    @abc.abstractmethod
+    def setup(self, **kwargs):
+        self.add_param("nports", label="Number of ports", vtype=int, default=1)
+        self.add_param("dtype", label="Port type", vtype=str, default="complex")
+        self.add_param("vlen", label="VLEN", vtype=int, default=1)
 
-        self.add_port(name='in', nports=1, dtype=complex).on_update(
 
-        )
+class PadSource(BaseBlock):
+    """
+    Used to define the external IO of a generated hier block
+    """
+    label = 'Pad Source'  # the label of this block (label in the gui)
+    categories = []
 
-    # todo: add custom stuff
-
+    @abc.abstractmethod
+    def setup(self, **kwargs):
+        super(PadSource, self).setup(self, **kwargs)
+        self.add

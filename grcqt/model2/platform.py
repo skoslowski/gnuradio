@@ -82,6 +82,8 @@ class Platform(object):
 
             except BlockLoadException as e:
                 exceptions.append(e)
+        if exceptions:
+            raise BlockLoadException(exceptions)
 
     @staticmethod
     def iter_block_files(block_paths, suffix):

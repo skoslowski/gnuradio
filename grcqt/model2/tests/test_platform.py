@@ -28,7 +28,7 @@ def test_block_load():
     p.load_blocks()
 
     assert 'block_key' in p.blocks
-    assert p.blocks['block_key'].name == "testname"
+    assert p.blocks['block_key'].label == "testname"
 
     assert 'test_block' in p.blocks
 
@@ -46,6 +46,6 @@ def test_block_load_for_real():
     p.load_blocks()
 
     assert 'block_key' in p.blocks
-    assert p.blocks['block_key'].name == "testname"
+    assert p.blocks['block_key'].label == "testname"
 
     assert 'test_block' in p.blocks

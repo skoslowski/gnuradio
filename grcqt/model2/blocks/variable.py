@@ -22,13 +22,13 @@ from . base import BaseBlock
 
 class VariableBlock(BaseBlock):
 
-    name = "Variable"
+    label = "Variable"
 
     def __repr__(self):
-        return "<{} {!r}>".format(self.name, self.id)
+        return "<{} {!r}>".format(self.label, self.uid)
 
     def setup(self, **kwargs):
-        self.add_param("Value", "value", "raw")
+        self.add_param("value", "Value", "raw")
 
     @staticmethod
     def value(valid_params):

@@ -21,7 +21,7 @@ from .. blocks.variable import VariableBlock
 
 def add_variable(fg, name, value):
     var = VariableBlock()
-    var.params['id'].value = name
+    var.params['uid'].value = name
     var.params['value'].value = value
     fg.add_block(var)
 

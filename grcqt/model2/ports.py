@@ -34,24 +34,24 @@ class BasePort(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def __init__(self, direction, name, nports=None):
+    def __init__(self, direction, label, nports=None):
         super(BasePort, self).__init__()
-        self._name = name
+        self._label = label
         self._nports = nports
         self.direction = direction
         self.active = True
 
     @property
-    def name(self):
-        """The name of this block"""
-        name = self._name
+    def label(self):
+        """The label of this block"""
+        label = self._label
         if self.nports is not None:
-            name += '0'
-        return name
+            label += '0'
+        return label
 
-    @name.setter
-    def name(self, value):
-        self._name = value
+    @label.setter
+    def label(self, value):
+        self._label = value
 
     @property
     def nports(self):
@@ -111,31 +111,31 @@ class BasePort(ElementWithUpdate):
         super(BasePort, self).validate()
         len_connections = len(list(self.connections))
         if not self.connections_optimal and not len_connections:
-            error_message = "Port '{self.name}' not connected."
+            error_message = "Port '{self.label}' not connected."
         elif len_connections > 1 and not self.allow_multiple_connections:
-            error_message = "Port '{self.name}' has to many connections."
+            error_message = "Port '{self.label}' has to many connections."
         else:
             error_message = ''
         self.add_error(error_message)
 
 
 class PortClone(Element):
-    """Acts as a clone of its parent object, but adds and index to its name"""
+    """Acts as a clone of its parent object, but adds and index to its label"""
 
     def __init__(self, clone_id):
         super(PortClone, self).__init__()
         self.clone_id = clone_id
 
     @property
-    def name(self):
-        """The name of a cloned port gets its index appended"""
-        return self.parent.name[:-1] + str(self.clone_id)
+    def label(self):
+        """The label of a cloned port gets its index appended"""
+        return self.parent.label[:-1] + str(self.clone_id)
 
     @property
     def key(self):
         """The key of a cloned port gets its index appended"""
         if isinstance(self.parent, MessagePort):
-            return self.parent.id + str(self.clone_id)
+            return self.parent.uid + str(self.clone_id)
 
     def __getattr__(self, item):
         """Get all other attributes from parent (Port) object"""
@@ -149,9 +149,9 @@ BasePort.register(PortClone)
 class StreamPort(BasePort):
     """Stream ports have a data type and vector length"""
 
-    def __init__(self, direction, name, dtype, vlen=1, nports=None):
+    def __init__(self, direction, label, dtype, vlen=1, nports=None):
         """Create a new stream port"""
-        super(StreamPort, self).__init__(direction, name, nports)
+        super(StreamPort, self).__init__(direction, label, nports)
         self._dtype = self._vlen = None
         # call setters
         self.dtype = dtype
@@ -182,9 +182,9 @@ class MessagePort(BasePort):
     allow_multiple_connections = {SINK: False, SOURCE: True}
     connections_optimal = True
 
-    def __init__(self, direction, name, key=None, nports=1):
-        super(MessagePort, self).__init__(direction, name, nports)
-        self.key = key or name
+    def __init__(self, direction, label, key=None, nports=1):
+        super(MessagePort, self).__init__(direction, label, nports)
+        self.key = key or label
 
     @property
     def allow_multiple_connections(self):

@@ -44,8 +44,8 @@ class Element(object):
         self.collected_errors = []
 
     def __str__(self):
-        """Most elements have a name (blocks, ports, params, ...)"""
-        return getattr(self, 'name', self.__class__.__name__)
+        """Most elements have a label (blocks, ports, params, ...)"""
+        return getattr(self, 'label', self.__class__.__name__)
 
     ###########################################################################
 
@@ -214,7 +214,7 @@ class Namespace(collections.OrderedDict):
     def _set_value_from_element(self, key):
         if isinstance(self.elements, list):
             for element in self.elements:
-                if element.id == key:
+                if element.uid == key:
                     break
             else:
                 return
@@ -230,7 +230,7 @@ class Namespace(collections.OrderedDict):
 
     def __getitem__(self, key):
         if key in self._getitem_recursion_keys:
-            raise NameError("name {!r} is not defined".format(key))
+            raise NameError("label {!r} is not defined".format(key))
         if self._auto_resolve and key not in self:
             self._getitem_recursion_keys.append(key)
             self._set_value_from_element(key)

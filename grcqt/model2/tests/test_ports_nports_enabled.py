@@ -38,7 +38,7 @@ def block():
 
 def test_nports(block):
     """test the block fixture setup"""
-    assert [sink.name for sink in block.sinks] == \
+    assert [sink.label for sink in block.sinks] == \
            ["in", "in20", "in21", "in22", "in3"]
     assert [sink.dtype for sink in block.sinks] == \
            [complex, "int", "int", "int", complex]
@@ -67,30 +67,30 @@ def test_set_nports2(block):
 def test_reduce_size(block):
     block.sinks[1].nports = 1
     block.update()
-    assert [sink.name for sink in block.sinks] == ["in", "in20", "in3"]
+    assert [sink.label for sink in block.sinks] == ["in", "in20", "in3"]
 
     block.sinks[1].nports = 5
     block.update()
-    assert [sink.name for sink in block.sinks] == \
+    assert [sink.label for sink in block.sinks] == \
            ["in", "in20", "in21", "in22", "in23", "in24", "in3"]
 
     block.sinks[1].nports = 2
     block.update()
-    assert [sink.name for sink in block.sinks] == \
+    assert [sink.label for sink in block.sinks] == \
            ["in", "in20", "in21", "in3"]
 
 
 def test_active(block):
     block.sinks[0].active = False
     block.update()
-    assert [sink.name for sink in block.sinks] == \
+    assert [sink.label for sink in block.sinks] == \
            ["in20", "in21", "in22", "in3"]
 
 
 def test_active2(block):
     block.sinks[1].active = False
     block.update()
-    assert [sink.name for sink in block.sinks] == \
+    assert [sink.label for sink in block.sinks] == \
            ["in", "in3"]
     block.children[1].enabled = True
     block.update()
