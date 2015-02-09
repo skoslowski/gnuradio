@@ -195,14 +195,14 @@ class Block(BaseBlock):
         # todo: form busses
         return evaluated
 
-    def add_stream_sink(self, label, dtype, vlen=1, nports=None):
+    def add_stream_sink(self, label='in', dtype='complex', vlen=1, nports=None):
         return self.add_port(StreamPort, 'sink', label, dtype, vlen, nports)
 
-    def add_stream_source(self, label, dtype, vlen=1, nports=None):
+    def add_stream_source(self, label='out', dtype='complex', vlen=1, nports=None):
         return self.add_port(StreamPort, 'source', label, dtype, vlen, nports)
 
-    def add_message_sink(self, label, key=None, nports=1):
+    def add_message_sink(self, label='in', key=None, nports=None):
         return self.add_port(MessagePort, 'sink', label, key, nports)
 
-    def add_message_source(self, label, key=None, nports=1):
+    def add_message_source(self, label='out', key=None, nports=None):
         return self.add_port(MessagePort, 'source', label, key, nports)

@@ -166,3 +166,15 @@ class OptionsParam(Param):
 
     def __getitem__(self, key):
         return self.options[self.options.index(self.evaluated)].extra[key]
+
+
+class DTypeParam(OptionsParam):
+    pass
+    # ToDo: Implement
+
+
+class VlenParam(Param):
+
+    def __init__(self, uid="vlen", label="VLEN", vtype='int', default=1,
+                 validator=lambda v: v>0):
+        super(VlenParam, self).__init__(uid, label, vtype, default, validator)

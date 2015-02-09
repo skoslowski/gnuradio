@@ -16,33 +16,73 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, division, print_function
-import abc
 
-from . base import BaseBlock
+from . base import Block
 
 
-class PadBlock(BaseBlock):
+class PadStreamSource(Block):
     """
     Used to define the external IO of a generated hier block
     """
-    label = 'Pad Block'  # the label of this block (label in the gui)
-    categories = []
+    label = 'Pad Stream Source'
 
-    @abc.abstractmethod
     def setup(self, **kwargs):
-        self.add_param("nports", label="Number of ports", vtype=int, default=1)
+        super(PadStreamSource,self).setup(**kwargs)
+
+        self.add_param("label", label="Label", vtype=str, default="out")
+        self.add_param("dtype", label="Port type", vtype=str, default="complex")
+        self.add_param("vlen", label="VLEN", vtype=int, default=1,
+                       validator=lambda v: v > 0)
+        self.add_param("nports", label="Number of ports", vtype=int, default=1,
+                       validator=lambda v: v > 0)
+
+        self.add_stream_source().on_update("label", "dtype", "vlen", "nports")
+
+
+class PadStreamSink(Block):
+    """
+    Used to define the external IO of a generated hier block
+    """
+    label = 'Pad Stream Sink'
+
+    def setup(self, **kwargs):
+        super(PadStreamSink, self).setup(**kwargs)
+
+        self.add_param("label", label="Label", vtype=str, default="out")
         self.add_param("dtype", label="Port type", vtype=str, default="complex")
         self.add_param("vlen", label="VLEN", vtype=int, default=1)
+        self.add_param("nports", label="Number of ports", vtype=int, default=1)
+
+        self.add_stream_sink().on_update("label", "dtype", "vlen", "nports")
 
 
-class PadSource(BaseBlock):
+class PadMessageSource(Block):
     """
     Used to define the external IO of a generated hier block
     """
-    label = 'Pad Source'  # the label of this block (label in the gui)
-    categories = []
+    label = 'Pad Message Source'
 
-    @abc.abstractmethod
     def setup(self, **kwargs):
-        super(PadSource, self).setup(self, **kwargs)
-        self.add
+        super(PadMessageSource, self).setup(**kwargs)
+
+        self.add_param("label", label="Label", vtype=str, default="out")
+        self.add_param("key", label="Key", vtype=str, default="in")
+        self.add_param("nports", label="Number of ports", vtype=int, default=1)
+
+        self.add_message_sink().on_update("label", "dtype", "vlen", "nports")
+
+
+class PadMessageSink(Block):
+    """
+    Used to define the external IO of a generated hier block
+    """
+    label = 'Pad Message Source'
+
+    def setup(self, **kwargs):
+        super(PadMessageSink, self).setup(**kwargs)
+
+        self.add_param("label", label="Label", vtype=str, default="out")
+        self.add_param("key", label="Key", vtype=str, default="in")
+        self.add_param("nports", label="Number of ports", vtype=int, default=1)
+
+        self.add_message_source().on_update("label", "dtype", "vlen", "nports")

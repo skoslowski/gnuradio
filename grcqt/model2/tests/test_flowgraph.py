@@ -46,7 +46,7 @@ def test_flowgraph_namespace_circle():
     fg.update()
     assert not fg.is_valid
     assert all("is not defined" in error.args[0]
-               for origin, error in fg.iter_error_messages())
+               for origin, error in fg.iter_errors())
 
 def test_flowgraph_missing_var():
     fg = FlowGraph()
@@ -69,6 +69,6 @@ def test_flowgraph_imports():
     add_variable(fg, "B", "myfunc(3.5)")
     add_variable(fg, "C", "math.sqrt(4)")
     fg.update()
-    for key, value in {'A': 5, 'B': 3, 'C': 2}.viewitems():
+    for key, value in {'A': 5, 'B': 3, 'C': 2}.iteritems():
         assert fg.namespace[key] == value
     assert fg.is_valid

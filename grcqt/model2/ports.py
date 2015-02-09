@@ -149,7 +149,7 @@ BasePort.register(PortClone)
 class StreamPort(BasePort):
     """Stream ports have a data type and vector length"""
 
-    def __init__(self, direction, label, dtype, vlen=1, nports=None):
+    def __init__(self, direction, label, dtype='complex', vlen=1, nports=None):
         """Create a new stream port"""
         super(StreamPort, self).__init__(direction, label, nports)
         self._dtype = self._vlen = None

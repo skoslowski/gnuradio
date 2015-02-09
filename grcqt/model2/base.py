@@ -19,6 +19,7 @@ from __future__ import absolute_import, division, print_function
 import weakref
 import collections
 import contextlib
+from itertools import chain
 
 from . import exceptions
 
@@ -133,20 +134,20 @@ class Element(object):
         return (not self.collected_errors and
                 all(child.is_valid for child in self.children))
 
-    def iter_error_messages(self, recursive=True):
+    def iter_errors(self, recursive=True):
         for err in self.collected_errors:
             yield self, err
         if recursive:
             for child in self.children:
-                for err in child.iter_error_messages():
+                for err in child.iter_errors():
                     yield err
 
-    def clear_error_messages(self, recursive=True):
+    def clear_errors(self, recursive=True):
         """Clear error messages in this and all child objects"""
         del self.collected_errors[:]
         if recursive:
             for child in self.children:
-                child.clear_error_messages()
+                child.clear_errors()
 
 
 class ElementWithUpdate(Element):
@@ -169,21 +170,23 @@ class ElementWithUpdate(Element):
             except Exception as e:  # Never throw during update
                 self.add_error("Failed to update '{}.{}': {}".format(
                     self, target, e.args[0]
-                ))
+                ))  # todo: need a better exception here
 
-    def on_update(self, **kwargs):
+    def on_update(self, *args, **kwargs):
         """This installs a number of callbacks in the objects update function
 
-        The object must a child of a Block. The key of each argument must be a
-        valid attribute of the object. The values are callables with a single
-        argument. On update a dict of parameter keys and evaluated value is
-        passed.
-
-        As a shorthand a parameter key (string) can be passed instead of a
-        callable. The parameter value is used to update the attribute.
+        kwargs: The key of each argument must be a valid attribute of the
+                object. The values are callables with must accept any keyword
+                argument. As a shorthand a parameter key (string) can be passed
+                instead of a callable. The parameter value is used to update
+                the attribute.
+        args:   list of parameter uids which are also object attributes. Each
+                attribute is updated with the value of the corresponding
+                parameter (same as shorthand in kwargs)
         """
         invalid_attr_names = []
-        for attr_name, callback in kwargs.iteritems():
+        args_as_dict = ((attr_name, attr_name) for attr_name in args)
+        for attr_name, callback in chain(kwargs.iteritems(), args_as_dict):
             if hasattr(self, attr_name):  # todo: exclude methods
                 self.update_actions[attr_name] = callback
             else:
