@@ -42,6 +42,7 @@ GR_PYTHON_INSTALL(FILES
     ParserErrorsDialog.py
     PropsDialog.py
     Preferences.py
+    Runner.py
     StateCache.py
     __init__.py
     DESTINATION ${GR_PYTHON_DIR}/gnuradio/grc/gui

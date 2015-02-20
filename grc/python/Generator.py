@@ -18,10 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import os
-import sys
-import subprocess
 import tempfile
-from distutils.spawn import find_executable
 from Cheetah.Template import Template
 
 from .. gui import Messages
@@ -29,7 +26,7 @@ from .. base import ParseXML
 from .. base import odict
 
 from . Constants import TOP_BLOCK_FILE_MODE, FLOW_GRAPH_TEMPLATE, \
-    XTERM_EXECUTABLE, HIER_BLOCK_FILE_MODE, HIER_BLOCKS_LIB_DIR, BLOCK_DTD
+    HIER_BLOCK_FILE_MODE, HIER_BLOCKS_LIB_DIR, BLOCK_DTD
 from . import expr_utils
 
 
@@ -107,34 +104,6 @@ class TopBlockGenerator(object):
             os.chmod(self.get_file_path(), self._mode)
         except:
             pass
-
-    def get_popen(self):
-        """
-        Execute this python flow graph.
-
-        Returns:
-            a popen object
-        """
-        # extract the path to the python executable
-        python_exe = sys.executable
-
-        # when using wx gui on mac os, execute with pythonw
-        # using pythonw is not necessary anymore, disabled below
-        # if self._generate_options == 'wx_gui' and 'darwin' in sys.platform.lower():
-        #   python_exe = 'pythonw'
-
-        # setup the command args to run
-        cmds = [python_exe, '-u', self.get_file_path()]  # -u is unbuffered stdio
-
-        # when in no gui mode on linux, use a graphical terminal (looks nice)
-        xterm_executable = find_executable(XTERM_EXECUTABLE)
-        if self._generate_options == 'no_gui' and xterm_executable:
-            cmds = [xterm_executable, '-e'] + cmds
-
-        p = subprocess.Popen(
-            args=cmds, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-            shell=False, universal_newlines=True)
-        return p
 
     def _build_python_code_from_template(self):
         """

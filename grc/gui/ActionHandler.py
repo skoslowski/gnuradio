@@ -29,6 +29,7 @@ import gobject
 import subprocess
 import Preferences
 from threading import Thread
+import functools
 import Messages
 from .. base import ParseXML
 from MainWindow import MainWindow
@@ -36,6 +37,7 @@ from PropsDialog import PropsDialog
 from ParserErrorsDialog import ParserErrorsDialog
 import Dialogs
 from FileDialogs import OpenFlowGraphFileDialog, SaveFlowGraphFileDialog, SaveReportsFileDialog, SaveImageFileDialog
+import Runner
 
 gobject.threads_init()
 
@@ -490,11 +492,20 @@ class ActionHandler:
                         generator.write()
                     except Exception,e: Messages.send_fail_gen(e)
                 else: self.generator = None
+
         elif action == Actions.FLOW_GRAPH_EXEC:
-            if not self.get_page().get_proc():
+            page = self.get_page()
+            if not page.get_proc():
                 Actions.FLOW_GRAPH_GEN()
-                if self.get_page().get_saved() and self.get_page().get_file_path():
-                    ExecFlowGraphThread(self)
+                if page.get_saved() and page.get_file_path():
+                    generator = page.get_generator()
+                    target = generator.get_file_path()
+                    try_xterm = (generator.get_generate_options() == 'no_gui')
+
+                    if self.main_window.exec_settings[0] is None:
+                        ExecFlowGraphThread(self, functools.partial(
+                            Runner.start_process_local, target, try_xterm))
+
         elif action == Actions.FLOW_GRAPH_KILL:
             if self.get_page().get_proc():
                 try:
@@ -574,7 +585,7 @@ class ActionHandler:
         Actions.RELOAD_BLOCKS.set_sensitive(True)
         Actions.FIND_BLOCKS.set_sensitive(True)
         #set the exec and stop buttons
-        self.update_exec_stop()
+        self.update_gen_exec_stop_actions()
         #saved status
         Actions.FLOW_GRAPH_SAVE.set_sensitive(not self.get_page().get_saved())
         self.main_window.update()
@@ -588,7 +599,7 @@ class ActionHandler:
         self.get_flow_graph().queue_draw()
         return True #action was handled
 
-    def update_exec_stop(self):
+    def update_gen_exec_stop_actions(self):
         """
         Update the exec and stop buttons.
         Lock and unlock the mutex for race conditions with exec flow graph threads.
@@ -598,10 +609,11 @@ class ActionHandler:
         Actions.FLOW_GRAPH_EXEC.set_sensitive(sensitive)
         Actions.FLOW_GRAPH_KILL.set_sensitive(self.get_page().get_proc() is not None)
 
+
 class ExecFlowGraphThread(Thread):
     """Execute the flow graph as a new process and wait on it to finish."""
 
-    def __init__ (self, action_handler):
+    def __init__ (self, action_handler, process_factory):
         """
         ExecFlowGraphThread constructor.
 
@@ -609,17 +621,15 @@ class ExecFlowGraphThread(Thread):
             action_handler: an instance of an ActionHandler
         """
         Thread.__init__(self)
-        self.update_exec_stop = action_handler.update_exec_stop
-        self.flow_graph = action_handler.get_flow_graph()
-        #store page and dont use main window calls in run
+        self.update_gui = action_handler.update_gen_exec_stop_actions
+        #store page and don't use main window calls in run
         self.page = action_handler.get_page()
         Messages.send_start_exec(self.page.get_generator().get_file_path())
         #get the popen
         try:
-            self.p = self.page.get_generator().get_popen()
-            self.page.set_proc(self.p)
-            #update
-            self.update_exec_stop()
+            self.proc = process_factory()
+            self.page.set_proc(self.proc)
+            self.update_gui()
             self.start()
         except Exception, e:
             Messages.send_verbose_exec(str(e))
@@ -634,12 +644,12 @@ class ExecFlowGraphThread(Thread):
         r = "\n"
         while r:
             gobject.idle_add(Messages.send_verbose_exec, r)
-            r = os.read(self.p.stdout.fileno(), 1024)
-        self.p.poll()
+            r = os.read(self.proc.stdout.fileno(), 1024)
+        self.proc.poll()
         gobject.idle_add(self.done)
 
     def done(self):
         """Perform end of execution tasks."""
-        Messages.send_end_exec(self.p.returncode)
+        Messages.send_end_exec(self.proc.returncode)
         self.page.set_proc(None)
-        self.update_exec_stop()
+        self.update_gui()
