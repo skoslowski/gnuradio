@@ -490,7 +490,11 @@ class ActionHandler:
                     try:
                         Messages.send_start_gen(generator.get_file_path())
                         generator.write()
-                    except Exception,e: Messages.send_fail_gen(e)
+                        if self.main_window.exec_settings[0] is not None and \
+                                generator.get_generate_options() != 'hb':
+                            generator.write_zipped_module(self.platform)
+                    except Exception as e:
+                        Messages.send_fail_gen(e)
                 else: self.generator = None
 
         elif action == Actions.FLOW_GRAPH_EXEC:
@@ -502,9 +506,15 @@ class ActionHandler:
                     target = generator.get_file_path()
                     try_xterm = (generator.get_generate_options() == 'no_gui')
 
-                    if self.main_window.exec_settings[0] is None:
+                    if self.main_window.exec_settings[0] is None:  # no host means local
                         ExecFlowGraphThread(self, functools.partial(
                             Runner.start_process_local, target, try_xterm))
+                    elif generator.get_generate_options() != 'hb':
+                        target = target.replace('.py', '.zip')
+                        params = self.main_window.exec_settings
+                        ExecFlowGraphThread(self, functools.partial(
+                            Runner.start_process_remote, target, try_xterm,
+                            params.hostname, params.ssh_cmd or "ssh", params.run_cmd))
 
         elif action == Actions.FLOW_GRAPH_KILL:
             if self.get_page().get_proc():

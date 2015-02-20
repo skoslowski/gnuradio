@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import sys
+import os
 import subprocess
 from distutils.spawn import find_executable as distutils_find_executable
 
@@ -46,3 +47,25 @@ def start_process_local(target, try_xterm):
     return subprocess.Popen(
         args=cmds, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         shell=False, universal_newlines=True)
+
+
+def start_process_remote(target, try_xterm, host, ssh_cmd="ssh", run_cmd=""):
+    remote_cmd = 'cat > {file}; {run_cmd} {file}'.format(
+        file=os.path.basename(target),
+        run_cmd=run_cmd or 'python2'
+    )
+    cmds = ssh_cmd.split(' ') + [host, remote_cmd]
+
+    proc = subprocess.Popen(
+        args=cmds,
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        shell=False, universal_newlines=True
+    )
+    try:
+        with open(target, 'rb') as fp:
+            proc.stdin.write(fp.read())
+        proc.stdin.close()
+    except IOError:
+        proc.kill()  # process output printed in run
+
+    return proc

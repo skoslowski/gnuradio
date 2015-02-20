@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 import os
 import tempfile
+from zipfile import PyZipFile
 from Cheetah.Template import Template
 
 from .. gui import Messages
@@ -177,6 +178,23 @@ class TopBlockGenerator(object):
         t = Template(open(FLOW_GRAPH_TEMPLATE, 'r').read(), namespace)
         return str(t)
 
+    def write_zipped_module(self, platform):
+        file_path = self.get_file_path()
+        zfile_path = file_path.replace('.py', '.zip')
+        Messages.send_start_gen(zfile_path)
+
+        zfile = PyZipFile(zfile_path, mode="w")
+        zfile.writepy(HIER_BLOCKS_LIB_DIR)
+        zfile.write(file_path, 'main.py')
+        zfile.writestr('__main__.py', ZIPPED_MODULE_BOOTSTRAP_TEMPLATE.format(
+            major_version=platform.get_version_major(),
+            api_version=platform.get_version_api(),
+            minor_version=platform.get_version_minor(),
+            version_full=platform.get_version()
+        ))
+        zfile.close()
+        return zfile_path
+
 
 class HierBlockGenerator(TopBlockGenerator):
     """Extends the top block generator to also generate a block XML file"""
@@ -294,3 +312,26 @@ class HierBlockGenerator(TopBlockGenerator):
 
         n = {'block': block_n}
         return n
+
+
+ZIPPED_MODULE_BOOTSTRAP_TEMPLATE = """
+try:
+    from gnuradio import gr
+    version = gr.major_version(), gr.api_version(), gr.minor_version()
+    message = "This package was generated with GNU Radio {{0}}. " \
+              "Running on version {{1}}.".format({version_full!r}, gr.version())
+    if (gr.major_version(), gr.api_version()) != ({major_version!r}, {api_version!r}):
+        print "Error: ", message
+        exit(1)
+    if gr.minor_version() != {minor_version!r}:
+        print "Warning:", message, "\\n"
+except ImportError:
+    print "Error: Cannot import GNU Radio"
+    exit(1)
+except AttributeError:
+    print "Error: Cannot determine GNU Radio version"
+    exit(1)
+
+import runpy
+runpy.run_module('main', run_name='__main__')
+"""
