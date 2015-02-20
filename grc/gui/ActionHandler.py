@@ -514,7 +514,7 @@ class ActionHandler:
                         params = self.main_window.exec_settings
                         ExecFlowGraphThread(self, functools.partial(
                             Runner.start_process_remote, target, try_xterm,
-                            params.hostname, params.ssh_cmd or "ssh", params.run_cmd))
+                            params.hostname, params.ssh_cmd, params.run_cmd))
 
         elif action == Actions.FLOW_GRAPH_KILL:
             if self.get_page().get_proc():
