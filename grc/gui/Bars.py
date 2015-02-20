@@ -22,6 +22,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 
+
 ##The list of actions for the toolbar.
 TOOLBAR_LIST = (
     Actions.FLOW_GRAPH_NEW,
@@ -107,6 +108,7 @@ MENU_BAR_LIST = (
         Actions.FLOW_GRAPH_GEN,
         Actions.FLOW_GRAPH_EXEC,
         Actions.FLOW_GRAPH_KILL,
+        "create_server_list_menu",
     ]),
     (gtk.Action('Tools', '_Tools', None, None), [
         Actions.TOOLS_RUN_FDESIGN,
@@ -121,6 +123,8 @@ MENU_BAR_LIST = (
         Actions.ABOUT_WINDOW_DISPLAY,
     ]),
 )
+
+
 class Toolbar(gtk.Toolbar):
     """The gtk toolbar with actions added from the toolbar list."""
 
@@ -138,6 +142,7 @@ class Toolbar(gtk.Toolbar):
                 action.set_property('tooltip', action.get_property('tooltip'))
             else: self.add(gtk.SeparatorToolItem())
 
+
 class MenuBar(gtk.MenuBar):
     """The gtk menu bar with actions added from the menu bar list."""
 
@@ -149,6 +154,8 @@ class MenuBar(gtk.MenuBar):
         Add the submenu to the menu bar.
         """
         gtk.MenuBar.__init__(self)
+        self.server_list_item = None
+
         for main_action, actions in MENU_BAR_LIST:
             #create the main menu item
             main_menu_item = main_action.create_menu_item()
@@ -156,8 +163,40 @@ class MenuBar(gtk.MenuBar):
             #create the menu
             main_menu = gtk.Menu()
             main_menu_item.set_submenu(main_menu)
-            for action in actions:
-                if action: #append a menu item
-                    main_menu.append(action.create_menu_item())
-                else: main_menu.append(gtk.SeparatorMenuItem())
+            for item in actions:
+                if isinstance(item, str) and hasattr(self, item):
+                    menu_item = getattr(self, item)()
+                elif item: #append a menu item
+                    menu_item = item.create_menu_item()
+                else:
+                    menu_item = gtk.SeparatorMenuItem()
+                main_menu.append(menu_item)
+
             main_menu.show_all() #this show all is required for the separators to show
+
+    def create_server_list_menu(self):
+        self.server_list_item = menu_item = gtk.MenuItem("Targets")
+        submenu = gtk.Menu()
+
+        submenu.append(gtk.SeparatorMenuItem())
+        submenu.append(Actions.OPEN_PREFS_FILE.create_menu_item())
+        submenu.show_all()
+
+        menu_item.set_submenu(submenu)
+        return menu_item
+
+    def update_server_list_menu(self, servers, callback):
+        if self.server_list_item is None:
+            return
+        submenu = self.server_list_item.get_submenu()
+        for child in submenu.children()[:-2]:
+            submenu.remove(child)
+        local_item = gtk.RadioMenuItem(None, "local")
+        local_item.connect("activate", callback, (None,))
+        submenu.insert(local_item, 0)
+        for i, server_params in enumerate(servers):
+            item = gtk.RadioMenuItem(local_item, server_params.label)
+            submenu.insert(item, i+1)
+            item.connect("activate", callback, server_params)
+        submenu.show_all()
+        local_item.set_active(True)

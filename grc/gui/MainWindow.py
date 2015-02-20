@@ -78,7 +78,8 @@ class MainWindow(gtk.Window):
         self.add(vbox)
         #create the menu bar and toolbar
         self.add_accel_group(Actions.get_accel_group())
-        vbox.pack_start(Bars.MenuBar(), False)
+        self.menu = Bars.MenuBar()
+        vbox.pack_start(self.menu, False)
         vbox.pack_start(Bars.Toolbar(), False)
         vbox.pack_start(self.hpaned)
         #create the notebook
@@ -105,6 +106,8 @@ class MainWindow(gtk.Window):
         self.flow_graph_vpaned.pack2(self.reports_scrolled_window, False) #dont allow resize
         #load preferences and show the main window
         Preferences.load(platform)
+        self.exec_settings = (None,)  # This will be a namedtuple, later
+        self.update_run_targets_submenu()
         self.resize(*Preferences.main_window_size())
         self.flow_graph_vpaned.set_position(Preferences.reports_window_position())
         self.hpaned.set_position(Preferences.blocks_window_position())
@@ -374,3 +377,11 @@ class MainWindow(gtk.Window):
             list of pages
         """
         return [self.notebook.get_nth_page(page_num) for page_num in range(self.notebook.get_n_pages())]
+
+    def update_run_targets_submenu(self):
+        """
+        Update run targets sub-menu
+        """
+        self.menu.update_server_list_menu(
+            Preferences.remote_servers(),
+            lambda _, s: setattr(self, 'exec_settings', s))

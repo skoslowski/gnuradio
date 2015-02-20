@@ -18,6 +18,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import os
+import sys
 import signal
 from Constants import IMAGE_FILE_EXTENSION
 import Actions
@@ -57,7 +58,7 @@ class ActionHandler:
         self.clipboard = None
         for action in Actions.get_all_actions(): action.connect('activate', self._handle_action)
         #setup the main window
-        self.platform = platform;
+        self.platform = platform
         self.main_window = MainWindow(platform)
         self.main_window.connect('delete-event', self._quit)
         self.main_window.connect('key-press-event', self._handle_key_press)
@@ -108,7 +109,7 @@ class ActionHandler:
     def _handle_action(self, action):
         #print action
         ##################################################
-        # Initalize/Quit
+        # Initialize/Quit
         ##################################################
         if action == Actions.APPLICATION_INITIALIZE:
             for action in Actions.get_all_actions(): action.set_sensitive(False) #set all actions disabled
@@ -122,7 +123,8 @@ class ActionHandler:
                 Actions.TOGGLE_REPORTS_WINDOW, Actions.TOGGLE_HIDE_DISABLED_BLOCKS,
                 Actions.TOOLS_RUN_FDESIGN, Actions.TOGGLE_SCROLL_LOCK,
                 Actions.CLEAR_REPORTS, Actions.SAVE_REPORTS,
-                Actions.TOGGLE_AUTO_HIDE_PORT_LABELS, Actions.TOGGLE_SNAP_TO_GRID
+                Actions.TOGGLE_AUTO_HIDE_PORT_LABELS, Actions.TOGGLE_SNAP_TO_GRID,
+                Actions.OPEN_PREFS_FILE,
             ): action.set_sensitive(True)
             if ParseXML.xml_failures:
                 Messages.send_xml_errors_if_any(ParseXML.xml_failures)
@@ -535,9 +537,18 @@ class ActionHandler:
             Actions.ELEMENT_CREATE()
 
         elif action == Actions.TOOLS_RUN_FDESIGN:
-            subprocess.Popen('gr_filter_design',
-                             shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            subprocess.Popen('gr_filter_design', shell=True)
+            return True
 
+        elif action == Actions.OPEN_PREFS_FILE:
+            file_path = self.platform.get_prefs_file()
+            if sys.platform.startswith('darwin'):
+                subprocess.Popen(('open', file_path))
+            elif os.name == 'nt':
+                os.startfile(file_path)
+            elif os.name == 'posix':
+                subprocess.call(('xdg-open', file_path))
+            return True
         else:
             print '!!! Action "%s" not handled !!!' % action
         ##################################################

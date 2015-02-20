@@ -400,7 +400,7 @@ BUSSIFY_SINKS = Action(
 )
 XML_PARSER_ERRORS_DISPLAY = Action(
     label='_Parser Errors',
-    tooltip='View errors that occured while parsing XML files',
+    tooltip='View errors that occurred while parsing XML files',
     stock_id=gtk.STOCK_DIALOG_ERROR,
 )
 TOOLS_RUN_FDESIGN = Action(
@@ -410,4 +410,8 @@ TOOLS_RUN_FDESIGN = Action(
 )
 TOOLS_MORE_TO_COME = Action(
     label='More to come',
+)
+OPEN_PREFS_FILE = Action(
+    label='Open preferences',
+    tooltip="Open the GRC preferences file to add remotes"
 )
