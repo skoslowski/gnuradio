@@ -38,8 +38,13 @@ from ParserErrorsDialog import ParserErrorsDialog
 import Dialogs
 from FileDialogs import OpenFlowGraphFileDialog, SaveFlowGraphFileDialog, SaveReportsFileDialog, SaveImageFileDialog
 import Runner
+import Utils
 
 gobject.threads_init()
+
+#default applications
+PLAIN_TEXT_EDITOR = Utils.get_default_application('text/plain')
+
 
 class ActionHandler:
     """
@@ -563,12 +568,26 @@ class ActionHandler:
 
         elif action == Actions.OPEN_PREFS_FILE:
             file_path = self.platform.get_prefs_file()
-            if sys.platform.startswith('darwin'):
-                subprocess.Popen(('open', file_path))
-            elif os.name == 'nt':
-                os.startfile(file_path)
-            elif os.name == 'posix':
-                subprocess.call(('xdg-open', file_path))
+            try:
+                if sys.platform.startswith('darwin'):
+                    subprocess.Popen(('open', file_path))
+                elif os.name == 'nt':
+                    os.startfile(file_path)
+                elif os.name == 'posix':
+                    if PLAIN_TEXT_EDITOR:
+                        run((PLAIN_TEXT_EDITOR, file_path),
+                            lambda r: r == 0 and Actions.RELOAD_SERVER_LIST())
+                    else:  # maybe we messed up emulating xdg-open
+                        subprocess.call(('xdg-open', file_path))
+            except OSError:
+                Messages.send("\nFailed tp to open the preferences file. Please open manually.\n")
+            return True
+
+        elif action == Actions.RELOAD_SERVER_LIST:
+            if Preferences.reload_remote_servers():
+                self.main_window.update_run_targets_submenu()
+            else:
+                Messages.send("\nFailed to read preferences file\n")
             return True
         else:
             print '!!! Action "%s" not handled !!!' % action
@@ -663,3 +682,10 @@ class ExecFlowGraphThread(Thread):
         Messages.send_end_exec(self.proc.returncode)
         self.page.set_proc(None)
         self.update_gui()
+
+
+def run(args, on_complete=None):
+    thread = Thread(
+        target=lambda: gobject.idle_add(on_complete, subprocess.call(args)))
+    thread.daemon = True
+    thread.start()

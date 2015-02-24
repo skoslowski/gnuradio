@@ -17,12 +17,14 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
+import subprocess
 from Constants import POSSIBLE_ROTATIONS, CANVAS_GRID_SIZE
 from Cheetah.Template import Template
 import pygtk
 pygtk.require('2.0')
 import gtk
 import gobject
+
 
 def rotate_pixmap(gc, src_pixmap, dst_pixmap, angle=gtk.gdk.PIXBUF_ROTATE_COUNTERCLOCKWISE):
     """
@@ -45,6 +47,7 @@ def rotate_pixmap(gc, src_pixmap, dst_pixmap, angle=gtk.gdk.PIXBUF_ROTATE_COUNTE
     pixbuf.get_from_drawable(src_pixmap, src_pixmap.get_colormap(), 0, 0, 0, 0, -1, -1)
     pixbuf = pixbuf.rotate_simple(angle)
     dst_pixmap.draw_pixbuf(gc, pixbuf, 0, 0, 0, 0)
+
 
 def get_rotated_coordinate(coor, rotation):
     """
@@ -69,7 +72,8 @@ def get_rotated_coordinate(coor, rotation):
         270: (0, -1),
     }[rotation]
     x, y = coor
-    return (x*cos_r + y*sin_r, -x*sin_r + y*cos_r)
+    return x*cos_r + y*sin_r, -x*sin_r + y*cos_r
+
 
 def get_angle_from_coordinates((x1,y1), (x2,y2)):
     """
@@ -88,6 +92,7 @@ def get_angle_from_coordinates((x1,y1), (x2,y2)):
     else:#90 or 270
         if y2 > y1: return 270
         else: return 90
+
 
 def parse_template(tmpl_str, **kwargs):
     """
@@ -109,6 +114,7 @@ def parse_template(tmpl_str, **kwargs):
     #   print str(kwargs['param'].get_error_messages())
     return str(Template(tmpl_str, kwargs))
 
+
 def align_to_grid(coor):
     _align = lambda: int(round(x / (1.0 * CANVAS_GRID_SIZE)) * CANVAS_GRID_SIZE)
     try:
@@ -116,3 +122,38 @@ def align_to_grid(coor):
     except TypeError:
         x = coor
         return _align()
+
+
+def get_default_application(mime_type='text/plain'):
+    """
+    Get the default application for the specified mime type by querying
+    xdg-utils and parsing the resulting .desktop file.
+
+    Note: calling xdg-open would be easier. However, we can't monitor the
+          opened process (to wait for its completing).
+
+    Returns:
+        the path the application or and emtpy string
+    """
+    try:
+        # find the .desktop spec files for this mime type
+        editors = subprocess.check_output(
+            ('xdg-mime', 'query', 'default', mime_type))
+        dot_desktop = "/usr/share/applications/{0}.desktop".format(
+            editors.split('.desktop')[0])
+        # parse it to get the Exec line
+        with open(dot_desktop) as fp:
+            for line in fp:
+                cmd, _, file_path = line.strip().partition('=')
+                if cmd.lower() == 'exec':
+                    break
+            else:
+                file_path = ""
+        # check if this application accepts a file path as argument
+        file_path, _, field_code = file_path.rpartition(' %')
+        if field_code not in ("f", "F", "u", "U"):
+            file_path = ""
+    except (OSError, IOError):
+        file_path = ""
+
+    return file_path

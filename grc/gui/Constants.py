@@ -22,6 +22,7 @@ pygtk.require('2.0')
 import gtk
 import os
 
+
 ##default path for the open/save dialogs
 DEFAULT_FILE_PATH = os.getcwd()
 

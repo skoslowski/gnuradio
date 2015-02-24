@@ -415,3 +415,4 @@ OPEN_PREFS_FILE = Action(
     label='Open preferences',
     tooltip="Open the GRC preferences file to add remotes"
 )
+RELOAD_SERVER_LIST = Action()
