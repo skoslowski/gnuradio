@@ -18,8 +18,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import os
+import sys
 import tempfile
-from zipfile import PyZipFile
+import runpy
+import glob
+from zipfile import ZipFile
 from Cheetah.Template import Template
 
 from .. gui import Messages
@@ -179,19 +182,49 @@ class TopBlockGenerator(object):
         return str(t)
 
     def write_zipped_module(self, platform):
+        """
+        Bundle the generated flowgraph and its depending grc-generated modules
+        into a single zip file for remote execution. Dependencies are found
+        in the flowgraph's path and the hier block library path
+
+        Args:
+            platform: platform instance to get local GNU radio version
+
+        Return:
+            file path to generated zip file
+        """
         file_path = self.get_file_path()
         zfile_path = file_path.replace('.py', '.zip')
         Messages.send_start_gen(zfile_path)
+        # run the flowgraph (not as __main__) and observe imports
+        try:
+            with ImportLogger(os.path.dirname(file_path)) as local_blocks:
+                with ImportLogger(HIER_BLOCKS_LIB_DIR) as hier_block_list:
+                    runpy.run_path(self.get_file_path())
+        except Exception:
+            Messages.send("    Warning: failed to determine imports\n")
+            local_blocks = hier_block_list = []
 
-        zfile = PyZipFile(zfile_path, mode="w")
-        zfile.writepy(HIER_BLOCKS_LIB_DIR)
-        zfile.write(file_path, 'main.py')
+        zfile = ZipFile(zfile_path, mode="w")
+        # the bootstrap code
         zfile.writestr('__main__.py', ZIPPED_MODULE_BOOTSTRAP_TEMPLATE.format(
             major_version=platform.get_version_major(),
             api_version=platform.get_version_api(),
             minor_version=platform.get_version_minor(),
             version_full=platform.get_version()
         ))
+        # the flowgraph as module main
+        Messages.send("    adding {0!r} as 'main.py'\n".format(file_path))
+        zfile.write(file_path, 'main.py')
+        # any file found by the import loggers
+        for dependency in (local_blocks + hier_block_list):
+            name = os.path.basename(dependency)
+            if name not in zfile.namelist():
+                Messages.send("    adding {0!r}\n".format(dependency))
+                zfile.write(dependency, name)
+            else:  # already have file with that name
+                Messages.send("    skipping {0!r} (duplicate name)".format(
+                    dependency))
         zfile.close()
         return zfile_path
 
@@ -335,3 +368,25 @@ except AttributeError:
 import runpy
 runpy.run_module('main', run_name='__main__')
 """
+
+
+class ImportLogger:
+    def __init__(self, directory):
+        self.modules = modules = dict()
+        for file_path in glob.iglob(os.path.join(directory, '*.py')):
+            fullname = os.path.basename(file_path)[:-3]
+            modules[fullname] = file_path
+
+        self.log = []
+
+    def find_module(self, fullname, path):
+        if fullname in self.modules:
+            self.log.append(self.modules[fullname])
+
+    def __enter__(self):
+        sys.meta_path.insert(0, self)
+        return self.log
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.meta_path.remove(self)
+        return
