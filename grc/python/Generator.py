@@ -18,10 +18,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 """
 
 import os
-import sys
 import tempfile
 import runpy
-import glob
 from zipfile import ZipFile
 from Cheetah.Template import Template
 
@@ -29,10 +27,11 @@ from .. gui import Messages
 from .. base import ParseXML
 from .. base import odict
 
+
 from . Constants import TOP_BLOCK_FILE_MODE, FLOW_GRAPH_TEMPLATE, \
     HIER_BLOCK_FILE_MODE, HIER_BLOCKS_LIB_DIR, BLOCK_DTD
 from . import expr_utils
-
+from . Utils import LoggedImport
 
 class Generator(object):
     """Adaptor for various generators (uses generate_options)"""
@@ -196,14 +195,13 @@ class TopBlockGenerator(object):
         file_path = self.get_file_path()
         zfile_path = file_path.replace('.py', '.zip')
         Messages.send_start_gen(zfile_path)
-        # run the flowgraph (not as __main__) and observe imports
         try:
-            with ImportLogger(os.path.dirname(file_path)) as local_blocks:
-                with ImportLogger(HIER_BLOCKS_LIB_DIR) as hier_block_list:
-                    runpy.run_path(self.get_file_path())
+            path = (os.path.dirname(file_path), HIER_BLOCKS_LIB_DIR)
+            # runs the flowgraph (not as __main__) and observes imports
+            dependencies = LoggedImport.log_from_exec_file(file_path, path)
         except Exception:
-            Messages.send("    Warning: failed to determine imports\n")
-            local_blocks = hier_block_list = []
+            Messages.send("    Warning: failed to determine imports. Assuming none.\n")
+            dependencies = []
 
         zfile = ZipFile(zfile_path, mode="w")
         # the bootstrap code
@@ -217,7 +215,7 @@ class TopBlockGenerator(object):
         Messages.send("    adding {0!r} as 'main.py'\n".format(file_path))
         zfile.write(file_path, 'main.py')
         # any file found by the import loggers
-        for dependency in (local_blocks + hier_block_list):
+        for dependency in dependencies:
             name = os.path.basename(dependency)
             if name not in zfile.namelist():
                 Messages.send("    adding {0!r}\n".format(dependency))
@@ -368,25 +366,3 @@ except AttributeError:
 import runpy
 runpy.run_module('main', run_name='__main__')
 """
-
-
-class ImportLogger:
-    def __init__(self, directory):
-        self.modules = modules = dict()
-        for file_path in glob.iglob(os.path.join(directory, '*.py')):
-            fullname = os.path.basename(file_path)[:-3]
-            modules[fullname] = file_path
-
-        self.log = []
-
-    def find_module(self, fullname, path):
-        if fullname in self.modules:
-            self.log.append(self.modules[fullname])
-
-    def __enter__(self):
-        sys.meta_path.insert(0, self)
-        return self.log
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        sys.meta_path.remove(self)
-        return

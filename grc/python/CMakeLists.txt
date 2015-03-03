@@ -29,6 +29,7 @@ GR_PYTHON_INSTALL(FILES
     Param.py
     Platform.py
     Port.py
+    Utils.py
     __init__.py
     DESTINATION ${GR_PYTHON_DIR}/gnuradio/grc/python
     COMPONENT "grc"
