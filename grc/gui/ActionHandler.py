@@ -509,16 +509,16 @@ class ActionHandler:
                 if page.get_saved() and page.get_file_path():
                     generator = page.get_generator()
                     target = generator.get_file_path()
-                    try_xterm = (generator.get_generate_options() == 'no_gui')
 
                     if self.main_window.exec_settings[0] is None:  # no host means local
+                        try_xterm = (generator.get_generate_options() == 'no_gui')
                         ExecFlowGraphThread(self, functools.partial(
                             Runner.start_process_local, target, try_xterm))
                     elif generator.get_generate_options() != 'hb':
                         target = target.replace('.py', '.zip')
                         params = self.main_window.exec_settings
                         ExecFlowGraphThread(self, functools.partial(
-                            Runner.start_process_remote, target, try_xterm,
+                            Runner.start_process_remote, target, True,
                             params.hostname, params.ssh_cmd, params.run_cmd))
 
         elif action == Actions.FLOW_GRAPH_KILL:
