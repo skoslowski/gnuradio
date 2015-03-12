@@ -106,8 +106,8 @@ class MainWindow(gtk.Window):
         self.flow_graph_vpaned.pack2(self.reports_scrolled_window, False) #dont allow resize
         #load preferences and show the main window
         Preferences.load(platform)
-        self.exec_settings = (None,)  # This will be a namedtuple, later
-        self.update_run_targets_submenu()
+        self.default_exec_target = (None,)  # This will be a namedtuple, later
+        self.update_exec_targets_submenu()
         self.resize(*Preferences.main_window_size())
         self.flow_graph_vpaned.set_position(Preferences.reports_window_position())
         self.hpaned.set_position(Preferences.blocks_window_position())
@@ -378,10 +378,26 @@ class MainWindow(gtk.Window):
         """
         return [self.notebook.get_nth_page(page_num) for page_num in range(self.notebook.get_n_pages())]
 
-    def update_run_targets_submenu(self):
+    def update_exec_targets_submenu(self):
         """
         Update run targets sub-menu
         """
-        self.menu.update_server_list_menu(
-            Preferences.remote_servers(),
-            lambda _, s: setattr(self, 'exec_settings', s))
+        exec_targets = Preferences.remote_servers()
+        exec_targets.insert(0,
+            Preferences.RemoteServerParams(None, 'local', None, None, None))
+        callback = lambda _, s: setattr(self, 'default_exec_target', s)
+        self.menu.update_server_list_menu(exec_targets, callback)
+
+    def get_exec_target(self):
+        remote_server_label = self.get_flow_graph().get_option('exec_target')
+        for remote in Preferences.remote_servers():
+            if remote.label == remote_server_label:
+                exec_target = remote
+                break
+        else:
+            exec_target = self.default_exec_target
+            if remote_server_label:
+                Messages.send("\nUnknown remote server %r. Using %r instead.\n" % (
+                    remote_server_label, getattr(exec_target, 'label', 'local')))
+
+        return exec_target

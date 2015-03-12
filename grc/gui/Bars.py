@@ -185,18 +185,19 @@ class MenuBar(gtk.MenuBar):
         menu_item.set_submenu(submenu)
         return menu_item
 
-    def update_server_list_menu(self, servers, callback):
+    def update_server_list_menu(self, exec_targets, callback):
         if self.server_list_item is None:
             return
         submenu = self.server_list_item.get_submenu()
         for child in submenu.children()[:-2]:
             submenu.remove(child)
-        local_item = gtk.RadioMenuItem(None, "local")
-        local_item.connect("activate", callback, (None,))
-        submenu.insert(local_item, 0)
-        for i, server_params in enumerate(servers):
-            item = gtk.RadioMenuItem(local_item, server_params.label)
-            submenu.insert(item, i+1)
+
+        default_item = None
+        for i, server_params in enumerate(exec_targets):
+            item = gtk.RadioMenuItem(default_item, server_params.label)
+            if i == 0:
+                default_item = item
+            submenu.insert(item, i)
             item.connect("activate", callback, server_params)
         submenu.show_all()
-        local_item.set_active(True)
+        default_item.set_active(True)

@@ -98,8 +98,9 @@ def send_fail_gen(error):
     traceback.print_exc()
 
 ################# functions for executing flow graphs   ########################################
-def send_start_exec(file_path):
-    send('\nExecuting: "%s"'%file_path + '\n')
+def send_start_exec(file_path, remote_server=None):
+    target = '' if remote_server is None else 'on "%s"' % remote_server
+    send('\nExecuting: "%s" %s\n' % (file_path, target))
 
 def send_verbose_exec(verbose):
     send(verbose)

@@ -495,7 +495,7 @@ class ActionHandler:
                     try:
                         Messages.send_start_gen(generator.get_file_path())
                         generator.write()
-                        if self.main_window.exec_settings[0] is not None and \
+                        if self.main_window.default_exec_target.hostname is not None and \
                                 generator.get_generate_options() != 'hb':
                             generator.write_zipped_module(self.platform)
                     except Exception as e:
@@ -509,17 +509,19 @@ class ActionHandler:
                 if page.get_saved() and page.get_file_path():
                     generator = page.get_generator()
                     target = generator.get_file_path()
-
-                    if self.main_window.exec_settings[0] is None:  # no host means local
+                    exec_target = self.main_window.get_exec_target()
+                    if exec_target.hostname is None:  # no host means local
                         try_xterm = (generator.get_generate_options() == 'no_gui')
+                        Messages.send_start_exec(target)
                         ExecFlowGraphThread(self, functools.partial(
                             Runner.start_process_local, target, try_xterm))
                     elif generator.get_generate_options() != 'hb':
                         target = target.replace('.py', '.zip')
-                        params = self.main_window.exec_settings
+                        Messages.send_start_exec(target, exec_target.label)
                         ExecFlowGraphThread(self, functools.partial(
                             Runner.start_process_remote, target, True,
-                            params.hostname, params.ssh_cmd, params.run_cmd))
+                            exec_target.hostname, exec_target.ssh_cmd, exec_target.run_cmd))
+
 
         elif action == Actions.FLOW_GRAPH_KILL:
             if self.get_page().get_proc():
@@ -577,15 +579,15 @@ class ActionHandler:
                     if PLAIN_TEXT_EDITOR:
                         run((PLAIN_TEXT_EDITOR, file_path),
                             lambda r: r == 0 and Actions.RELOAD_SERVER_LIST())
-                    else:  # maybe we messed up emulating xdg-open
-                        subprocess.call(('xdg-open', file_path))
+                    else:
+                        Messages.send("\nCan't determine your default text/plain editor\n")
             except OSError:
                 Messages.send("\nFailed tp to open the preferences file. Please open manually.\n")
             return True
 
         elif action == Actions.RELOAD_SERVER_LIST:
             if Preferences.reload_remote_servers():
-                self.main_window.update_run_targets_submenu()
+                self.main_window.update_exec_targets_submenu()
             else:
                 Messages.send("\nFailed to read preferences file\n")
             return True
@@ -653,7 +655,6 @@ class ExecFlowGraphThread(Thread):
         self.update_gui = action_handler.update_gen_exec_stop_actions
         #store page and don't use main window calls in run
         self.page = action_handler.get_page()
-        Messages.send_start_exec(self.page.get_generator().get_file_path())
         #get the popen
         try:
             self.proc = process_factory()

@@ -125,6 +125,13 @@ else: self.stop(); self.wait()</callback>
 		</option>
 	</param>
 	<param>
+		<name>Exec Target</name>
+		<key>exec_target</key>
+		<value></value>
+		<type>string</type>
+    <hide>part</hide>
+	</param>
+	<param>
 		<name>Max Number of Output</name>
 		<key>max_nouts</key>
 		<value>0</value>

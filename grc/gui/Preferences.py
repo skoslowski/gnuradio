@@ -43,8 +43,7 @@ DISCLAIMER = """\
 #          when closing GRC. Extra entries and comments are not preserved.
 #
 # To add servers for remote execution, add entries like the following to the
-# section 'remote_servers'. If you opened this file from grc (and are on posix)
-# your changes are applied when the editor is closed, else restart GRC.
+# section 'remote_servers'.
 #
 #     NAME = HOSTNAME                          ; the hostname argument for ssh
 #     NAME_hostname = HOSTNAME                 ; same as 'NAME = ' only
@@ -54,10 +53,15 @@ DISCLAIMER = """\
 #
 # where NAME is a unique string. The resulting command line is
 #
-#     NAME_ssh_cmd NAME_hostname NAME_run_cmd '...'
+#     CUSTOM_SSH_COMMAND HOSTNAME CUSTOM_COMMAND_ON_REMOTE '...'
 #     ssh my_host python2 -uc '...'
 #
-# Note, that password entry is not supported.
+# If you opened this file from grc (and are on posix) your changes are applied
+# when the editor is closed, else restart GRC to see your changes.
+#
+# Note, ssh will try to call ssh-askpass if you need to enter password. Make
+# sure hostname is in the list of known hosts. Instead of a custom ssh command
+# (custom port, ...) it might be simpler to add an entry to your ssh_config.
 
 """
 
