@@ -99,7 +99,7 @@ class Element(object):
          Returns:
             a platform object or None
         """
-        from . platform import Platform
+        from . platform_ import Platform
         return self.get_parent_by_class(Platform)
 
     def reset_lazyproperties(self):
@@ -185,8 +185,8 @@ class ElementWithUpdate(Element):
                 parameter (same as shorthand in kwargs)
         """
         invalid_attr_names = []
-        args_as_dict = ((attr_name, attr_name) for attr_name in args)
-        for attr_name, callback in chain(kwargs.iteritems(), args_as_dict):
+        args_items = ((attr_name, attr_name) for attr_name in args)
+        for attr_name, callback in chain(kwargs.iteritems(), args_items):
             if hasattr(self, attr_name):  # todo: exclude methods
                 self.update_actions[attr_name] = callback
             else:
@@ -199,12 +199,15 @@ class ElementWithUpdate(Element):
 class Namespace(collections.OrderedDict):
     """A dict class that auto-calls variables for missing names"""
 
-    def __init__(self, items):
+    def __init__(self, element_getter):
         super(Namespace, self).__init__()
-        self.elements = items
+        if callable(element_getter):
+            self.element_getter = element_getter
+        else:
+            self.element_getter = self.element_list_getter(element_getter)
         self.auto_resolved_keys = []
         self._auto_resolve = True
-        self._getitem_recursion_keys = []
+        self._missing_key_recursion_chain = []
 
     @contextlib.contextmanager
     def auto_resolve_off(self):
@@ -214,33 +217,34 @@ class Namespace(collections.OrderedDict):
         finally:
             self._auto_resolve = True
 
-    def _set_value_from_element(self, key):
-        if isinstance(self.elements, list):
-            for element in self.elements:
+    @staticmethod
+    def element_list_getter(elements):
+        def getter(key):
+            for element in elements:
                 if element.uid == key:
-                    break
-            else:
-                return
-        else:
-            try:
-                element = self.elements[key]
-            except KeyError:
-                return
-        element.update()
-        self.auto_resolved_keys.append(key)
-        if element.is_valid:
-            self[key] = element.evaluated
+                    return element
+            raise KeyError(key)
+        return getter
 
-    def __getitem__(self, key):
-        if key in self._getitem_recursion_keys:
-            raise NameError("label {!r} is not defined".format(key))
-        if self._auto_resolve and key not in self:
-            self._getitem_recursion_keys.append(key)
-            self._set_value_from_element(key)
-            self._getitem_recursion_keys.remove(key)
-        return super(Namespace, self).__getitem__(key)
+    def __missing__(self, key):
+        if not self._auto_resolve or key in self._missing_key_recursion_chain:
+            raise KeyError(key)
+        # get element for the missing key (raises KeyError)
+        element = self.element_getter(key)
+        # get value from element, protect against inf recursion
+        self._missing_key_recursion_chain.append(key)
+        element.update()
+        value = element.evaluated
+        self._missing_key_recursion_chain.remove(key)
+        # valid or not, this key is added to resolution order
+        self.auto_resolved_keys.append(key)
+        if not element.is_valid:
+            raise KeyError(key)
+
+        self[key] = value  # safe the value in the namespace
+        return value
 
     def clear(self):
         super(Namespace, self).clear()
         del self.auto_resolved_keys[:]
-        del self._getitem_recursion_keys[:]
+        del self._missing_key_recursion_chain[:]

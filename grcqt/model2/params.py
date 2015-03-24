@@ -43,7 +43,8 @@ class Param(ElementWithUpdate):
         self.value = self.default = default  # todo get vtype default
 
     def __repr__(self):
-        return "<Param '{}.{}'>".format(self.parent_block.id, self.uid)
+        return "<Param '{}.{}' = {!r}>".format(
+            self.parent_block.uid, self.uid, self.value)
 
     @property
     def vtype(self):
@@ -95,6 +96,7 @@ class IdParam(Param):
     def __init__(self):
         super(IdParam, self).__init__('uid', label='ID', vtype=str)
         self.value = self.default = self._id_factory.next()
+        self.update()
 
     def set_unique_block_id(self):
         """get a unique block id within the flow-graph by trail&error"""
@@ -105,9 +107,11 @@ class IdParam(Param):
         return repr(block_id)
 
     def update(self):
-        # first update type, name, visibility, ..
-        # then get evaluated value. 'parse' adds quotes or puts it in a list
-        self._evaluated = self.value
+        pass
+
+    @property
+    def evaluated(self):
+        return str(eval(self.value))
 
     def validate(self):
         id_value = self.evaluated

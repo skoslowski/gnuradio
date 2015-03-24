@@ -44,7 +44,7 @@ class BaseBlock(Element):
         self._evaluated = None
 
         self.params = OrderedDict()
-        self.namespace = Namespace(self.params)  # dict of evaluated params
+        self.namespace = Namespace(lambda k: self.params[k])  # dict of evaluated params
         self.enabled = True
 
         self.add_param(cls=IdParam)
@@ -91,7 +91,11 @@ class BaseBlock(Element):
     @property
     def uid(self):
         """unique identifier for this block within the flow-graph"""
-        return self.params['uid'].value
+        return self.params['uid'].evaluated
+
+    @property
+    def typename(self):
+        return self.__class__.__name__
 
     @property
     def evaluated(self):
@@ -145,7 +149,7 @@ class Block(BaseBlock):
         self.sources = []  # filled / updated by update()
         self.sinks = []
 
-        self.add_param('alias', 'Block Alias', vtype=str, default=self.uid)
+        self.add_param('alias', 'Block Alias', vtype=str, default=repr(self.uid))
         # todo: hide these for blocks w/o ports (shouldn't be the case in this class)
         self.add_param('affinity', 'Core Affinity', vtype=list, default=[])
         # todo: hide these for sink-only blocks

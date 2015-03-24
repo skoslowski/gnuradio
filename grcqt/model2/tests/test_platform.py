@@ -18,7 +18,7 @@
 from __future__ import absolute_import, division, print_function
 from os import path
 
-from .. platform import Platform
+from .. platform_ import Platform
 
 
 def test_block_load():

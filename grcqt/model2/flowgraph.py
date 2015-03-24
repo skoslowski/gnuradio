@@ -53,6 +53,10 @@ class FlowGraph(base.Element):
         self.options = {}  # do we want a dict here?
         self.namespace = base.Namespace(self.blocks)
 
+    @property
+    def uid(self):
+        return self.options.get('uid', 'Flowgraph')
+
     def add_block(self, key_or_block):
         """Add a new block to the flow-graph
 
@@ -112,5 +116,20 @@ class FlowGraph(base.Element):
             if block.uid in self.namespace.auto_resolved_keys:
                 continue  # already evaluated for some other block
             block.update()
+
+        self.blocks.sort(key=index_default(self.namespace.auto_resolved_keys))
+
         for connection in self.connections:
             connection.update()
+
+
+def index_default(mylist, default=None):
+    if default is None:
+        default = len(mylist)
+
+    def index_getter(element):
+        try:
+            return mylist.index(element.uid)
+        except:
+            return default
+    return index_getter
