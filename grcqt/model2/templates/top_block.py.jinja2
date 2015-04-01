@@ -9,16 +9,16 @@
 
 {% endblock imports %}
 
-{% block class_def %}class {{ fg.uid }}(gr.top_block):{% endblock %}
+{% block class_def %}class {{ fg.name }}(gr.top_block):{% endblock %}
 
 {% block makes %}
     {%- for block in fg.blocks %}
-        self.{{ block.uid }} = {{ block.uid }} = {{ get_block_make(block)|indent(8, False) -}}
+        self.{{ block.name }} = {{ block.name }} = {{ get_block_make(block)|indent(8, False) -}}
     {% endfor -%}
 {% endblock makes %}
 
 {% block footer %}
 if __name__ == '__main__':
-    fg = {{ fg.uid }}()
+    fg = {{ fg.name }}()
     fg.start()
 {% endblock %}

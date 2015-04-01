@@ -72,18 +72,18 @@ env = Environment(
 )
 
 
-ignored_params = ('uid', 'alias', 'affinity', 'minoutbuf', 'maxoutbuf')
+ignored_params = ('name', 'alias', 'affinity', 'minoutbuf', 'maxoutbuf')
 
 
-def render_block_template_from_string(template, block):
+def render_user_template(template, block):
     # clean-out extra indents
     template = template.strip('\n')
     leading_whitespace = len(template) - len(template.lstrip())
     template = '\n'.join(line[leading_whitespace:] for line in template.split('\n'))
     # prepare param namespace
     namespace = OrderedDict(
-        (uid, param.value)
-        for uid, param in block.params.items() if uid not in ignored_params
+        (name, param.value)
+        for name, param in block.params.items() if name not in ignored_params
     )
     # render template
     return env.from_string(template).render(namespace)
@@ -91,12 +91,12 @@ def render_block_template_from_string(template, block):
 
 def get_block_make(block):
     if block.make_template:
-        make = render_block_template_from_string(block.make_template, block)
+        make = render_user_template(block.make_template, block)
 
     else:
         make = "{}({})".format(block.typename, ", ".join(
-            "{}={}".format(uid, param.value)
-            for uid, param in block.params.items() if uid not in ignored_params
+            "{}={}".format(name, param.value)
+            for name, param in block.params.items() if name not in ignored_params
         ))
 
     return make
@@ -105,7 +105,7 @@ def get_block_make(block):
 def get_imports(fg):
     imports = set(fg.options.get('imports', []))
     for block in fg.blocks:
-        import_ = render_block_template_from_string(block.import_template, block)
+        import_ = render_user_template(block.import_template, block)
         imports.add(import_)
     return imports
 
@@ -117,6 +117,6 @@ print(top_block_template.render(
     fg=fg,
     get_block_make=get_block_make,
     get_imports=get_imports,
-    render_block_template_from_string=render_block_template_from_string,
+    render_block_template_from_string=render_user_template,
 ))
 

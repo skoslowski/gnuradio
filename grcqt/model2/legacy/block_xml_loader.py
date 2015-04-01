@@ -264,7 +264,7 @@ def get_params(block_e):
     params = []
     for param_e in block_e.getiterator('param'):
         kwargs = OrderedDict()
-        kwargs['label'], kwargs['uid'] = param_e.findtext('label', 'key')
+        kwargs['label'], kwargs['name'] = param_e.findtext('label', 'key')
 
         vtype, gets_updated = param_e.evaltext('type', 'vtype')
         if not gets_updated:

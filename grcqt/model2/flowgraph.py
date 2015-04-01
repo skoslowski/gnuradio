@@ -54,8 +54,8 @@ class FlowGraph(base.Element):
         self.namespace = base.Namespace(self.blocks)
 
     @property
-    def uid(self):
-        return self.options.get('uid', 'Flowgraph')
+    def name(self):
+        return self.options.get('name', 'Flowgraph')
 
     def add_block(self, key_or_block):
         """Add a new block to the flow-graph
@@ -113,7 +113,7 @@ class FlowGraph(base.Element):
 
         # eval blocks first, then connections
         for block in self.blocks:
-            if block.uid in self.namespace.auto_resolved_keys:
+            if block.name in self.namespace.auto_resolved_keys:
                 continue  # already evaluated for some other block
             block.update()
 
@@ -129,7 +129,7 @@ def index_default(mylist, default=None):
 
     def index_getter(element):
         try:
-            return mylist.index(element.uid)
+            return mylist.index(element.name)
         except:
             return default
     return index_getter

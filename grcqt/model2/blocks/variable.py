@@ -25,7 +25,7 @@ class VariableBlock(BaseBlock):
     label = "Variable"
 
     def __repr__(self):
-        return "<{} {!r}>".format(self.label, self.uid)
+        return "<{} {!r}>".format(self.label, self.name)
 
     def setup(self, **kwargs):
         self.add_param("value", "Value", "raw")

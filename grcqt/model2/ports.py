@@ -135,7 +135,7 @@ class PortClone(Element):
     def key(self):
         """The key of a cloned port gets its index appended"""
         if isinstance(self.parent, MessagePort):
-            return self.parent.uid + str(self.clone_id)
+            return self.parent.name + str(self.clone_id)
 
     def __getattr__(self, item):
         """Get all other attributes from parent (Port) object"""

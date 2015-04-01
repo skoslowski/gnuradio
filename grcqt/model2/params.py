@@ -30,13 +30,13 @@ from . _consts import BLOCK_ID_BLACK_LIST
 class Param(ElementWithUpdate):
     __metaclass__ = ABCMeta
 
-    def __init__(self, uid, label, vtype='raw', default=None, category=None, validator=None):
+    def __init__(self, name, label, vtype='raw', default=None, category=None, validator=None):
         super(Param, self).__init__()
         self._vtype = None
         self._evaluated = None
 
-        self.uid = uid
-        self.label = label if label is not None else uid
+        self.name = name
+        self.label = label if label is not None else name
         self.category = category
         self.vtype = vtype
         self.validator = validator
@@ -44,7 +44,7 @@ class Param(ElementWithUpdate):
 
     def __repr__(self):
         return "<Param '{}.{}' = {!r}>".format(
-            self.parent_block.uid, self.uid, self.value)
+            self.parent_block.name, self.name, self.value)
 
     @property
     def vtype(self):
@@ -94,29 +94,28 @@ class IdParam(Param):
     _id_factory = map(lambda c: repr("block_{}".format(c)), itertools.count())
 
     def __init__(self):
-        super(IdParam, self).__init__('uid', label='ID', vtype=str)
+        super(IdParam, self).__init__('name', label='ID', vtype=str)
         self.value = self.default = self._id_factory.next()
         self.update()
 
     def set_unique_block_id(self):
         """get a unique block id within the flow-graph by trail&error"""
         blocks = self.parent_flowgraph.blocks
-        block_name = self.parent_block.__class__.__name__
-        block_ids = map(lambda key: "{}_{}".format(block_name, key), itertools.count())
-        block_id = itertools.dropwhile(lambda id_: id_ in blocks, block_ids).next()
-        return repr(block_id)
+        block_typename = self.parent_block.__class__.__name__
+        block_ids = map(lambda key: "{}_{}".format(block_typename, key), itertools.count())
+        return itertools.dropwhile(lambda id_: id_ in blocks, block_ids).next()
 
     def update(self):
         pass
 
     @property
     def evaluated(self):
-        return str(eval(self.value))
+        return str(self.value).strip('\'\"')
 
     def validate(self):
         id_value = self.evaluated
         is_duplicate_id = any(
-            block.uid == id_value
+            block.name == id_value
             for block in self.parent_flowgraph.blocks if block is not self
         )
         if not self._id_matcher.match(id_value):
@@ -143,8 +142,8 @@ class OptionsParam(Param):
         def __format__(self, format_spec):
             return str(self.value)
 
-    def __init__(self, uid, label=None, vtype='raw', default=None):
-        super(OptionsParam, self).__init__(uid, label, vtype, default)
+    def __init__(self, name, label=None, vtype='raw', default=None):
+        super(OptionsParam, self).__init__(name, label, vtype, default)
         self.options = []
         self.allow_arbitrary_values = False
 
@@ -179,6 +178,6 @@ class DTypeParam(OptionsParam):
 
 class VlenParam(Param):
 
-    def __init__(self, uid="vlen", label="VLEN", vtype='int', default=1,
+    def __init__(self, name="vlen", label="VLEN", vtype='int', default=1,
                  validator=lambda v: v>0):
-        super(VlenParam, self).__init__(uid, label, vtype, default, validator)
+        super(VlenParam, self).__init__(name, label, vtype, default, validator)

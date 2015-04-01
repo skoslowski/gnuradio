@@ -55,8 +55,8 @@ def test_block_add_param2(block):
 def test_block_add_param3(block):
     # add with custom class through ABC register
     class MyParam2(object):
-        def __init__(self, uid, name):
-            self.uid = uid
+        def __init__(self, name, label):
+            self.name = name
     Param.register(MyParam2)
 
     block.add_param("t2", "t label", cls=MyParam2)

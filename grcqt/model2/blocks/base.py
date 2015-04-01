@@ -48,7 +48,7 @@ class BaseBlock(Element):
         self.enabled = True
 
         self.add_param(cls=IdParam)
-        # self.params['uid'].set_unique_block_id()
+        # self.params['name'].set_unique_block_id()
         self.setup(**kwargs)
 
     @abstractmethod
@@ -81,17 +81,17 @@ class BaseBlock(Element):
         else:
             param = Param(*args, **kwargs)
 
-        if param.uid in self.params:
+        if param.name in self.params:
             raise exceptions.BlockSetupException(
-                "Param key '{}' not unique".format(param.uid))
-        self.params[param.uid] = param
+                "Param key '{}' not unique".format(param.name))
+        self.params[param.name] = param
         self.add_child(param)  # double bookkeeping =(
         return param
 
     @property
-    def uid(self):
+    def name(self):
         """unique identifier for this block within the flow-graph"""
-        return self.params['uid'].evaluated
+        return self.params['name'].evaluated
 
     @property
     def typename(self):
@@ -149,7 +149,7 @@ class Block(BaseBlock):
         self.sources = []  # filled / updated by update()
         self.sinks = []
 
-        self.add_param('alias', 'Block Alias', vtype=str, default=repr(self.uid))
+        self.add_param('alias', 'Block Alias', vtype=str, default=repr(self.name))
         # todo: hide these for blocks w/o ports (shouldn't be the case in this class)
         self.add_param('affinity', 'Core Affinity', vtype=list, default=[])
         # todo: hide these for sink-only blocks

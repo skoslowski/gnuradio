@@ -21,7 +21,7 @@ from .. blocks.variable import VariableBlock
 
 def add_variable(fg, name, value):
     var = VariableBlock()
-    var.params['uid'].value = name
+    var.params['name'].value = name
     var.params['value'].value = value
     fg.add_block(var)
 
@@ -47,6 +47,7 @@ def test_flowgraph_namespace_circle():
     assert not fg.is_valid
     assert all("is not defined" in error.args[0]
                for origin, error in fg.iter_errors())
+
 
 def test_flowgraph_missing_var():
     fg = FlowGraph()

@@ -180,7 +180,7 @@ class ElementWithUpdate(Element):
                 argument. As a shorthand a parameter key (string) can be passed
                 instead of a callable. The parameter value is used to update
                 the attribute.
-        args:   list of parameter uids which are also object attributes. Each
+        args:   list of parameter names which are also object attributes. Each
                 attribute is updated with the value of the corresponding
                 parameter (same as shorthand in kwargs)
         """
@@ -221,7 +221,7 @@ class Namespace(collections.OrderedDict):
     def element_list_getter(elements):
         def getter(key):
             for element in elements:
-                if element.uid == key:
+                if element.name == key:
                     return element
             raise KeyError(key)
         return getter
