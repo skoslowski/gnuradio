@@ -1,0 +1,29 @@
+{% set ignored_params = ('uid', 'alias', 'affinity', 'minoutbuf', 'maxoutbuf') -%}
+{% macro get_make(block) -%}
+        self.{{ block.uid }} = {{ block.uid }} = {{ '' }}
+        {%- if block.make_template -%}
+            {% with self = block-%}
+            {{ block.make_template -}}
+            {% endwith -%}
+        {%- else -%}
+            {{ block.typename }}(
+            {%- for uid, param in block.params.items() if uid not in ignored_params -%}
+                {{ uid }}={{ param.value }}
+                {%- if not loop.last %}, {% endif %}
+            {%- endfor -%}
+            )
+        {%- endif %}
+{%- endmacro -%}
+
+#!/usr/bin/env python2
+
+{% block imports %}{% endblock -%}
+
+{% block header %}{% endblock -%}
+
+{% block class_def %}class myclass(object):{% endblock %}
+
+    {% block init_def %}def __init__(self):{% endblock %}
+        {% block makes %}{% endblock %}
+
+{% block footer %}{% endblock %}
