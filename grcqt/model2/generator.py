@@ -20,7 +20,7 @@ from __future__ import absolute_import, division, print_function
 from collections import OrderedDict
 
 from jinja2 import Environment, FileSystemLoader
-
+from mako.lookup import TemplateLookup
 
 import model2
 
@@ -35,7 +35,8 @@ class MyBlock(model2.Block):
     """
 
     make_template = """\
-        bla.foo()"""
+        bla.foo()
+    """
 
     def setup(self, **kwargs):
         pass
@@ -65,11 +66,6 @@ for err in fg.iter_errors():
     print(err)
 
 assert fg.is_valid
-
-env = Environment(
-    loader=FileSystemLoader('./templates'),
-    extensions=['jinja2.ext.with_']
-)
 
 
 ignored_params = ('name', 'alias', 'affinity', 'minoutbuf', 'maxoutbuf')
@@ -110,6 +106,11 @@ def get_imports(fg):
     return imports
 
 
+
+env = Environment(
+    loader=FileSystemLoader('./templates'),
+    extensions=['jinja2.ext.with_']
+)
 top_block_template = env.get_template('top_block.py.jinja2')
 
 
@@ -120,3 +121,12 @@ print(top_block_template.render(
     render_block_template_from_string=render_user_template,
 ))
 
+lookup = TemplateLookup(directories=['templates'])
+top_block_template = lookup.get_template("top_block.py.mako")
+
+print(top_block_template.render(
+    fg=fg,
+    get_block_make=get_block_make,
+    get_imports=get_imports,
+    render_block_template_from_string=render_user_template,
+))

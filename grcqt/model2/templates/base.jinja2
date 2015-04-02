@@ -1,20 +1,3 @@
-{% set ignored_params = ('name', 'alias', 'affinity', 'minoutbuf', 'maxoutbuf') -%}
-{% macro get_make(block) -%}
-        self.{{ block.name }} = {{ block.name }} = {{ '' }}
-        {%- if block.make_template -%}
-            {% with self = block-%}
-            {{ block.make_template -}}
-            {% endwith -%}
-        {%- else -%}
-            {{ block.typename }}(
-            {%- for name, param in block.params.items() if name not in ignored_params -%}
-                {{ name }}={{ param.value }}
-                {%- if not loop.last %}, {% endif %}
-            {%- endfor -%}
-            )
-        {%- endif %}
-{%- endmacro -%}
-
 #!/usr/bin/env python2
 
 {% block imports %}{% endblock -%}
