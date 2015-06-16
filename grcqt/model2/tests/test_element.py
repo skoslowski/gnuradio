@@ -50,6 +50,8 @@ def test_element_update():
     BaseBlock.register(Block)
 
     class A(ElementWithUpdate):
+        _update_allowed = ['a', 'b']
+
         a = 3
         _b = False
 

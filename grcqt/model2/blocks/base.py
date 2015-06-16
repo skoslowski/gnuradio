@@ -23,8 +23,8 @@ from collections import OrderedDict
 import inspect
 
 from .. import exceptions
-from .. base import Element, Namespace
-from .. params import Param, IdParam
+from .. base import Element, Namespace, NO_VALUE
+from .. params import Param, NameParam
 from .. ports import (BasePort, StreamPort, MessagePort,
                       SINK, SOURCE, PORT_DIRECTIONS)
 
@@ -41,65 +41,22 @@ class BaseBlock(Element):
 
     def __init__(self, **kwargs):
         super(BaseBlock, self).__init__()
-        self._evaluated = None
 
         self.params = OrderedDict()
         self.namespace = Namespace(lambda k: self.params[k])  # dict of evaluated params
         self.enabled = True
 
-        self.add_param(cls=IdParam)
-        # self.params['name'].set_unique_block_id()
+        self.name_param = self.add_param(cls=NameParam)
         self.setup(**kwargs)
-
-    @abstractmethod
-    def setup(self, **kwargs):
-        """here block designers add code for ports and params"""
-        pass
-
-    @staticmethod
-    def value(valid_params):
-        """design-time value (as string) of this block/variable"""
-        # todo: find a better way to spec a value a to signal NotImplemented
-        return object()
-
-    def add_param(self, *args, **kwargs):
-        """Add a param to this block
-
-        Usage options:
-            - a param object as args[0]
-            - a param class as kwargs['cls']
-            - all other args and kwargs get passed to param constructor
-        """
-        if args and isinstance(args[0], Param):
-            param = args[0]
-        elif 'cls' in kwargs:
-            cls = kwargs.pop('cls')  # remove cls from kwargs
-            if inspect.isclass(cls) and issubclass(cls, Param):
-                param = cls(*args, **kwargs)
-            else:
-                raise exceptions.BlockSetupException("Invalid param class")
-        else:
-            param = Param(*args, **kwargs)
-
-        if param.name in self.params:
-            raise exceptions.BlockSetupException(
-                "Param key '{}' not unique".format(param.name))
-        self.params[param.name] = param
-        self.add_child(param)  # double bookkeeping =(
-        return param
 
     @property
     def name(self):
         """unique identifier for this block within the flow-graph"""
-        return self.params['name'].evaluated
+        return self.name_param.evaluated
 
     @property
     def typename(self):
         return self.__class__.__name__
-
-    @property
-    def evaluated(self):
-        return self._evaluated
 
     def update(self):
         """Update the blocks params and (re-)build the local namespace"""
@@ -107,16 +64,19 @@ class BaseBlock(Element):
         for key, param in self.params.iteritems():
             if key in self.namespace.auto_resolved_keys:
                 continue  # already evaluated for some other param
-            param.update()
-            if param.is_valid:
-                self.namespace[key] = param.evaluated
+            param_evaluated = param.update()
+            if param.is_valid and param_evaluated is not NO_VALUE:
+                self.namespace[key] = param_evaluated
+        # get value for block
+        evaluated = NO_VALUE
         if self.is_valid:
             try:
                 value = self.value(self.namespace)
-                self._evaluated = self.parent_flowgraph.evaluate(value) \
-                    if isinstance(value, str) else value
+                evaluated = self.parent_flowgraph.evaluate(value) \
+                    if isinstance(value,str) else value
             except Exception as e:
                 self.add_error(e)
+        return evaluated
 
     def load(self, state):
         for key, param in self.params.iteritems():
@@ -135,6 +95,46 @@ class BaseBlock(Element):
         state['enabled'] = self.enabled
         # ToDo: add gui stuff
         return state
+
+    ###########################################################################
+    # SUBCLASS API
+    ###########################################################################
+    @abstractmethod
+    def setup(self, **kwargs):
+        """here block designers add code for ports and params"""
+        pass
+
+    @staticmethod
+    def value(valid_params):
+        """design-time value (as string) of this block/variable"""
+        # todo: find a better way to spec a value a to signal NotImplemented
+        return "object()"
+
+    def add_param(self, *args, **kwargs):
+        """Add a param to this block
+
+        Usage options:
+            - a param object as args[0]
+            - a param class as kwargs['cls']
+            - all other args and kwargs get passed to param constructor
+        """
+        if args and isinstance(args[0], Param):
+            param = args[0]
+        elif 'cls' in kwargs:
+            cls = kwargs.pop('cls')  # remove cls from kwargs
+            if inspect.isclass(cls) and issubclass(cls, Param):
+                param = cls(*args, **kwargs)
+            else:
+                raise ValueError("Invalid param class/obj")
+        else:
+            param = Param(*args, **kwargs)
+
+        if param.name in self.params:
+            raise exceptions.BlockSetupError(
+                "Param key {!r} not unique".format(param.name))
+        self.params[param.name] = param
+        self.add_child(param)  # double bookkeeping =(
+        return param
 
 
 class Block(BaseBlock):
@@ -156,24 +156,6 @@ class Block(BaseBlock):
         self.add_param('minoutbuf', 'Min Output Buffer', vtype=int, default=0)
         self.add_param('maxoutbuf', 'Max Output Buffer', vtype=int, default=0)
 
-    def add_port(self, cls, *args, **kwargs):
-        """Add a port to this block
-
-        Args:
-            - cls: instance or subclass of BasePort
-            - args, kwargs: arguments to pass the the port
-        """
-        if inspect.isclass(cls) and issubclass(cls, BasePort):
-            port = cls(*args, **kwargs)
-        elif isinstance(cls, BasePort):
-            port = cls
-        else:
-            raise ValueError("Excepted an instance or subclass of BasePort")
-        if port.direction not in PORT_DIRECTIONS:
-            raise exceptions.BlockSetupException("Unknown port direction")
-        self.add_child(port)
-        return port
-
     def iter_ports(self, direction=None):
         for port in filter(lambda p: isinstance(p, BasePort), self.children):
             if direction is None or port.direction == direction:
@@ -188,16 +170,37 @@ class Block(BaseBlock):
         del self.sources[:]
         for port in self.iter_ports():
             port.update()  # todo: handle exceptions
-            if port.active:
+            if port.state == 'show':
                 # re-add ports and their clones
                 ports = port_lists.get(port.direction, [])
                 ports.append(port)
-                ports += port.clones
+                ports += port.clones()
             elif port in ports_current.get(port.direction, []):
                 # remove connections from ports that were disabled
                 port.disconnect()
         # todo: form busses
         return evaluated
+
+    ###########################################################################
+    # SUBCLASS API
+    ###########################################################################
+    def add_port(self, cls, *args, **kwargs):
+        """Add a port to this block
+
+        Args:
+            - cls: instance or subclass of BasePort
+            - args, kwargs: arguments to pass the the port
+        """
+        if inspect.isclass(cls) and issubclass(cls, BasePort):
+            port = cls(*args, **kwargs)
+        elif isinstance(cls, BasePort):
+            port = cls
+        else:
+            raise ValueError("Excepted an instance or subclass of BasePort")
+        if port.direction not in PORT_DIRECTIONS:
+            raise exceptions.BlockSetupError("Unknown port direction")
+        self.add_child(port)
+        return port
 
     def add_stream_sink(self, label='in', dtype='complex', vlen=1, nports=None):
         return self.add_port(StreamPort, 'sink', label, dtype, vlen, nports)

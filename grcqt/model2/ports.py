@@ -20,7 +20,7 @@ from __future__ import absolute_import, division, print_function
 from abc import ABCMeta, abstractmethod
 from itertools import islice
 
-from . base import Element, ElementWithUpdate
+from . base import Element, ElementWithUpdate, exceptions
 from . import types
 
 
@@ -32,6 +32,7 @@ PORT_DIRECTIONS = (SINK, SOURCE)
 class BasePort(ElementWithUpdate):
     """Common elements of stream and message ports"""
     __metaclass__ = ABCMeta
+    _update_allowed = ['nports', 'label', 'state']
 
     @abstractmethod
     def __init__(self, direction, label, nports=None):
@@ -39,7 +40,7 @@ class BasePort(ElementWithUpdate):
         self._label = label
         self._nports = nports
         self.direction = direction
-        self.active = True
+        self.state = 'show'
 
     @property
     def label(self):
@@ -72,30 +73,23 @@ class BasePort(ElementWithUpdate):
     def connections_optimal(self):
         return False
 
-    @property
     def connections(self):
         """Iterator for the connections using this port"""
         for connection in self.parent_flowgraph.connections:
             if self in connection.ports:
                 yield connection
 
-    @property
     def clones(self):
         """Iterator for port clones of this (master) port"""
         for child in self.children:
             if isinstance(child, PortClone):
                 yield child
 
-    def disconnect(self):
-        """remove all connections to/from this port"""
-        for connection in self.connections:
-            self.parent_flowgraph.remove(connection)
-
     def update(self):
         """update attributes, adjust the number of clones"""
         super(BasePort, self).update()  # used-installed callbacks
         if self.nports is not None:
-            clones = list(self.clones)
+            clones = list(self.clones())
             # remove excess clones
             for clone in islice(clones, self.nports-1, 1000000):
                 clone.disconnect()
@@ -105,18 +99,23 @@ class BasePort(ElementWithUpdate):
             nports_current = len(clones) + 1
             for clone_id in range(nports_current, self.nports):
                 self.add_child(PortClone(clone_id))
+        self.validate()
 
     def validate(self):
         """Assert that the port is connected correctly"""
-        super(BasePort, self).validate()
-        len_connections = len(list(self.connections))
+        len_connections = len(list(self.connections()))
+        error_message = ''
         if not self.connections_optimal and not len_connections:
             error_message = "Port '{self.label}' not connected."
         elif len_connections > 1 and not self.allow_multiple_connections:
             error_message = "Port '{self.label}' has to many connections."
-        else:
-            error_message = ''
-        self.add_error(error_message)
+        if error_message:
+            self.add_error(exceptions.UpdateError(error_message))
+
+    def disconnect(self):
+        """remove all connections to/from this port"""
+        for connection in self.connections():
+            self.parent_flowgraph.remove(connection)
 
 
 class PortClone(Element):
@@ -148,6 +147,7 @@ BasePort.register(PortClone)
 
 class StreamPort(BasePort):
     """Stream ports have a data type and vector length"""
+    _update_allowed = BasePort._update_allowed + ['dtype', 'vlen']
 
     def __init__(self, direction, label, dtype='complex', vlen=1, nports=None):
         """Create a new stream port"""
@@ -175,9 +175,14 @@ class StreamPort(BasePort):
         vlen = int(value)
         assert vlen > 0, "Invalid value '{}' for vlen".format(value)
 
+    @property
+    def itemsize(self):
+        return types.port_dtypes[self.dtype] * self.vlen
+
 
 class MessagePort(BasePort):
     """Message ports usually have a fixed key"""
+    _update_allowed = BasePort._update_allowed + ['key']
 
     allow_multiple_connections = {SINK: False, SOURCE: True}
     connections_optimal = True

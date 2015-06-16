@@ -18,13 +18,13 @@
 from __future__ import absolute_import, division, print_function
 from os import path
 
-from .. platform_ import Platform
+from .. library import BlockLibrary
 
 
 def test_block_load():
     test_file_dir = path.join(path.dirname(__file__), 'resources')
 
-    p = Platform((3, 8, 0), test_file_dir)
+    p = BlockLibrary((3, 8, 0), test_file_dir)
     p.load_blocks()
 
     assert 'block_key' in p.blocks
@@ -42,7 +42,7 @@ def test_block_load_for_real():
     except ImportError:
         return
 
-    p = Platform((3, 8, 0), block_dir)
+    p = BlockLibrary((3, 8, 0), block_dir)
     p.load_blocks()
 
     assert 'block_key' in p.blocks

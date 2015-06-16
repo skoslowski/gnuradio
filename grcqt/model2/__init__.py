@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from . platform_ import Platform
+from . library import BlockLibrary
 from . flowgraph import FlowGraph
 from . blocks import Block
 from . params import Param

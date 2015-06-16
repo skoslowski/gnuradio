@@ -17,19 +17,23 @@
 from __future__ import absolute_import, division, print_function
 
 
-class GRCBaseException(Exception):
+class GRCError(Exception):
     pass
 
 
-class BlockException(GRCBaseException):
+class BlockError(GRCError):
     pass
 
 
-class BlockSetupException(GRCBaseException):
+class UpdateError(GRCError):
     pass
 
 
-class ValidationException(GRCBaseException):
+class BlockSetupError(GRCError):
+    pass
+
+
+class ValidationException(GRCError):
 
     def __init__(self, source, message):
         self.source = source
@@ -39,5 +43,5 @@ class ValidationException(GRCBaseException):
         return self.message
 
 
-class CheetahConversionException(GRCBaseException):
+class CheetahConversionException(GRCError):
     pass

@@ -17,41 +17,33 @@
 
 from __future__ import absolute_import, division, print_function
 
-import functools
-
-from . import exceptions
-from . import base
-from . blocks import BaseBlock
-from . connection import Connection
-
-
-def functools_lru_cache(func):
-    """very simplified back-port of functools.lru_cache in py3k"""
-    result_cache = {}
-
-    @functools.wraps(func)
-    def wrapper(self, *args, **kwargs):
-        key = str(args[0])
-        try:
-            result = result_cache[key]
-        except KeyError:
-            result = result_cache[key] = func(self, *args, **kwargs)
-        return result
-
-    wrapper.cache_clear = result_cache.clear
-    return wrapper
+from . import exceptions, base, blocks, connection
 
 
 class FlowGraph(base.Element):
 
-    def __init__(self):
+    def __init__(self, block_library=None):
         super(FlowGraph, self).__init__()
 
+        self.block_library = block_library
         self.blocks = []
         self.connections = []
 
         self.options = {}  # do we want a dict here?
         self.namespace = base.Namespace(self.blocks)
+
+    @classmethod
+    def flowgraph_from_nested_data(cls, n, block_library=None):
+        fg = cls(block_library)
+        for blk in n.get('block', []):
+            fg.add_block(blk['key']).load(blk.get('param', []))
+        for con in n.get('connection', []):
+            fg.make_connection(
+                (con['source_block_id'], con['source_key']),
+                (con['sink_block_id'], con['sink_key'])
+            )
+        fg.update()
+        return fg
 
     @property
     def name(self):
@@ -68,36 +60,38 @@ class FlowGraph(base.Element):
         """
         if isinstance(key_or_block, str):
             try:
-                block = self.platform.blocks[key_or_block]()
+                block = self.block_library.blocks[key_or_block]()
             except KeyError:
-                raise exceptions.BlockException(
+                raise exceptions.BlockSetupError(
                     "Failed to add block {!r}".format(key_or_block))
-        elif isinstance(key_or_block, BaseBlock):
+        elif isinstance(key_or_block, blocks.BaseBlock):
             block = key_or_block
         else:
-            raise exceptions.BlockException("")
+            raise exceptions.BlockSetupError("Need to block key or obj")
         self.add_child(block)
         self.blocks.append(block)
         return block
 
     def make_connection(self, endpoint_a, endpoint_b):
         """Add a connection between the ports of two blocks"""
-        connection = Connection(endpoint_a, endpoint_b)
-        self.add_child(connection)
-        self.connections.append(connection)
-        return connection
+        con = connection.Connection(endpoint_a, endpoint_b)
+        self.add_child(con)
+        self.connections.append(con)
+        return con
 
     def remove(self, elements):
+        if not isinstance(elements, (list, tuple)):
+            elements = elements,
         for element in elements:
-            if isinstance(element, BaseBlock):
+            if isinstance(element, blocks.BaseBlock):
                 # todo: remove connections to this block?
                 self.blocks.remove(element)
-            elif isinstance(element, Connection):
+            elif isinstance(element, connection.Connection):
                 self.connections.remove(element)
             self.children.remove(element)
             del element
 
-    @functools_lru_cache
+    @base.functools_lru_cache
     def evaluate(self, expr):
         """Evaluate an expr in the flow-graph namespace"""
         return eval(str(expr), None, self.namespace)
@@ -115,12 +109,16 @@ class FlowGraph(base.Element):
         for block in self.blocks:
             if block.name in self.namespace.auto_resolved_keys:
                 continue  # already evaluated for some other block
-            block.update()
+            block_evaluated = block.update()
+            if block.name in self.namespace:
+                block.add_error(Exception("Duplicate block name"))
+            elif block.is_valid and block_evaluated is not base.NO_VALUE:
+                self.namespace[block.name] = block_evaluated
 
         self.blocks.sort(key=index_default(self.namespace.auto_resolved_keys))
 
-        for connection in self.connections:
-            connection.update()
+        for con in self.connections:
+            con.update()
 
 
 def index_default(mylist, default=None):
@@ -130,6 +128,6 @@ def index_default(mylist, default=None):
     def index_getter(element):
         try:
             return mylist.index(element.name)
-        except:
+        except ValueError:
             return default
     return index_getter

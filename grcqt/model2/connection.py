@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+from . import exceptions, ports
 from . base import Element
 
 
@@ -49,3 +50,18 @@ class Connection(Element):
     @property
     def ports(self):
         return self.source_port, self.sink_port
+
+    def update(self):
+        self.validate()
+
+    def validate(self):
+        source_port, sink_port = self.source_port, self.sink_port
+
+        if isinstance(self.source_port, ports.StreamPort):
+            if source_port.dtype != sink_port.dtype:
+                self.add_error(exceptions.UpdateError("Data type mismatch"))
+            elif source_port.itemsize != sink_port.itemsize:
+                msg = "Item size mismatch: source has {}, sink {}".format(
+                    source_port.itemsize, sink_port.itemsize)
+                self.add_error(exceptions.UpdateError(msg))
+

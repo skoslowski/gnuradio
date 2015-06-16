@@ -17,11 +17,13 @@
 
 from __future__ import absolute_import, division, print_function
 import weakref
+import functools
 import collections
 import contextlib
 from itertools import chain
 
 from . import exceptions
+from ._consts import NO_VALUE, BLOCK_ID_BLACK_LIST
 
 
 class lazyproperty(object):
@@ -35,6 +37,23 @@ class lazyproperty(object):
             value = self.func(instance)
             setattr(instance, self.func.__name__, value)
             return value
+
+
+def functools_lru_cache(func):
+    """very simplified back-port of functools.lru_cache in py3k"""
+    result_cache = {}
+
+    @functools.wraps(func)
+    def wrapper(self, *args, **kwargs):
+        key = str(args[0])
+        try:
+            result = result_cache[key]
+        except KeyError:
+            result = result_cache[key] = func(self, *args, **kwargs)
+        return result
+
+    wrapper.cache_clear = result_cache.clear
+    return wrapper
 
 
 class Element(object):
@@ -92,16 +111,6 @@ class Element(object):
         from . flowgraph import FlowGraph
         return self.get_parent_by_class(FlowGraph)
 
-    @lazyproperty
-    def platform(self):
-        """Get the platform object from the ancestry
-
-         Returns:
-            a platform object or None
-        """
-        from . platform_ import Platform
-        return self.get_parent_by_class(Platform)
-
     def reset_lazyproperties(self):
         """Reset all lazy properties"""
         # todo: use case?
@@ -110,15 +119,6 @@ class Element(object):
                 delattr(self, name)
 
     ###########################################################################
-
-    def validate(self):
-        """Validate object and all child object in this tree
-
-        Validation shall only check the validity of the flow-graph, not change
-        any values
-        """
-        for child in self.children:
-            child.validate()
 
     def add_error(self, err_or_msg):
         """Format and add an error message for this element"""
@@ -152,6 +152,8 @@ class Element(object):
 
 class ElementWithUpdate(Element):
     """Adds installable update callbacks for specific attributes"""
+
+    _update_allowed = []
 
     def __init__(self):
         super(ElementWithUpdate, self).__init__()
@@ -187,12 +189,12 @@ class ElementWithUpdate(Element):
         invalid_attr_names = []
         args_items = ((attr_name, attr_name) for attr_name in args)
         for attr_name, callback in chain(kwargs.iteritems(), args_items):
-            if hasattr(self, attr_name):  # todo: exclude methods
+            if attr_name in self._update_allowed and hasattr(self, attr_name):
                 self.update_actions[attr_name] = callback
             else:
                 invalid_attr_names.append(attr_name)
         if invalid_attr_names:
-            raise exceptions.BlockSetupException(
+            raise exceptions.UpdateError(
                 "No attribute(s) founds for " + str(invalid_attr_names))
 
 
@@ -233,16 +235,15 @@ class Namespace(collections.OrderedDict):
         element = self.element_getter(key)
         # get value from element, protect against inf recursion
         self._missing_key_recursion_chain.append(key)
-        element.update()
-        value = element.evaluated
+        element_evaluated = element.update()
         self._missing_key_recursion_chain.remove(key)
         # valid or not, this key is added to resolution order
         self.auto_resolved_keys.append(key)
-        if not element.is_valid:
+        if element_evaluated is NO_VALUE or not element.is_valid:
             raise KeyError(key)
 
-        self[key] = value  # safe the value in the namespace
-        return value
+        self[key] = element_evaluated  # safe the value in the namespace
+        return element_evaluated
 
     def clear(self):
         super(Namespace, self).clear()

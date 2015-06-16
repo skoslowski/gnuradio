@@ -81,14 +81,14 @@ def test_reduce_size(block):
 
 
 def test_active(block):
-    block.sinks[0].active = False
+    block.sinks[0].state = 'hide'
     block.update()
     assert [sink.label for sink in block.sinks] == \
            ["in20", "in21", "in22", "in3"]
 
 
 def test_active2(block):
-    block.sinks[1].active = False
+    block.sinks[1].state = 'hide'
     block.update()
     assert [sink.label for sink in block.sinks] == \
            ["in", "in3"]

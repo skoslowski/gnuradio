@@ -75,7 +75,7 @@ def test_block_add_param5(block):
     try:
         class NotAParamSubclass(object): pass
         block.add_param("t", "t4", cls=NotAParamSubclass)
-    except exceptions.BlockSetupException:
+    except ValueError:
         pass
     else:
         assert False
@@ -85,7 +85,7 @@ def test_block_add_param6(block):
     block.add_param(Param("t1", "test label"))
     try:
         block.add_param("t1", "another label")
-    except exceptions.BlockSetupException as e:
+    except exceptions.BlockSetupError as e:
         assert "not unique" in e.message
     else:
         assert False
@@ -101,7 +101,7 @@ def test_block_add_ports(block):
     block.add_port(StreamPort, 'sink', "in", complex)
     try:
         block.add_port(StreamPort, 'up', "in", complex)
-    except exceptions.BlockSetupException:
+    except exceptions.BlockSetupError:
         pass
     else:
         assert False

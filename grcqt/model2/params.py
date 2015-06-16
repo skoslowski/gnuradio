@@ -23,17 +23,16 @@ import itertools
 from abc import ABCMeta
 
 from . import types
-from . base import ElementWithUpdate
-from . _consts import BLOCK_ID_BLACK_LIST
+from . base import ElementWithUpdate, NO_VALUE, BLOCK_ID_BLACK_LIST
 
 
 class Param(ElementWithUpdate):
     __metaclass__ = ABCMeta
+    _update_allowed = ['vtype', 'label', 'state']
 
     def __init__(self, name, label, vtype='raw', default=None, category=None, validator=None):
         super(Param, self).__init__()
         self._vtype = None
-        self._evaluated = None
 
         self.name = name
         self.label = label if label is not None else name
@@ -41,6 +40,8 @@ class Param(ElementWithUpdate):
         self.vtype = vtype
         self.validator = validator
         self.value = self.default = default  # todo get vtype default
+
+        self.state = 'show'
 
     def __repr__(self):
         return "<Param '{}.{}' = {!r}>".format(
@@ -55,10 +56,6 @@ class Param(ElementWithUpdate):
         assert value in types.param_vtypes, "Invalid vtype '{}'".format(value)
         self._vtype = value
 
-    @property
-    def evaluated(self):
-        return self._evaluated
-
     def reset(self):
         self.value = self.default
 
@@ -68,63 +65,47 @@ class Param(ElementWithUpdate):
         # then get evaluated value. 'parse' adds quotes or puts it in a list
         if not self.is_valid:
             self.add_error("Can't evaluate invalid param")
-            return
+            return NO_VALUE
+
         try:
-            self._evaluated = types.param_vtypes[self.vtype].parse(
+            evaluated = types.param_vtypes[self.vtype].parse(
                 self.parent_flowgraph.evaluate(self.value))
+            # value type validation
+            types.param_vtypes[self.vtype].validate(evaluated)
+            # custom validator
+            if callable(self.validator) and not self.validator(evaluated):
+                raise Exception("Custom validator for parameter"
+                                " '{self.label}' failed")
         except Exception as e:
             self.add_error(e)
+            evaluated = NO_VALUE
 
-    def validate(self):
-        try:
-            # value type validation
-            types.param_vtypes[self.vtype].validate(self.evaluated)
-            # custom validator
-            if callable(self.validator) and not self.validator(self.evaluated):
-                self.add_error("Custom validator for parameter"
-                               " '{self.label}' failed")
-        except Exception as e:
-            self.add_error("Failed to validate '{self.label}': " + repr(e))
+        return evaluated
 
 
-class IdParam(Param):
+class NameParam(Param):
     """Parameter of a block used as a unique parameter within a flow-graph"""
 
-    _id_matcher = re.compile('^[a-z|A-Z]\w*$')
-    _id_factory = map(lambda c: repr("block_{}".format(c)), itertools.count())
+    _update_allowed = []
+    _name_matcher = re.compile('^[a-z|A-Z]\w*$')
+    _name_factory = map(lambda c: repr("block_{}".format(c)),itertools.count())
 
     def __init__(self):
-        super(IdParam, self).__init__('name', label='ID', vtype=str)
-        self.value = self.default = self._id_factory.next()
-        self.update()
-
-    def set_unique_block_id(self):
-        """get a unique block id within the flow-graph by trail&error"""
-        blocks = self.parent_flowgraph.blocks
-        block_typename = self.parent_block.__class__.__name__
-        block_ids = map(lambda key: "{}_{}".format(block_typename, key), itertools.count())
-        return itertools.dropwhile(lambda id_: id_ in blocks, block_ids).next()
-
-    def update(self):
-        pass
+        super(NameParam, self).__init__('name', label='ID', vtype=str)
+        self.value = self.default = self._name_factory.next()
 
     @property
     def evaluated(self):
         return str(self.value).strip('\'\"')
 
-    def validate(self):
-        id_value = self.evaluated
-        is_duplicate_id = any(
-            block.name == id_value
-            for block in self.parent_flowgraph.blocks if block is not self
-        )
-        if not self._id_matcher.match(id_value):
-            self.add_error("Invalid ID")
-        elif id_value in BLOCK_ID_BLACK_LIST:
+    def update(self):
+        evaluated = self.evaluated
+        if not self._name_matcher.match(evaluated):
+            self.add_error(Exception("Invalid ID {!r}".format(evaluated)))
+        elif evaluated in BLOCK_ID_BLACK_LIST:
             self.add_error("ID is blacklisted")
-        elif is_duplicate_id:
-            self.add_error("Duplicate ID")
-        super(IdParam, self).validate()
+
+        return NO_VALUE  # Never add this to the block namespace
 
 
 class OptionsParam(Param):
@@ -146,6 +127,7 @@ class OptionsParam(Param):
         super(OptionsParam, self).__init__(name, label, vtype, default)
         self.options = []
         self.allow_arbitrary_values = False
+        self._evaluated = NO_VALUE
 
     def add_option(self, name_or_option, value, **kwargs):
         if isinstance(name_or_option, self.Option):
@@ -155,20 +137,19 @@ class OptionsParam(Param):
         self.options.append(option)
 
     def update(self):
-        super(Param, self).update()
-        self._evaluated = self.parent_flowgraph.evaluate(self.value)
-
-    def validate(self):
-        super(OptionsParam, self).validate()
-        value = self.evaluated
-        if not self.allow_arbitrary_values and value not in map(lambda o: o.value, self.options):
+        evaluated = super(Param, self).update()
+        if not self.allow_arbitrary_values and \
+                        evaluated not in map(lambda o: o.value, self.options):
             self.add_error("Value {self.evaluated!r} not allowed")
 
+        self._evaluated = evaluated
+        return evaluated
+
     def __format__(self, format_spec):
-        return self.evaluated.__format__(format_spec)
+        return self._evaluated.__format__(format_spec)
 
     def __getitem__(self, key):
-        return self.options[self.options.index(self.evaluated)].extra[key]
+        return self.options[self.options.index(self._evaluated)].extra[key]
 
 
 class DTypeParam(OptionsParam):

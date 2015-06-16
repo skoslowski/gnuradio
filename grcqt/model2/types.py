@@ -18,8 +18,6 @@
 from __future__ import absolute_import, division, print_function
 
 import itertools
-import numpy as np
-
 
 port_dtypes = {}
 param_vtypes = {}
@@ -65,7 +63,6 @@ PortDType.register('Integer 8',           1, ('s8',  'byte'))  # uint?
 
 
 class ParamVType(object):
-
     def __init__(self, names, valid_types):
         self.names = names if isinstance(names, (list, set, tuple)) else (names,)
         self.valid_types = valid_types
@@ -93,7 +90,6 @@ class ParamRawVType(ParamVType):
 
 
 class ParamStringVType(ParamVType):
-
     def parse(self, evaluated):
         if evaluated is None:
             return ''
@@ -125,17 +121,27 @@ class ParamVectorVType(ParamNumericVType):
             ))
 
 
-INT_TYPES = (int, long, np.int, np.int8, np.int16, np.int32, np.uint64,
-             np.uint, np.uint8, np.uint16, np.uint32, np.uint64)
-REAL_TYPES = (float, np.float, np.float32, np.float64) + INT_TYPES
-COMPLEX_TYPES = (complex, np.complex, np.complex64, np.complex128) + REAL_TYPES
-VECTOR_TYPES = (tuple, list, set, np.ndarray)
+INT_TYPES = [int, long]
+REAL_TYPES = [float]
+COMPLEX_TYPES = [complex]
+VECTOR_TYPES = [tuple, list, set]
+try:
+    import numpy as np
+    INT_TYPES += [np.int, np.int8, np.int16, np.int32, np.uint64, np.uint,
+                  np.uint8, np.uint16, np.uint32, np.uint64]
+    REAL_TYPES += [np.float, np.float32, np.float64]
+    COMPLEX_TYPES += [np.complex, np.complex64, np.complex128]
+    VECTOR_TYPES += [np.ndarray]
+except ImportError:
+    pass
+REAL_TYPES += INT_TYPES
+COMPLEX_TYPES += REAL_TYPES
 
 ParamVType.register('bool', (bool,))
 ParamStringVType.register(('string', 'str'), (str,))
 ParamRawVType.register('raw', (None,))
 
-# the order if import here!
+# the order is import here! Why?
 ParamNumericVType.register('int', INT_TYPES)
 ParamNumericVType.register(('real', 'float'), REAL_TYPES)
 ParamNumericVType.register('complex', COMPLEX_TYPES)

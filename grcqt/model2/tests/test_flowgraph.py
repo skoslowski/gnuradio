@@ -28,14 +28,16 @@ def add_variable(fg, name, value):
 
 def test_flowgraph_namespace():
     fg = FlowGraph()
-    add_variable(fg, "_", "A")  # to put A in namespace
+    add_variable(fg, "foo", "A")  # to put A in namespace
     add_variable(fg, "A", "B+C")
     add_variable(fg, "B", "C")
     add_variable(fg, "C", "1")
     fg.update()
-    assert fg.namespace == {"A": 2, "B": 1, "C": 1}
+    assert fg.namespace == {"A": 2, "B": 1, "C": 1, 'foo': 2}
+    for err in fg.iter_errors(True):
+        print err
     assert fg.is_valid
-    assert list(fg.namespace.keys()) == ['C', 'B', 'A']
+    assert list(fg.namespace.keys()) == ['C', 'B', 'A', 'foo']
 
 
 def test_flowgraph_namespace_circle():

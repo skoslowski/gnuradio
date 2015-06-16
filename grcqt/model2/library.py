@@ -33,15 +33,15 @@ class BlockLoadException(Exception):
     pass
 
 
-class Platform(object):
+class BlockLibrary(object):
 
     def __init__(self, version, block_paths):
         """
-        A platform object holds block classes.
+        A block_library object holds block classes.
 
         Args:
             version: a 3-tuple for file versions, e.g. (3,7,6)
-            block_paths: the file paths to blocks in this platform
+            block_paths: the file paths to blocks in this block_library
         """
         self.version = version
         self.block_paths = block_paths if not isinstance(block_paths, str) \
@@ -111,14 +111,3 @@ class Platform(object):
                         self.blocks[value.__name__] = value
         finally:
             if f: f.close()
-
-    def flowgraph_from_nested_data(self, n):
-        fg = FlowGraph(self)
-        for blk in n.get('block', []):
-            fg.add_block(blk['key']).load(blk.get('param', []))
-        for con in n.get('connection', []):
-            fg.make_connection(
-                (con['source_block_id'], con['source_key']),
-                (con['sink_block_id'], con['sink_key'])
-            )
-        return fg
