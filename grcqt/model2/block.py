@@ -22,11 +22,10 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 import inspect
 
-from .. import exceptions
-from .. base import Element, Namespace, NO_VALUE
-from .. params import Param, NameParam
-from .. ports import (BasePort, StreamPort, MessagePort,
-                      SINK, SOURCE, PORT_DIRECTIONS)
+from . import exceptions
+from .base import Element, Namespace, NO_VALUE
+from .params import Param, NameParam
+from .ports import (BasePort, StreamPort, MessagePort)
 
 
 class BaseBlock(Element):
@@ -151,10 +150,10 @@ class Block(BaseBlock):
 
         self.add_param('alias', 'Block Alias', vtype=str, default=repr(self.name))
         # todo: hide these for blocks w/o ports (shouldn't be the case in this class)
-        self.add_param('affinity', 'Core Affinity', vtype=list, default=[])
+        self.add_param('affinity', 'Core Affinity', vtype=list, default='[]')
         # todo: hide these for sink-only blocks
-        self.add_param('minoutbuf', 'Min Output Buffer', vtype=int, default=0)
-        self.add_param('maxoutbuf', 'Max Output Buffer', vtype=int, default=0)
+        self.add_param('minoutbuf', 'Min Output Buffer', vtype=int, default='0')
+        self.add_param('maxoutbuf', 'Max Output Buffer', vtype=int, default='0')
 
     def iter_ports(self, direction=None):
         for port in filter(lambda p: isinstance(p, BasePort), self.children):
@@ -164,8 +163,9 @@ class Block(BaseBlock):
     def update(self):
         """Update the blocks ports"""
         evaluated = super(Block, self).update()  # update param und evaluate first
-        ports_current = {SINK: list(self.sinks), SOURCE: list(self.sources)}
-        port_lists = {SINK: self.sinks, SOURCE: self.sources}
+        ports_current = {BasePort.SINK: list(self.sinks),
+                         BasePort.SOURCE: list(self.sources)}
+        port_lists = {BasePort.SINK: self.sinks, BasePort.SOURCE: self.sources}
         del self.sinks[:]
         del self.sources[:]
         for port in self.iter_ports():
@@ -197,7 +197,7 @@ class Block(BaseBlock):
             port = cls
         else:
             raise ValueError("Excepted an instance or subclass of BasePort")
-        if port.direction not in PORT_DIRECTIONS:
+        if port.direction not in port.PORT_DIRECTIONS:
             raise exceptions.BlockSetupError("Unknown port direction")
         self.add_child(port)
         return port

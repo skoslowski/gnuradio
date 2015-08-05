@@ -26,7 +26,8 @@ from collections import defaultdict
 from . _consts import BLOCK_CLASS_FILE_EXTENSION, BLOCK_XML_EXTENSION, BLOCK_TREE_EXTENSION
 from . import legacy
 from . flowgraph import FlowGraph
-from . blocks import BaseBlock
+from . block import BaseBlock
+from . blocks import block_xml
 
 
 class BlockLoadException(Exception):
@@ -74,7 +75,7 @@ class BlockLibrary(object):
                 continue
             try:
                 if block_file.endswith(BLOCK_XML_EXTENSION):
-                    block = legacy.load_block_xml(block_file)
+                    block = block_xml.get_block_class(block_file)
                     block.categories = categories[block.__name__].union(block.categories)
                     self.blocks[block.__name__] = block
                 else:

@@ -17,8 +17,8 @@
 
 from __future__ import absolute_import, division, print_function
 
-from . import exceptions, base, blocks, connection
-
+from . import exceptions, base, connection
+from .block import BaseBlock
 
 class FlowGraph(base.Element):
 
@@ -64,7 +64,7 @@ class FlowGraph(base.Element):
             except KeyError:
                 raise exceptions.BlockSetupError(
                     "Failed to add block {!r}".format(key_or_block))
-        elif isinstance(key_or_block, blocks.BaseBlock):
+        elif isinstance(key_or_block, BaseBlock):
             block = key_or_block
         else:
             raise exceptions.BlockSetupError("Need to block key or obj")
@@ -83,7 +83,7 @@ class FlowGraph(base.Element):
         if not isinstance(elements, (list, tuple)):
             elements = elements,
         for element in elements:
-            if isinstance(element, blocks.BaseBlock):
+            if isinstance(element, BaseBlock):
                 # todo: remove connections to this block?
                 self.blocks.remove(element)
             elif isinstance(element, connection.Connection):

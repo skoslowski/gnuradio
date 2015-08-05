@@ -64,10 +64,12 @@ PortDType.register('Integer 8',           1, ('s8',  'byte'))  # uint?
 
 class ParamVType(object):
     def __init__(self, names, valid_types):
-        self.names = names if isinstance(names, (list, set, tuple)) else (names,)
+        self.names = names if isinstance(names, (list, set, tuple)) else [names]
         self.valid_types = valid_types
 
     def parse(self, evaluated):
+        if evaluated is None:
+            evaluated = self.valid_types[0]()
         return evaluated
 
     def validate(self, evaluated):
@@ -92,9 +94,10 @@ class ParamRawVType(ParamVType):
 class ParamStringVType(ParamVType):
     def parse(self, evaluated):
         if evaluated is None:
-            return ''
+            evaluated =  ''
         if not isinstance(evaluated, str):
-            return repr(str(evaluated))
+            evaluated = repr(str(evaluated))
+        return evaluated
 
 
 class ParamNumericVType(ParamVType):
@@ -105,13 +108,14 @@ class ParamVectorVType(ParamNumericVType):
 
     def __init__(self, names, valid_types, valid_item_types):
         super(ParamVectorVType, self).__init__(names, valid_types)
-        self.valid_item_types = (
-            valid_item_types if isinstance(names, (list, set, tuple)) else
-            (valid_item_types,))
+        if isinstance(valid_item_types, (list, set, tuple)):
+            self.valid_item_types = valid_item_types
+        else:
+            self.valid_item_types = [valid_item_types]
 
     def parse(self, evaluated):
         if not isinstance(evaluated, self.valid_types):
-            evaluated = (evaluated, )
+            evaluated = [evaluated]
         return evaluated
 
     def validate(self, evaluated):
@@ -121,17 +125,17 @@ class ParamVectorVType(ParamNumericVType):
             ))
 
 
-INT_TYPES = [int, long]
-REAL_TYPES = [float]
-COMPLEX_TYPES = [complex]
-VECTOR_TYPES = [tuple, list, set]
+INT_TYPES = (int, long)
+REAL_TYPES = (float,)
+COMPLEX_TYPES = (complex,)
+VECTOR_TYPES = (tuple, list, set)
 try:
     import numpy as np
-    INT_TYPES += [np.int, np.int8, np.int16, np.int32, np.uint64, np.uint,
-                  np.uint8, np.uint16, np.uint32, np.uint64]
-    REAL_TYPES += [np.float, np.float32, np.float64]
-    COMPLEX_TYPES += [np.complex, np.complex64, np.complex128]
-    VECTOR_TYPES += [np.ndarray]
+    INT_TYPES += (np.int, np.int8, np.int16, np.int32, np.uint64, np.uint,
+                  np.uint8, np.uint16, np.uint32, np.uint64)
+    REAL_TYPES += (np.float, np.float32, np.float64)
+    COMPLEX_TYPES += (np.complex, np.complex64, np.complex128)
+    VECTOR_TYPES += (np.ndarray,)
 except ImportError:
     pass
 REAL_TYPES += INT_TYPES

@@ -98,7 +98,7 @@ class Element(object):
          Returns:
             a block object or None
         """
-        from . blocks import BaseBlock
+        from . block import BaseBlock
         return self.get_parent_by_class(BaseBlock)
 
     @lazyproperty

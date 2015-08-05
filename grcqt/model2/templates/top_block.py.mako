@@ -5,14 +5,13 @@
             indented = '\n'.join(spaces + line for line in x.split('\n'))
             return spaces + indented if first_line else indented.strip()
         return _indent
-%>
-
+%>\
 #!/usr/bin/env python2
 
 # imports
 % for import_ in get_imports(fg):
 ${ import_ }
-% endfor
+% endfor\
 
 
 class ${ fg.name }(gr.top_block):
@@ -26,7 +25,7 @@ class ${ fg.name }(gr.top_block):
 
         % for con in fg.connections:
         self.connect(${ con })
-        % endfor
+        % endfor\
 
 
 if __name__ == '__main__':

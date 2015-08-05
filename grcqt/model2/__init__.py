@@ -19,6 +19,6 @@ from __future__ import absolute_import, division, print_function
 
 from . library import BlockLibrary
 from . flowgraph import FlowGraph
-from . blocks import Block
+from . block import Block
 from . params import Param
 from . connection import Connection

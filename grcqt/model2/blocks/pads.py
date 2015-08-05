@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from . base import Block
+from ..block import Block
 
 
 class PadStreamSource(Block):

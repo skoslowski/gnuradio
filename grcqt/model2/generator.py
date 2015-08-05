@@ -17,10 +17,8 @@
 
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict
-
-from jinja2 import Environment, FileSystemLoader
 from mako.lookup import TemplateLookup
+from mako.template import Template
 
 import model2
 
@@ -43,7 +41,7 @@ class MyBlock(model2.Block):
 
 b = MyBlock()
 b.make_template = ''
-b.import_template = 'import {{ b1 }}'
+b.import_template = 'import ${ b1 }'
 p = model2.Param("b1", "b1", vtype='raw')
 p.value = "block_1"
 b.add_param(p)
@@ -62,8 +60,10 @@ fg.add_block(b)
 fg.add_block(MyBlock())
 
 fg.update()
-for err in fg.iter_errors():
-    print(err)
+for elem, err in fg.iter_errors():
+    print(repr(elem))
+    print(repr(err))
+    print()
 
 assert fg.is_valid
 
@@ -77,12 +77,12 @@ def render_user_template(template, block):
     leading_whitespace = len(template) - len(template.lstrip())
     template = '\n'.join(line[leading_whitespace:] for line in template.split('\n'))
     # prepare param namespace
-    namespace = OrderedDict(
+    namespace = dict(
         (name, param.value)
         for name, param in block.params.items() if name not in ignored_params
     )
     # render template
-    return env.from_string(template).render(namespace)
+    return Template(template).render(**namespace)
 
 
 def get_block_make(block):
@@ -107,19 +107,6 @@ def get_imports(fg):
 
 
 
-env = Environment(
-    loader=FileSystemLoader('./templates'),
-    extensions=['jinja2.ext.with_']
-)
-top_block_template = env.get_template('top_block.py.jinja2')
-
-
-print(top_block_template.render(
-    fg=fg,
-    get_block_make=get_block_make,
-    get_imports=get_imports,
-    render_block_template_from_string=render_user_template,
-))
 
 lookup = TemplateLookup(directories=['templates'])
 top_block_template = lookup.get_template("top_block.py.mako")

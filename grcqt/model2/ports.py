@@ -24,15 +24,15 @@ from . base import Element, ElementWithUpdate, exceptions
 from . import types
 
 
-SINK = 'sink'
-SOURCE = 'source'
-PORT_DIRECTIONS = (SINK, SOURCE)
-
 
 class BasePort(ElementWithUpdate):
     """Common elements of stream and message ports"""
     __metaclass__ = ABCMeta
     _update_allowed = ['nports', 'label', 'state']
+
+    SINK = 'sink'
+    SOURCE = 'source'
+    PORT_DIRECTIONS = (SINK, SOURCE)
 
     @abstractmethod
     def __init__(self, direction, label, nports=None):
@@ -67,7 +67,7 @@ class BasePort(ElementWithUpdate):
 
     @property
     def allow_multiple_connections(self):
-        return {SINK: False, SOURCE: True}.get(self.direction, False)
+        return {self.SINK: False, self.SOURCE: True}.get(self.direction, False)
 
     @property
     def connections_optimal(self):
@@ -184,7 +184,7 @@ class MessagePort(BasePort):
     """Message ports usually have a fixed key"""
     _update_allowed = BasePort._update_allowed + ['key']
 
-    allow_multiple_connections = {SINK: False, SOURCE: True}
+    allow_multiple_connections = {BasePort.SINK: False, BasePort.SOURCE: True}
     connections_optimal = True
 
     def __init__(self, direction, label, key=None, nports=1):
