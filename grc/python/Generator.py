@@ -24,6 +24,8 @@ import tempfile
 import shlex
 import codecs
 from distutils.spawn import find_executable
+from zipfile import ZipFile
+
 from Cheetah.Template import Template
 
 from .. gui import Messages
@@ -34,6 +36,7 @@ from .. base.Constants import BLOCK_FLAG_NEED_QT_GUI
 from . Constants import TOP_BLOCK_FILE_MODE, FLOW_GRAPH_TEMPLATE, \
     XTERM_EXECUTABLE, HIER_BLOCK_FILE_MODE, HIER_BLOCKS_LIB_DIR, BLOCK_DTD
 from . import expr_utils
+from . Utils import LoggedImport
 
 
 class Generator(object):
@@ -271,6 +274,59 @@ class TopBlockGenerator(object):
         output.append((self.get_file_path(), str(t)))
         return output
 
+    def write_zipped_module(self, platform):
+        """
+        Bundle the generated flowgraph and its depending grc-generated modules
+        into a single zip file for remote execution. Dependencies are found
+        in the flowgraph's path and the hier block library path
+
+        Args:
+            platform: platform instance to get local GNU radio version
+
+        Return:
+            file path to generated zip file
+        """
+        file_path = self.get_file_path()
+        zfile_path = file_path.replace('.py', '.zip')
+        Messages.send_start_gen(zfile_path)
+        try:
+            path = (os.path.dirname(file_path), HIER_BLOCKS_LIB_DIR)
+            # runs the flowgraph (not as __main__) and observes imports
+            dependencies = LoggedImport.log_from_exec_file(file_path, path)
+        except Exception:
+            Messages.send("    Warning: failed to determine imports. Assuming none.\n")
+            dependencies = []
+
+        zfile = ZipFile(zfile_path, mode="w")
+        # the bootstrap code
+        zfile.writestr('__main__.py', ZIPPED_MODULE_BOOTSTRAP_TEMPLATE.format(
+            major_version=platform.get_version_major(),
+            api_version=platform.get_version_api(),
+            minor_version=platform.get_version_minor(),
+            version_full=platform.get_version()
+        ))
+        # the flowgraph as module main
+        for filename, data in self._build_python_code_from_template():
+            if filename == file_path:
+                Messages.send("    adding {0!r} as 'main.py'\n".format(file_path))
+                zfile.write(file_path, 'main.py')
+            else:
+                Messages.send("    adding {0!r}'\n".format(file_path))
+                zfile.write(file_path, 'main.py')
+
+
+        # any file found by the import loggers
+        for dependency in dependencies:
+            name = os.path.basename(dependency)
+            if name not in zfile.namelist():
+                Messages.send("    adding {0!r}\n".format(dependency))
+                zfile.write(dependency, name)
+            else:  # already have file with that name
+                Messages.send("    skipping {0!r} (duplicate name)".format(
+                    dependency))
+        zfile.close()
+        return zfile_path
+
 
 class HierBlockGenerator(TopBlockGenerator):
     """Extends the top block generator to also generate a block XML file"""
@@ -414,3 +470,26 @@ class QtHierBlockGenerator(HierBlockGenerator):
             "\n${gui_hint()($win)}"
         )
         return n
+
+
+ZIPPED_MODULE_BOOTSTRAP_TEMPLATE = """
+try:
+    from gnuradio import gr
+    version = gr.major_version(), gr.api_version(), gr.minor_version()
+    message = "This package was generated with GNU Radio {{0}}. " \
+              "Running on version {{1}}.".format({version_full!r}, gr.version())
+    if (gr.major_version(), gr.api_version()) != ({major_version!r}, {api_version!r}):
+        print "Error: ", message
+        exit(1)
+    if gr.minor_version() != {minor_version!r}:
+        print "Warning:", message, "\\n"
+except ImportError:
+    print "Error: Cannot import GNU Radio"
+    exit(1)
+except AttributeError:
+    print "Error: Cannot determine GNU Radio version"
+    exit(1)
+
+import runpy
+runpy.run_module('main', run_name='__main__')
+"""
