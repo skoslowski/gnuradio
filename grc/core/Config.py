@@ -23,6 +23,7 @@ import os
 from os.path import expanduser, normpath, expandvars, exists
 
 from . import Constants
+from .Element import lazy_property
 
 
 class Config(object):
@@ -42,7 +43,7 @@ class Config(object):
         if not os.path.exists(self.yml_block_cache):
             os.mkdir(self.yml_block_cache)
 
-    @property
+    @lazy_property
     def block_paths(self):
         path_list_sep = {'/': ':', '\\': ';'}[os.path.sep]
 

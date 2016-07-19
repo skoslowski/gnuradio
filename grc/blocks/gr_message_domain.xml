@@ -12,8 +12,6 @@
   <connection>
     <source_domain>gr_message</source_domain>
     <sink_domain>gr_message</sink_domain>
-    <make>#slurp
-        self.msg_connect($make_port_sig($source), $make_port_sig($sink))#slurp
-    </make>
+    <make>self.msg_connect({}, {})</make>
   </connection>
 </domain>

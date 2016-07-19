@@ -1,0 +1,53 @@
+########################################################
+##Mako template - gnuradio_python
+##
+##@param imports the import statements
+##@param flow_graph the flow_graph
+##@param variables the variable blocks
+##@param parameters the parameter blocks
+##@param blocks the signal blocks
+##@param connections the connections
+##@param msgs the msg type connections
+##@param generate_options the type of flow graph
+##@param callbacks variable id map to callback strings
+########################################################
+
+## All template parts which are dependend on the generate options are set in this
+## file. The static parts are inherited.
+
+<%inherit file="base.tmpl"/>
+
+<%block name="class_init">
+<%
+class_name = flow_graph.get_option('id')
+param_str = ', '.join(['self'] + ['{}={}'.format(param.get_id(), param.get_make()) for param in parameters])
+%>\
+<%
+in_sigs = flow_graph.get_hier_block_stream_io('in')
+out_sigs = flow_graph.get_hier_block_stream_io('out')
+%>\
+class ${class_name}(gr.hier_block2):
+<%def name="make_io_sig(io_sigs)">\
+<% size_strs = ['{}*{}'.format(io_sig['size'], io_sig['vlen']) for io_sig in io_sigs] %>\
+    %if len(io_sigs) == 0:
+gr.io_signature(0, 0, 0)\
+    %elif len(io_sigs) == 1:
+gr.io_signature(1, 1, ${size_strs[0]})\
+    %else:
+gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(size_strs)}])\
+    %endif
+</%def>\
+
+    def __init__(${param_str}):
+        gr.hier_block2.__init__(
+            self, "${title}",
+            ${make_io_sig(in_sigs)},
+            ${make_io_sig(out_sigs)},
+        )
+    %for pad in flow_graph.get_hier_block_message_io('in'):
+        self.message_port_register_hier_in("${pad}['label']")
+    %endfor
+    %for pad in flow_graph.get_hier_block_message_io('out'):
+        self.message_port_register_hier_out("${pad}['label']")
+    %endfor
+</%block>

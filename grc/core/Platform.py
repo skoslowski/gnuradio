@@ -71,7 +71,6 @@ class Platform(Element):
 
         if not yaml.__with_libyaml__:
             print("Warning: slow block loading")
-        self.build_block_library()
 
     def __str__(self):
         return 'Platform - {}'.format(self.config.name)

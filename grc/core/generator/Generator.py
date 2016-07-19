@@ -24,7 +24,9 @@ import tempfile
 import operator
 import collections
 
-from Cheetah.Template import Template
+from mako.template import Template
+from mako.lookup import TemplateLookup
+from mako import exceptions
 import six
 
 from .FlowGraphProxy import FlowGraphProxy
@@ -34,10 +36,6 @@ from ..Constants import (
     HIER_BLOCK_FILE_MODE, BLOCK_DTD
 )
 from ..utils import expr_utils
-
-DATA_DIR = os.path.dirname(__file__)
-FLOW_GRAPH_TEMPLATE = os.path.join(DATA_DIR, 'flow_graph.tmpl')
-
 
 class Generator(object):
     """Adaptor for various generators (uses generate_options)"""
@@ -244,8 +242,20 @@ class TopBlockGenerator(object):
             'callbacks': callbacks,
         }
         # Build the template
-        t = Template(open(FLOW_GRAPH_TEMPLATE, 'r').read(), namespace)
-        output.append((self.file_path, str(t)))
+        data_dir = os.path.dirname(__file__)
+        template_dir = os.path.join(data_dir, 'templates/')
+        tmpl_lookup = TemplateLookup(directories=[template_dir])
+        flowgraph_template = os.path.join(template_dir, str(self._generate_options)+'.tmpl')
+        try:
+            tmpl_read = Template(open(flowgraph_template, 'r').read(), lookup=tmpl_lookup)
+        except:
+            Messages.send_warning("Reading template from file {} failed:".format(flowgraph_template))
+        tmpl_rendered = None
+        try:
+            tmpl_rendered = tmpl_read.render(**namespace)
+        except:
+            Messages.send_warning("Rendering template from file {} failed: {}".format(flowgraph_template, exceptions.text_error_template().render()))
+        output.append((self.file_path, tmpl_rendered))
         return output
 
 

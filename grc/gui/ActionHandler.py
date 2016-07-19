@@ -54,6 +54,7 @@ class ActionHandler:
         for action in Actions.get_all_actions(): action.connect('activate', self._handle_action)
         #setup the main window
         self.platform = platform
+        self.platform.build_block_library()
         self.main_window = MainWindow(platform, self._handle_action)
         self.main_window.connect('delete-event', self._quit)
         self.main_window.connect('key-press-event', self._handle_key_press)

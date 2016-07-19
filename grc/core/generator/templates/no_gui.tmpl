@@ -1,0 +1,123 @@
+########################################################
+##Mako template - gnuradio_python
+##
+##@param imports the import statements
+##@param flow_graph the flow_graph
+##@param variables the variable blocks
+##@param parameters the parameter blocks
+##@param blocks the signal blocks
+##@param connections the connections
+##@param msgs the msg type connections
+##@param generate_options the type of flow graph
+##@param callbacks variable id map to callback strings
+########################################################
+
+## All template parts which are dependend on the generate options are set in this
+## file. The static parts are inherited.
+
+<%inherit file="base.tmpl"/>
+
+<%block name="shebang">\
+#!/usr/bin/env python2
+</%block>
+
+<%block name="class_init">
+<%
+class_name = flow_graph.get_option('id')
+param_str = ', '.join(['self'] + ['{}={}'.format(param.get_id(), param.get_make()) for param in parameters])
+%>\
+class ${class_name}(gr.top_block):
+
+    def __init__(${param_str}):
+        gr.top_block.__init__(self, "${title}")
+</%block>
+
+<%block name="main">
+## Set argument_parser function
+<%
+class_name = flow_graph.get_option('id')
+%>\
+<%def name="make_default(type, param)">
+    %if type == 'eng_float':
+eng_notation.num_to_str(${param}.get_make())
+    %else:
+${param}.get_make()
+    %endif
+</%def>\
+<%def name="make_short_id(param)">
+    <% short_id = param.get_param('short_id').get_evaluated() %>
+    %if short_id:
+        <% short_id = '-' + short_id %>
+    %endif
+${short_id}
+</%def>\
+<% params_eq_list = list() %>\
+%if parameters:
+
+def argument_parser():
+<% arg_parser_args = '' %>\
+    %if flow_graph.get_option('description'):
+<% arg_parser_args = 'description=description' %>\
+    description = repr(flow_graph.get_option('description'))
+    %endif
+    parser = ArgumentParser(${arg_parser_args})
+    %for param in parameters:
+<% type = param.get_param('type').get_value() %>\
+        %if type:
+## FIXME: test me: the next line should equal this: #silent $params_eq_list.append('%s=options.%s'%($param.get_id(), $param.get_id()))
+<% params_eq_list.append('{}=options.{}'.format(param.get_id(), param.get_id())) %>\
+    parser.add_argument(
+        %if make_short_id(param):
+        "${make_short_id(param)}", \
+        %endif
+        "--${param.get_id().replace('_', '-')}", dest="${param.get_id()}", type=${type}, default=${make_default(type, param)},
+        help="Set ${param.get_param('label').get_evaluated() or param.get_id()} [default=%(default)r]")
+        %endif
+    %endfor
+    return parser
+%endif
+
+
+## Set main function
+def main(top_block_cls=${class_name}, options=None):
+    %if parameters:
+    if options is None:
+        options = argument_parser().parse_args()
+    %endif
+    %if flow_graph.get_option('realtime_scheduling'):
+    if gr.enable_realtime_scheduling() != gr.RT_OK:
+        print "Error: failed to enable real-time scheduling."
+    %endif
+
+    tb = top_block_cls(${', '.join(params_eq_list)})
+        <% run_options = flow_graph.get_option('run_options') %>\
+        %if run_options == 'prompt':
+            %if flow_graph.get_option('max_nouts'):
+    tb.start(${flow_graph.get_option('max_nouts')})
+            %else:
+    tb.start()
+            %endif
+        %for m in monitors:
+    (tb.${m.get_id()}).start()
+        %endfor
+    try:
+        raw_input('Press Enter to quit: ')
+    except EOFError:
+        pass
+    tb.stop()
+        %elif run_options == 'run':
+            %if flow_graph.get_option('max_nouts'):
+    tb.start(${flow_graph.get_option('max_nouts')})
+            %else:
+    tb.start()
+            %endif
+        %endif
+        %for m in monitors:
+    (tb.${m.get_id()}).start()
+        %endfor
+    tb.wait()
+
+
+if __name__ == '__main__':
+    main()
+</%block>

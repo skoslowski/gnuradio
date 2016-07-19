@@ -1,0 +1,219 @@
+########################################################
+##Template Setup
+########################################################
+## Import python module needed for template generation
+<%! import time %>\
+## Put all global definitions here
+<%def name="make_io_sig(io_sigs)">
+    <% size_strs = ['{}*{}'.format(io_sig['size'], io_sig['vlen']) for io_sig in io_sigs] %>
+    %if len(io_sigs) == 0:
+gr.io_signature(0, 0, 0)
+    %elif len(io_sigs) == 1:
+gr.io_signature(1, 1, ${size_strs[0]})
+    %else:
+gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(size_strs)}])
+    %endif
+</%def>\
+<%def name="indent(code)">\
+<% code = '\n        '.join(str(code).splitlines()) %>\
+${code}\
+</%def>\
+<%def name="make_default(type, param)">
+    %if type == 'eng_float':
+eng_notation.num_to_str(${param}.get_make())
+    %else:
+${param}.get_make()
+    %endif
+</%def>\
+<%def name="make_short_id(param)">
+    <% short_id = param.get_param('short_id').get_evaluated() %>
+    %if short_id:
+        <% short_id = '-' + short_id %>
+    %endif
+${short_id}
+</%def>\
+########################################################
+##Flowgraph Header
+########################################################
+<%block name="shebang"/>\
+# -*- coding: utf-8 -*-
+<% DIVIDER = '#'*50 %>\
+${DIVIDER}
+# GNU Radio Python Flow Graph
+# Title: ${title}
+%if flow_graph.get_option('author'):
+# Author: ${flow_graph.get_option('author')}
+%endif
+%if flow_graph.get_option('description'):
+# Description: ${flow_graph.get_option('description')}
+%endif
+# Generated: ${time.ctime()}
+${DIVIDER}
+%if flow_graph.get_option('thread_safe_setters'):
+import threading
+%endif
+## Call XInitThreads as the _very_ first thing.
+## After some Qt import, it's too late
+<%block name="xinit"/>\
+########################################################
+##Create Imports
+########################################################
+
+<% _imports = imports %>\
+<%
+if flow_graph.get_option('qt_qss_theme'):
+    _imports = sorted(set(_imports + ["import os", "import sys"]))
+%>\
+%if any(imp.endswith("# grc-generated hier_block") for imp in _imports):
+import os
+import sys
+<% _imports = filter(lambda i: i not in ("import os", "import sys"), _imports) %>\
+sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
+%endif
+%for imp in _imports:
+${imp}
+%endfor
+########################################################
+##Create Class
+##  Write the class declaration for a top or hier block.
+##  The parameter names are the arguments to __init__.
+##  Determine the absolute icon path (wx gui only).
+##  Setup the IO signature (hier block only).
+########################################################
+
+<%block name="class_init"/>\
+%if flow_graph.get_option('thread_safe_setters'):
+
+        self._lock = threading.RLock()
+%endif
+########################################################
+##Create Parameters
+##  Set the parameter to a property of self.
+########################################################
+%if parameters:
+
+        ${DIVIDER}
+        # Parameters
+        ${DIVIDER}
+%endif
+%for param in parameters:
+        ${indent(param.get_var_make())}
+%endfor
+########################################################
+##Create Variables
+########################################################
+%if variables:
+
+        ${DIVIDER}
+        # Variables
+        ${DIVIDER}
+%endif
+%for var in variables:
+        ${indent(var.get_var_make())}
+%endfor
+########################################################
+##Create Message Queues
+########################################################
+%if msgs:
+
+        ${DIVIDER}
+        # Message Queues
+        ${DIVIDER}
+%endif
+%for msg in msgs:
+        ${msg.source_block.get_id()}_msgq_out = ${msg.sink_block.get_id()}_msgq_in = gr.msg_queue(2)
+%endfor
+########################################################
+##Create Blocks
+########################################################
+%if blocks:
+
+        ${DIVIDER}
+        # Blocks
+        ${DIVIDER}
+%endif
+%for blk in filter(lambda b: b.get_make(), blocks):
+    %if blk in variables:
+        ${indent(blk.get_make())}
+    %else:
+        self.${blk.get_id()} = ${indent(blk.get_make())}
+        %if 'alias' in blk.params and blk.params['alias'].get_evaluated():
+        (self.${blk.get_id()}).set_block_alias("${blk.params['alias'].get_evaluated()}")
+        %endif
+        %if 'affinity' in blk.params and blk.params['affinity'].get_evaluated():
+        (self.${blk.get_id()}).set_processor_affinity(${blk.params['affinity'].get_evaluated()})
+        %endif
+        %if len(blk.sources) > 0 and 'minoutbuf' in blk.params and int(blk.params['minoutbuf'].get_evaluated()) > 0:
+        (self.${blk.get_id()}).set_min_output_buffer(${blk.params['minoutbuf'].get_evaluated()})
+        %endif
+        %if len(blk.sources) > 0 and 'maxoutbuf' in blk.params and int(blk.params['maxoutbuf'].get_evaluated()) > 0:
+        (self.${blk.get_id()}).set_max_output_buffer(${blk.params['maxoutbuf'].get_evaluated()})
+        %endif
+    %endif
+%endfor
+########################################################
+##Create Connections
+##  The port name should be the id of the parent block.
+##  However, port names for IO pads should be self.
+########################################################
+%if connections:
+
+        ${DIVIDER}
+        # Connections
+        ${DIVIDER}
+%endif
+%for con in connections:
+## FIXME: hacky hacky! can we do this better? Look at grc/blocks/gr_*_domain.xml
+<%
+    def make_port_sig(port):
+        if port.parent.key in ('pad_source', 'pad_sink'):
+            block = 'self'
+            key = flow_graph.get_pad_port_global_key(port)
+        else:
+            block = 'self.' + port.parent.get_id()
+            key = port.key
+        if not key.isdigit():
+            key = repr(key)
+        return "({}, {})".format(block, key)
+
+    source = con.source_port
+    sink = con.sink_port
+
+    source_str =  make_port_sig(source)
+    sink_str =  make_port_sig(sink)
+%>\
+${"        "+connection_templates[(source.domain, sink.domain)].format(source_str, sink_str)}
+%endfor
+########################################################
+## Close method (mainly for QT gui)
+########################################################
+<%block name="close_method"/>\
+########################################################
+##Create Callbacks
+##  Write a set method for this variable that calls the callbacks
+########################################################
+%for var in parameters + variables:
+<% id = var.get_id() %>
+    def get_${id}(self):
+        return self.${id}
+
+    def set_${id}(self, ${id}):
+    %if flow_graph.get_option('thread_safe_setters'):
+        with self._lock:
+            self.${id} = ${id}
+        %for callback in callbacks[id]:
+            ${indent(callback)}
+        %endfor
+    %else:
+        self.${id} = ${id}
+        %for callback in callbacks[id]:
+        ${indent(callback)}
+        %endfor
+    %endif
+%endfor
+########################################################
+##Create Main
+##  For top block code, generate a main routine.
+##  Instantiate the top block and run as gui or cli.
+########################################################
+<%block name="main"/>\

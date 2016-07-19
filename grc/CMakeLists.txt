@@ -24,6 +24,7 @@ include(GrPython)
 
 GR_PYTHON_CHECK_MODULE("python >= 2.5"     sys          "sys.version.split()[0] >= '2.5'"           PYTHON_MIN_VER_FOUND)
 GR_PYTHON_CHECK_MODULE("Cheetah >= 2.0.0"  Cheetah      "Cheetah.Version >= '2.0.0'"                CHEETAH_FOUND)
+GR_PYTHON_CHECK_MODULE("mako >= 0.4.2"     mako         "mako._version_ >= '0.4.2'"                 MAKO_FOUND)
 GR_PYTHON_CHECK_MODULE("lxml >= 1.3.6"     lxml.etree   "lxml.etree.LXML_VERSION >= (1, 3, 6, 0)"   LXML_FOUND)
 GR_PYTHON_CHECK_MODULE("pygtk >= 2.10.0"   gtk          "gtk.pygtk_version >= (2, 10, 0)"           PYGTK_FOUND)
 GR_PYTHON_CHECK_MODULE("numpy"             numpy        True                                        NUMPY_FOUND)
@@ -36,6 +37,7 @@ if(NOT CMAKE_CROSSCOMPILING)
     set(grc_python_deps
         PYTHON_MIN_VER_FOUND
         CHEETAH_FOUND
+        MAKO_FOUND
         LXML_FOUND
         PYGTK_FOUND
         NUMPY_FOUND
