@@ -38,7 +38,7 @@ this program; if not, write to the Free Software Foundation, Inc.,
         <name>Alpha</name>
         <key>a</key>
         <value>0</value>
-        <type>$out_type</type>
+        <type>($out_type)</type>
     </param>
     <check>$vlen &gt; 0</check>
     <sink>
