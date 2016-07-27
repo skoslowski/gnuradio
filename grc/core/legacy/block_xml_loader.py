@@ -31,7 +31,7 @@ import yaml
 from lxml import etree
 from os import path
 
-from .yaml_output import OrderedDictFlowing, scalar_node
+from .yaml_output import OrderedDictFlowing, scalar_node, GRCDumper
 from . import cheetah_converter
 
 
@@ -49,7 +49,7 @@ def convert_xml(xml_file):
         return
 
     data = convert_block_xml(xml)
-    out = yaml.dump(data, default_flow_style=False, indent=4)
+    out = yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper)
 
     replace = [
         ('params:', '\nparams:'),
@@ -65,6 +65,7 @@ def convert_xml(xml_file):
 
 
 def convert_block_xml(node):
+    no_value = object()
 
     converter = cheetah_converter.Converter(names={
         param_node.findtext('key'): {
@@ -79,51 +80,50 @@ def convert_block_xml(node):
 
     data = OrderedDict()
     data['key'] = key
-    data['name'] = node.findtext('name')
-    data['category'] = node.findtext('category')
+    data['name'] = node.findtext('name') or no_value
+    data['category'] = node.findtext('category') or no_value
 
-    params = [convert_param_xml(param_node, converter) for param_node in node.getiterator('param')]
-    if params:
-        data['params'] = params
+    data['params'] = [convert_param_xml(param_node, converter)
+                      for param_node in node.getiterator('param')] or no_value
+    # data['params'] = {p.pop('key'): p for p in data['params']}
 
-    sinks = [convert_port_xml(port_node, converter) for port_node in node.getiterator('sink')]
-    if sinks:
-        data['sinks'] = sinks
+    data['sinks'] = [convert_port_xml(port_node, converter)
+                     for port_node in node.getiterator('sink')] or no_value
 
-    sources = [convert_port_xml(port_node, converter) for port_node in node.getiterator('source')]
-    if sources:
-        data['sources'] = sources
+    data['sources'] = [convert_port_xml(port_node, converter)
+                       for port_node in node.getiterator('source')] or no_value
 
-    imports = [converter.to_format_string(import_node.text)
+    imports = [converter.to_mako(import_node.text)
                for import_node in node.getiterator('import')]
     if imports:
-        data['import'] = imports if len(imports) > 1 else imports[0]
+        data['imports'] = (imports if len(imports) > 1 else imports[0]) or no_value
+
     make = node.findtext('make') or ''
     if '\n' in make:
-        make = converter.to_format_string(make)
+        make = converter.to_mako(make)
         data['make'] = scalar_node(make, style='|' if '\n' in make else None)
     else:
-        data['make'] = converter.to_format_string(make)
+        data['make'] = converter.to_mako(make) or no_value
 
-    data['callbacks'] = []  # todo
+    data['callbacks'] = [] or no_value # todo
 
     docs = node.findtext('doc')
     if docs:
         docs = docs.strip().replace('\\\n', '').replace('\n\n', '\n')
         data['documentation'] = scalar_node(docs, style='>')
 
-    return data
+    return OrderedDict((key, value) for key, value in data.items() if value is not no_value)
 
 
 def convert_param_xml(node, converter):
     param = OrderedDict()
     param['key'] = node.findtext('key').strip()
     param['name'] = node.findtext('name').strip()
-    param['type'] = converter.to_python(node.findtext('type') or '')
+    param['dtype'] = converter.to_python(node.findtext('type') or '')
 
     value = node.findtext('value')
     if value:
-        param['default'] = value
+        param['value'] = value
 
     # todo: parse hide, tab tags
 

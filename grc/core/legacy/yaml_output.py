@@ -4,46 +4,20 @@ import functools
 import six
 import yaml
 
-
-class Eval(unicode):
-    """String subtype explicitly enable evaluation of the provided expression"""
-    tag = u'!eval'
+from ..utils.yaml_loader import Eval, Mako
 
 
-class Mako(unicode):
-    """String subtype explicitly enable evaluation of the provided expression"""
-    tag = u'!mako'
+class GRCDumper(yaml.Dumper):
+
+    @classmethod
+    def add(cls, data_type):
+        def decorator(func):
+            cls.add_representer(data_type, func)
+            return func
+        return decorator
 
 
-class Chettah(unicode):
-    """String subtype explicitly enable evaluation of the provided expression"""
-    tag = u'!cheetah'
-
-
-class OrderedDictFlowing(OrderedDict):
-    pass
-
-
-def yaml_constructor(data_type):
-    def decorator(func):
-        yaml.add_constructor(data_type.tag, func)
-        return func
-    return decorator
-
-
-def yaml_representer(data_type):
-    def decorator(func):
-        yaml.add_representer(data_type, func)
-        return func
-    return decorator
-
-
-@yaml_constructor(Eval)
-def construct_code_string(loader, node):
-    return Eval(loader.construct_scalar(node))
-
-
-@yaml_representer(Eval)
+@GRCDumper.add(Eval)
 def represent_code_string(representer, data):
     node = representer.represent_scalar(tag=Eval.tag, value=data)
     if "'" in data and '"' not in data:
@@ -51,12 +25,12 @@ def represent_code_string(representer, data):
     return node
 
 
-@yaml_representer(Mako)
+@GRCDumper.add(Mako)
 def represent_mako_string(representer, data):
     return representer.represent_scalar(tag=Mako.tag, value=data)
 
 
-@yaml_representer(OrderedDict)
+@GRCDumper.add(OrderedDict)
 def represent_ordered_mapping(representer, data):
     self = representer
 
@@ -74,14 +48,18 @@ def represent_ordered_mapping(representer, data):
     return node
 
 
-@yaml_representer(OrderedDictFlowing)
+class OrderedDictFlowing(OrderedDict):
+    pass
+
+
+@GRCDumper.add(OrderedDictFlowing)
 def represent_ordered_mapping_flowing(representer, data):
     node = represent_ordered_mapping(representer, data)
     node.flow_style = True
     return node
 
 
-@yaml_representer(yaml.nodes.ScalarNode)
+@GRCDumper.add(yaml.nodes.ScalarNode)
 def represent_node(representer, node):
     return node
 

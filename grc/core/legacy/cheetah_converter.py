@@ -13,7 +13,7 @@ cheetah_substitution = re.compile(
     r'(?P<arg>[_a-zA-Z][_a-zA-Z0-9]*(?:\.[_a-zA-Z][_a-zA-Z0-9]*)?)(?P<eval>\(\))?'
     r'(?(d1)\)|(?(d2)\}|(?(d3)\]|)))$'
 )
-cheetah_inline_if = re.compile(r'#if (?P<cond>.*) then (?P<then>.*?) ?else (?P<else>.*) ?(#|$)')
+cheetah_inline_if = re.compile(r'#if (?P<cond>.*) then (?P<then>.*?) ?else (?P<else>.*?) ?(#|$)')
 
 
 class Python(object):
@@ -22,7 +22,7 @@ class Python(object):
     nested_start = ''
     nested_end = ''
     eval = ''
-    type = yaml_output.Eval
+    type = str  # yaml_output.Eval
 
 
 class FormatString(Python):
@@ -39,7 +39,7 @@ class Mako(Python):
     end = '}'
     nested_start = ''
     nested_end = ''
-    type = yaml_output.Mako
+    type = str
 
 
 class Converter(object):
@@ -64,6 +64,9 @@ class Converter(object):
     def to_format_string(self, expr):
         return self.convert(expr=expr, spec=FormatString)
 
+    def to_mako(self, expr):
+        return self.convert(expr=expr, spec=Mako)
+
     def convert(self, expr, spec=Python):
         if '$' not in expr:
             return expr
@@ -76,7 +79,7 @@ class Converter(object):
                 expr = self.convert_inline_conditional(expr, spec)
             return self.convert_hard(expr, spec)
         except ValueError:
-            return yaml_output.Chettah(expr)
+            return yaml_output.Cheetah(expr)
 
     def convert_simple(self, expr, spec=Python):
         match = cheetah_substitution.match(expr)
