@@ -76,7 +76,7 @@ class Param(Element):
         self._type = type
 
         self._hide = n.get('hide', '')
-        self.tab_label = n.get('tab', Constants.DEFAULT_PARAM_TAB)
+        self.category = n.get('tab', Constants.DEFAULT_PARAM_TAB)
         self._evaluated = None
 
         self.options = []
@@ -430,9 +430,6 @@ class Param(Element):
 
     def get_type(self):
         return self.parent.resolve_dependencies(self._type)
-
-    def get_tab_label(self):
-        return self.tab_label
 
     @nop_write
     @property

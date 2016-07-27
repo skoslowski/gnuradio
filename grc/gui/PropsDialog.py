@@ -68,7 +68,7 @@ class PropsDialog(Gtk.Dialog):
 
         # Params boxes for block parameters
         self._params_boxes = []
-        self._build_param_tab_boxes(block.params)
+        self._build_param_tab_boxes()
 
         # Docs for the block
         self._docs_text_display = doc_view = SimpleTextDisplay()
@@ -107,26 +107,26 @@ class PropsDialog(Gtk.Dialog):
         self.connect('response', self._handle_response)
         self.show_all()  # show all (performs initial gui update)
 
-    def _build_param_tab_boxes(self, params):
-        tab_labels = (p.tab_label for p in self._block.params.values())
+    def _build_param_tab_boxes(self):
+        categories = (p.category for p in self._block.params.values())
 
-        def unique_tab_labels():
+        def unique_categories():
             seen = {Constants.DEFAULT_PARAM_TAB}
             yield Constants.DEFAULT_PARAM_TAB
-            for tab_label in tab_labels:
-                if tab_label in seen:
+            for cat in categories:
+                if cat in seen:
                     continue
-                yield tab_label
-                seen.add(tab_label)
+                yield cat
+                seen.add(cat)
 
-        for tab in unique_tab_labels():
+        for category in unique_categories():
             label = Gtk.Label()
             vbox = Gtk.VBox()
             scroll_box = Gtk.ScrolledWindow()
             scroll_box.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
             scroll_box.add(vbox)
             self.notebook.append_page(scroll_box, label)
-            self._params_boxes.append((tab, label, vbox))
+            self._params_boxes.append((category, label, vbox))
 
     def _params_changed(self):
         """
@@ -169,7 +169,7 @@ class PropsDialog(Gtk.Dialog):
         """
         if force or self._params_changed():
             # hide params box before changing
-            for tab, label, vbox in self._params_boxes:
+            for category, label, vbox in self._params_boxes:
                 vbox.hide()
                 # empty the params box
                 for child in vbox.get_children():
@@ -179,7 +179,7 @@ class PropsDialog(Gtk.Dialog):
                 box_all_valid = True
                 for param in self._block.params.values():
                     # fixme: why do we even rebuild instead of really hiding params?
-                    if param.get_tab_label() != tab or param.get_hide() == 'all':
+                    if param.category != category or param.get_hide() == 'all':
                         continue
                     box_all_valid = box_all_valid and param.is_valid()
 
@@ -188,7 +188,7 @@ class PropsDialog(Gtk.Dialog):
                     vbox.pack_start(input_widget, input_widget.expand, True, 1)
 
                 label.set_markup('<span foreground="{color}">{name}</span>'.format(
-                    color='black' if box_all_valid else 'red', name=Utils.encode(tab)
+                    color='black' if box_all_valid else 'red', name=Utils.encode(category)
                 ))
                 vbox.show()  # show params box with new params
 
