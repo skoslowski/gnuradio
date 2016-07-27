@@ -145,20 +145,19 @@ class Port(Element):
             n: the nested odict
             dir: the direction
         """
-        self._n = n
+        Element.__init__(self, parent)
+
         if n['type'] == 'message':
             n['domain'] = Constants.GR_MESSAGE_DOMAIN
 
         if 'domain' not in n:
             n['domain'] = Constants.DEFAULT_DOMAIN
+
         elif n['domain'] == Constants.GR_MESSAGE_DOMAIN:
             n['key'] = n['name']
             n['type'] = 'message'  # For port color
 
-        # Build the port
-        Element.__init__(self, parent)
-        # Grab the data
-        self.name = n['name']
+        self.name = self._base_name = n['name']
         self.key = n['key']
         self.domain = n.get('domain')
         self._type = n.get('type', '')
@@ -278,12 +277,12 @@ class Port(Element):
         """
         # Add index to master port name if there are no clones yet
         if not self.clones:
-            self.name = self._n['name'] + '0'
+            self.name = self._base_name + '0'
             # Also update key for none stream ports
             if not self.key.isdigit():
                 self.key = self.name
 
-        name = self._n['name'] + str(len(self.clones) + 1)
+        name = self._base_name + str(len(self.clones) + 1)
         # Dummy value 99999 will be fixed later
         key = '99999' if self.key.isdigit() else name
 
@@ -304,7 +303,7 @@ class Port(Element):
         self.clones.remove(port)
         # Remove index from master port name if there are no more clones
         if not self.clones:
-            self.name = self._n['name']
+            self.name = self._base_name
             # Also update key for none stream ports
             if not self.key.isdigit():
                 self.key = self.name
