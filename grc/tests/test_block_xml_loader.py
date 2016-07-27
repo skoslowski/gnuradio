@@ -17,19 +17,26 @@
 
 from __future__ import print_function
 import glob
-import ast
 
 from os import path
 
 from grc.core.legacy.yaml_output import yaml
+from grc.core.utils.yaml_checker import SchemaChecker
 from grc.core.legacy.block_xml_loader import convert_xml
 
 
 def test_block_xml():
+    checker = SchemaChecker()
     test_file_dir = path.join(path.dirname(__file__), 'resources')
     for filename in glob.iglob(path.join(test_file_dir, '*.xml')):
         with open(filename) as fp:
             out = convert_xml(fp)
+        data = yaml.load(out)
+        passed = checker.run(data)
+        assert passed, checker.messages
+        assert not checker.messages
+        # for r in messages:
+        #     print(str(r)))
         # print('', '', out, sep='\n')
 
 
