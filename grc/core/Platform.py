@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, print_function
 
+import glob
 import os
 import sys
 
@@ -140,6 +141,13 @@ class Platform(Element):
         ParseXML.xml_failures.clear()
 
         # Try to parse and load blocks
+        for file_path in self.iter_yml_files():
+            try:
+                if file_path.endswith('.block.yml'):
+                    self.load_block_description()
+            except Exception as e:
+                raise
+
         for xml_file in self.iter_xml_files():
             try:
                 if xml_file.endswith("block_tree.xml"):
@@ -153,7 +161,6 @@ class Platform(Element):
                 pass
             except Exception as e:
                 raise
-                print('Warning: XML parsing failed:\n\t%r\n\tIgnoring: %s' % (e, xml_file), file=sys.stderr)
 
         # Add blocks to block tree
         for key, block in six.iteritems(self.blocks):
@@ -181,12 +188,42 @@ class Platform(Element):
                     for filename in sorted(f for f in filenames if f.endswith('.xml')):
                         yield os.path.join(dirpath, filename)
 
+    @staticmethod
+    def _adapt_block(n):
+        if n.pop('throttle', ''):
+            flags = n.setdefault('flags', '')
+            n['flags'] = flags + ' ' + Constants.BLOCK_FLAG_THROTTLE
+
+        # renames
+        for name in 'import check callback param sink source'.split():
+            n[name + 's'] = n.pop(name, [])
+        n['documentation'] = n.pop('doc', '')
+
+        for pn in n['params']:
+            pn['dtype'] = pn.pop('type', '')
+            category = pn.pop('tab', None)
+            if category:
+                pn['category'] = category
+            pn['options'] = options = pn.pop('option', [])
+            for on in options:
+                on['value'] = on.pop('key')
+                try:
+                    on['extra'] = dict(opt.split(':') for opt in pn.pop('opt', []))
+                except TypeError:
+                    raise ValueError('Error separating opts into key:value')
+
+        for pn in (n['sinks'] + n['sources']):
+            pn['dtype'] = pn.pop('type', '')
+            if pn['dtype'] == 'message':
+                pn['domain'] = Constants.GR_MESSAGE_DOMAIN
+
     def load_block_xml(self, xml_file):
         """Load block description from xml file"""
         # Validate and import
         ParseXML.validate_dtd(xml_file, Constants.BLOCK_DTD)
         n = ParseXML.from_file(xml_file).get('block', {})
         n['block_wrapper_path'] = xml_file  # inject block wrapper path
+        self._adapt_block(n)
         key = n.pop('key')
 
         if key in self.blocks:
@@ -271,6 +308,23 @@ class Platform(Element):
             docstring = docstring.replace('\n\n', '\n').strip()
             docs[match] = docstring
         self.block_docstrings[key] = docs
+
+    ##############################################
+    # YAML
+    ##############################################
+    def iter_yml_files(self):
+        """Iterator for block descriptions and category trees"""
+        for block_path in self.config.block_paths:
+            if os.path.isfile(block_path):
+                yield block_path
+            elif os.path.isdir(block_path):
+                pattern = os.path.join(block_path, '**.yml')
+                yield_from = glob.iglob(pattern)
+                for file_path in yield_from:
+                    yield file_path
+
+    def load_block_description(self):
+        pass
 
     ##############################################
     # Access

@@ -71,6 +71,10 @@ PORT_SCHEME = expand(
 
     dtype=str_,
     vlen=(int, str_),
+
+    nports=(int, str_),
+    optional=(bool, int, str_),
+    hide=(bool, str_),
 )
 
 BLOCK_SCHEME = expand(
@@ -83,10 +87,14 @@ BLOCK_SCHEME = expand(
     sinks=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
     sources=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
 
-    imports=(list, str),
-    make=str_,
+    checks=(list, str_),
+    var_value=str_,
 
+    imports=(list, str),
+    var_make=str_,
+    make=str_,
     callbacks=(list, str_),
+
     documentation=str_,
 )
 

@@ -53,29 +53,31 @@ class Block(Element):
 
     STATE_LABELS = ['disabled', 'enabled', 'bypassed']
 
-    def __init__(self, parent, key, name, **n):
+    def __init__(self, parent, key, **n):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
 
         self.key = key
-        self.name = name
+        self.name = n.get('name', key.title())
         self.category = [cat.strip() for cat in n.get('category', '').split('/') if cat.strip()]
         self.flags = n.get('flags', '')
-        self._doc = n.get('doc', '').strip('\n').replace('\\\n', '')
 
-        # Backwards compatibility
-        if n.get('throttle') and BLOCK_FLAG_THROTTLE not in self.flags:
-            self.flags += BLOCK_FLAG_THROTTLE
+        params_n = n.get('params', [])
+        sources_n = n.get('sources', [])
+        sinks_n = n.get('sinks', [])
 
-        self._imports = [i.strip() for i in n.get('import', [])]
-        self._make = n.get('make')
-        self._var_make = n.get('var_make')
         self._var_value = n.get('var_value', '$value')
-        self._checks = n.get('check', [])
-        self._callbacks = n.get('callback', [])
+        self._checks = n.get('checks', [])
 
+        self._imports = [i.strip() for i in n.get('imports', [])]
+        self._var_make = n.get('var_make')
+        self._make = n.get('make')
+        self._callbacks = n.get('callbacks', [])
+
+        self._doc = n.get('documentation', '').strip('\n').replace('\\\n', '')
         self._grc_source = n.get('grc_source', '')
         self.block_wrapper_path = n.get('block_wrapper_path')
+        # end of args ########################################################
 
         # Virtual source/sink and pad source/sink blocks are
         # indistinguishable from normal GR blocks. Make explicit
@@ -89,10 +91,6 @@ class Block(Element):
         # Disable blocks that are virtual/pads or variables
         if self.is_virtual_or_pad or self.is_variable:
             self.flags += BLOCK_FLAG_DISABLE_BYPASS
-
-        params_n = n.get('param', [])
-        sources_n = n.get('source', [])
-        sinks_n = n.get('sink', [])
 
         # Get list of param tabs
         self.params = collections.OrderedDict()
@@ -117,21 +115,21 @@ class Block(Element):
         def add_param(key, **kwargs):
             self.params[key] = param_factory(self, key=key, **kwargs)
 
-        add_param(key='id', name='ID', type='id')
+        add_param(key='id', name='ID', dtype='id')
 
         if not (self.is_virtual_or_pad or self.is_variable or self.key == 'options'):
-            add_param(key='alias', name='Block Alias', type='string',
-                      hide='part', tab=ADVANCED_PARAM_TAB)
+            add_param(key='alias', name='Block Alias', dtype='string',
+                      hide='part', category=ADVANCED_PARAM_TAB)
 
         if not self.is_virtual_or_pad and (has_sources or has_sinks):
-            add_param(key='affinity', name='Core Affinity', type='int_vector',
+            add_param(key='affinity', name='Core Affinity', dtype='int_vector',
                       hide='part', tab=ADVANCED_PARAM_TAB)
 
         if not self.is_virtual_or_pad and has_sources:
-            add_param(key='minoutbuf', name='Min Output Buffer', type='int',
-                      hide='part', value='0', tab=ADVANCED_PARAM_TAB)
-            add_param(key='maxoutbuf', name='Max Output Buffer', type='int',
-                      hide='part', value='0', tab=ADVANCED_PARAM_TAB)
+            add_param(key='minoutbuf', name='Min Output Buffer', dtype='int',
+                      hide='part', value='0', category=ADVANCED_PARAM_TAB)
+            add_param(key='maxoutbuf', name='Max Output Buffer', dtype='int',
+                      hide='part', value='0', category=ADVANCED_PARAM_TAB)
 
         base_params_n = {n['key']: n for n in params_n}
         for param_n in params_n:
@@ -143,8 +141,8 @@ class Block(Element):
             extended_param_n.update(param_n)
             self.params[key] = param_factory(self, **extended_param_n)
 
-        add_param(key='comment', name='Comment', type='_multiline', hide='part',
-                  value='', tab=ADVANCED_PARAM_TAB)
+        add_param(key='comment', name='Comment', dtype='_multiline', hide='part',
+                  value='', category=ADVANCED_PARAM_TAB)
 
     def _init_ports(self, ports_n, direction):
         port_factory = self.parent_platform.get_new_port
@@ -707,7 +705,7 @@ class EPyBlock(Block):
                 param.default = str(value)
             except KeyError:  # need to make a new param
                 param = param_factory(
-                    parent=self,  key=key, type='raw', value=value,
+                    parent=self,  key=key, dtype='raw', value=value,
                     name=key.replace('_', ' ').title(),
                 )
                 setattr(param, '__epy_param__', True)
@@ -729,7 +727,7 @@ class EPyBlock(Block):
                 ports_to_remove.remove(port_current)
                 port, port_current = port_current, next(iter_ports, None)
             else:
-                n = dict(name=label + str(key), type=port_type, key=key)
+                n = dict(name=label + str(key), dtype=port_type, key=key)
                 if port_type == 'message':
                     n['name'] = key
                     n['optional'] = '1'
@@ -759,7 +757,7 @@ class DummyBlock(Block):
         param_factory = self.parent_platform.get_new_param
         for param_n in params_n:
             key = param_n['key']
-            self.params.setdefault(key, param_factory(self, key=key, name=key, type='string'))
+            self.params.setdefault(key, param_factory(self, key=key, name=key, dtype='string'))
 
     def is_valid(self):
         return False
@@ -770,7 +768,7 @@ class DummyBlock(Block):
 
     def add_missing_port(self, key, dir):
         port = self.parent_platform.get_new_port(
-            parent=self, direction=dir, key=key, name='?', type='',
+            parent=self, direction=dir, key=key, name='?', dtype='',
         )
         if port.is_source:
             self.sources.append(port)

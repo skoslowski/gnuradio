@@ -107,38 +107,30 @@ class Port(Element):
     is_clone = False
 
     def __init__(self, parent, direction, **n):
-        """
-        Make a new port from nested data.
-
-        Args:
-            block: the parent element
-            n: the nested odict
-            dir: the direction
-        """
+        """Make a new port from nested data."""
         Element.__init__(self, parent)
 
-        if n['type'] == 'message':
-            n['domain'] = Constants.GR_MESSAGE_DOMAIN
-
-        if 'domain' not in n:
-            n['domain'] = Constants.DEFAULT_DOMAIN
-
-        elif n['domain'] == Constants.GR_MESSAGE_DOMAIN:
-            n['key'] = n['name']
-            n['type'] = 'message'  # For port color
-
-        self.name = self._base_name = n['name']
-        self.key = n['key']
-        self.domain = n.get('domain')
-        self._type = n.get('type', '')
-        self.inherit_type = not self._type
-        self._hide = n.get('hide', '')
         self._dir = direction
-        self._hide_evaluated = False  # Updated on rewrite()
+        self.key = key = n['key']
+        self.name = self._base_name = n.get(
+            'name', key if not key.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + key
+        )
+
+        self.domain = domain = n.get('domain', Constants.DEFAULT_DOMAIN)
+        self._type = n.get('dtype', '')
+        self._vlen = n.get('vlen', '')
+
+        if domain == Constants.GR_MESSAGE_DOMAIN:
+            self.key = self.name
+            self._type = 'message'  # For port color FIXME
 
         self._nports = n.get('nports', '')
-        self._vlen = n.get('vlen', '')
-        self.optional = bool(n.get('optional'))
+        self.optional = bool(n.get('optional', ''))
+        self._hide = n.get('hide', '')
+        # end of args ########################################################
+
+        self.inherit_type = not self._type
+        self._hide_evaluated = False  # Updated on rewrite()
         self.clones = []  # References to cloned ports (for nports > 1)
 
     def __str__(self):

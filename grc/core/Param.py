@@ -67,22 +67,26 @@ class Param(Element):
 
     is_param = True
 
-    def __init__(self, parent, key, name, type='raw', value='', **n):
+    def __init__(self, parent, key, name, dtype='raw', value='', **n):
         """Make a new param from nested data"""
         super(Param, self).__init__(parent)
         self.key = key
         self._name = name
-        self.value = self.default = value
-        self._type = type
+        self._type = dtype
 
+        self.value = self.default = value
+        options_n = n.get('options', [])
+
+        self.category = n.get('category', Constants.DEFAULT_PARAM_TAB)
         self._hide = n.get('hide', '')
-        self.category = n.get('tab', Constants.DEFAULT_PARAM_TAB)
+        # end of args ########################################################
+
         self._evaluated = None
 
         self.options = []
         self.options_names = []
         self.options_opts = {}
-        self._init_options(options_n=n.get('option', []))
+        self._init_options(options_n)
 
         self._init = False
         self._hostage_cells = list()
@@ -90,15 +94,15 @@ class Param(Element):
 
     def _init_options(self, options_n):
         """Create the Option objects from the n data"""
-        option_keys = set()
+        option_values = set()
         for option_n in options_n:
-            key, name = option_n['key'], option_n['name']
+            value, name = option_n['value'], option_n['name']
             # Test against repeated keys
-            if key in option_keys:
-                raise KeyError('Key "{}" already exists in options'.format(key))
-            option_keys.add(key)
+            if value in option_values:
+                raise KeyError('Value "{}" already exists in options'.format(value))
+            option_values.add(value)
             # Store the option
-            self.options.append(key)
+            self.options.append(value)
             self.options_names.append(name)
 
         if self.is_enum():
@@ -107,21 +111,19 @@ class Param(Element):
     def _init_enum(self, options_n):
         opt_ref = None
         for option_n in options_n:
-            key, opts_raw = option_n['key'], option_n.get('opt', [])
-            try:
-                self.options_opts[key] = opts = dict(opt.split(':') for opt in opts_raw)
-            except TypeError:
-                raise ValueError('Error separating opts into key:value')
+            value = option_n['value']
+            opts = self.options_opts[value] = option_n['extra']
 
             if opt_ref is None:
                 opt_ref = set(opts.keys())
             elif opt_ref != set(opts):
                 raise ValueError('Opt keys ({}) are not identical across all options.'
                                  ''.format(', '.join(opt_ref)))
+        default = self.options[0] if self.options else ''
         if not self.value:
-            self.value = self.default = self.options[0]
+            self.value = self.default = default
         elif self.value not in self.options:
-            self.value = self.default = self.options[0]  # TODO: warn
+            self.value = self.default = default  # TODO: warn
             # raise ValueError('The value {!r} is not in the possible values of {}.'
             #                  ''.format(self.get_value(), ', '.join(self.options)))
 
