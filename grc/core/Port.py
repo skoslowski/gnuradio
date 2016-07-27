@@ -115,20 +115,19 @@ class Port(Element):
             n: the nested odict
             dir: the direction
         """
-        self._n = n
+        Element.__init__(self, parent)
+
         if n['type'] == 'message':
             n['domain'] = Constants.GR_MESSAGE_DOMAIN
 
         if 'domain' not in n:
             n['domain'] = Constants.DEFAULT_DOMAIN
+
         elif n['domain'] == Constants.GR_MESSAGE_DOMAIN:
             n['key'] = n['name']
             n['type'] = 'message'  # For port color
 
-        # Build the port
-        Element.__init__(self, parent)
-        # Grab the data
-        self.name = n['name']
+        self.name = self._base_name = n['name']
         self.key = n['key']
         self.domain = n.get('domain')
         self._type = n.get('type', '')
@@ -139,7 +138,7 @@ class Port(Element):
 
         self._nports = n.get('nports', '')
         self._vlen = n.get('vlen', '')
-        self._optional = bool(n.get('optional'))
+        self.optional = bool(n.get('optional'))
         self.clones = []  # References to cloned ports (for nports > 1)
 
     def __str__(self):
@@ -155,7 +154,7 @@ class Port(Element):
         platform = self.parent_platform
         if self.domain not in platform.domains:
             self.add_error_message('Domain key "{}" is not registered.'.format(self.domain))
-        if not self.get_enabled_connections() and not self.get_optional():
+        if not self.get_enabled_connections() and not self.optional:
             self.add_error_message('Port is not connected.')
 
     def rewrite(self):
@@ -246,9 +245,6 @@ class Port(Element):
         except:
             return 1
 
-    def get_optional(self):
-        return bool(self._optional)
-
     def add_clone(self):
         """
         Create a clone of this (master) port and store a reference in self._clones.
@@ -261,12 +257,12 @@ class Port(Element):
         """
         # Add index to master port name if there are no clones yet
         if not self.clones:
-            self.name = self._n['name'] + '0'
+            self.name = self._base_name + '0'
             # Also update key for none stream ports
             if not self.key.isdigit():
                 self.key = self.name
 
-        name = self._n['name'] + str(len(self.clones) + 1)
+        name = self._base_name + str(len(self.clones) + 1)
         # Dummy value 99999 will be fixed later
         key = '99999' if self.key.isdigit() else name
 
@@ -287,7 +283,7 @@ class Port(Element):
         self.clones.remove(port)
         # Remove index from master port name if there are no more clones
         if not self.clones:
-            self.name = self._n['name']
+            self.name = self._base_name
             # Also update key for none stream ports
             if not self.key.isdigit():
                 self.key = self.name
