@@ -117,7 +117,7 @@ class Param(CoreParam):
         if not self.is_valid():
             return _truncate(value)
         if value in self.options:
-            return self.options_names[self.options.index(value)]
+            return self.options[value]  # its name
 
         ##################################################
         # Split up formatting by type

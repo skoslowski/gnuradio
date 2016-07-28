@@ -199,6 +199,7 @@ class Platform(Element):
         for name in 'import check callback param sink source'.split():
             n[name + 's'] = n.pop(name, [])
         n['documentation'] = n.pop('doc', '')
+        n['value'] = n.pop('var_value', '$value' if n['key'].startswith('variable') else '')
 
         for pn in n['params']:
             pn['dtype'] = pn.pop('type', '')
@@ -209,7 +210,7 @@ class Platform(Element):
             for on in options:
                 on['value'] = on.pop('key')
                 try:
-                    on['extra'] = dict(opt.split(':') for opt in pn.pop('opt', []))
+                    on['extra'] = dict(opt.split(':') for opt in on.pop('opt', []))
                 except TypeError:
                     raise ValueError('Error separating opts into key:value')
 
@@ -354,8 +355,8 @@ class Platform(Element):
     def get_generate_options(self):
         gen_opts = self.blocks['options'].get_param('generate_options')
         generate_mode_default = gen_opts.get_value()
-        return [(key, name, key == generate_mode_default)
-                for key, name in zip(gen_opts.options, gen_opts.options_names)]
+        return [(value, name, value == generate_mode_default)
+                for value, name in gen_opts.options.items()]
 
     ##############################################
     # Factories
@@ -364,6 +365,7 @@ class Platform(Element):
     Generator = Generator
     FlowGraph = FlowGraph
     Connection = Connection
+
     block_classes = {
         None: Block.Block,  # default
         'epy_block': Block.EPyBlock,
