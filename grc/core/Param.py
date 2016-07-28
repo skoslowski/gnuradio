@@ -52,9 +52,11 @@ class TemplateArg(object):
         self._param = param
 
     def __getitem__(self, item):
-        param = self._param
-        opts = param.options_opts[param.get_value()]
-        return str(opts[item]) if param.is_enum() else NotImplemented
+        try:
+            attribs = self._param.options.opts[item]
+        except KeyError:
+            return NotImplemented
+        return str(attribs[self._param.get_value()])
 
     def __str__(self):
         return str(self._param.to_code())
@@ -67,65 +69,67 @@ class Param(Element):
 
     is_param = True
 
-    def __init__(self, parent, key, name, dtype='raw', value='', **n):
+    def __init__(self, parent, key, name='', dtype='raw', value='',
+                 options=None, category='', hide=False, **kwargs):
         """Make a new param from nested data"""
         super(Param, self).__init__(parent)
         self.key = key
-        self._name = name
+        self._name = name or key.title()
         self._type = dtype
 
         self.value = self.default = value
-        options_n = n.get('options', [])
+        self.options = self._init_options(options or [])
 
-        self.category = n.get('category', Constants.DEFAULT_PARAM_TAB)
-        self._hide = n.get('hide', '')
+        self.category = category or Constants.DEFAULT_PARAM_TAB
+        self._hide = hide or ''
         # end of args ########################################################
 
         self._evaluated = None
-
-        self.options = []
-        self.options_names = []
-        self.options_opts = {}
-        self._init_options(options_n)
-
         self._init = False
         self._hostage_cells = list()
         self.template_arg = TemplateArg(self)
 
     def _init_options(self, options_n):
         """Create the Option objects from the n data"""
+        options = collections.OrderedDict()
+
         option_values = set()
         for option_n in options_n:
-            value, name = option_n['value'], option_n['name']
+            value, name = option_n['value'], str(option_n['name'])
             # Test against repeated keys
             if value in option_values:
                 raise KeyError('Value "{}" already exists in options'.format(value))
             option_values.add(value)
             # Store the option
-            self.options.append(value)
-            self.options_names.append(name)
+            options[value] = name
 
-        if self.is_enum():
-            self._init_enum(options_n)
-
-    def _init_enum(self, options_n):
-        opt_ref = None
-        for option_n in options_n:
-            value = option_n['value']
-            opts = self.options_opts[value] = option_n['extra']
-
-            if opt_ref is None:
-                opt_ref = set(opts.keys())
-            elif opt_ref != set(opts):
-                raise ValueError('Opt keys ({}) are not identical across all options.'
-                                 ''.format(', '.join(opt_ref)))
-        default = self.options[0] if self.options else ''
+        default = next(iter(options)) if options else ''
         if not self.value:
             self.value = self.default = default
-        elif self.value not in self.options:
-            self.value = self.default = default  # TODO: warn
-            # raise ValueError('The value {!r} is not in the possible values of {}.'
-            #                  ''.format(self.get_value(), ', '.join(self.options)))
+
+        if self.is_enum():
+            options.opts = self._init_enum(options_n)
+
+            if self.value not in options:
+                self.value = self.default = default  # TODO: warn
+                # raise ValueError('The value {!r} is not in the possible values of {}.'
+                #                  ''.format(self.get_value(), ', '.join(self.options)))
+        else:
+            options.opts = {}
+        return options
+
+    def _init_enum(self, options_n):
+        opts = collections.defaultdict(dict)
+        for option_n in options_n:
+            value, attribs = option_n['value'], option_n.get('extra', {})
+            for key in (attribs if opts.default_factory else opts):
+                try:
+                    opts[key][value] = attribs[key]
+                except KeyError:
+                    raise ValueError('attrib keys ({}) are not identical across all options.'
+                                     ''.format(', '.join(opts)))
+            opts.default_factory = None
+        return opts
 
     def __str__(self):
         return 'Param - {}({})'.format(self.name, self.key)
@@ -417,7 +421,7 @@ class Param(Element):
     def get_value(self):
         value = self.value
         if self.is_enum() and value not in self.options:
-            value = self.options[0]
+            value = self.default
             self.set_value(value)
         return value
 
@@ -437,12 +441,6 @@ class Param(Element):
     @property
     def name(self):
         return self.parent.resolve_dependencies(self._name).strip()
-
-    ##############################################
-    # Access Options
-    ##############################################
-    def opt_value(self, key):
-        return self.options_opts[self.get_value()][key]
 
     ##############################################
     # Import/Export Methods

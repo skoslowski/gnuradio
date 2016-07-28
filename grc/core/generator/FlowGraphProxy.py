@@ -66,11 +66,13 @@ class FlowGraphProxy(object):  # TODO: move this in a refactored Generator
             self.get_pad_sinks() if direction in ('source', 'out') else []
         ports = []
         for pad in pads:
+            type_param = pad.get_param('type')
+            size = type_param.options.opts[type_param.get_value()]['size']
             master = {
                 'label': str(pad.get_param('label').get_evaluated()),
                 'type': str(pad.get_param('type').get_evaluated()),
                 'vlen': str(pad.get_param('vlen').get_value()),
-                'size': pad.get_param('type').opt_value('size'),
+                'size': size,
                 'optional': bool(pad.get_param('optional').get_evaluated()),
             }
             num_ports = pad.get_param('num_streams').get_evaluated()

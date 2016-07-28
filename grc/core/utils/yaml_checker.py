@@ -25,13 +25,6 @@ import six
 Spec = collections.namedtuple('Spec', 'types required item_scheme')
 
 
-class Message(collections.namedtuple('Message', 'path type message')):
-    format = '{path}: {type}: {message}'
-
-    def __str__(self):
-        return self.format.format(**self._asdict())
-
-
 def expand(**kwargs):
     def expand_spec(spec):
         if not isinstance(spec, Spec):
@@ -45,12 +38,12 @@ def expand(**kwargs):
 
 str_ = six.string_types
 
+
 OPTIONS_SCHEME = expand(
     name=str_,
     value=object,
     extra=dict,
 )
-
 
 PARAM_SCHEME = expand(
     key=Spec(types=str_, required=True, item_scheme=None),
@@ -97,6 +90,13 @@ BLOCK_SCHEME = expand(
 
     documentation=str_,
 )
+
+
+class Message(collections.namedtuple('Message', 'path type message')):
+    format = '{path}: {type}: {message}'
+
+    def __str__(self):
+        return self.format.format(**self._asdict())
 
 
 class SchemaChecker(object):

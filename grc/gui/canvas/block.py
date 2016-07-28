@@ -353,10 +353,10 @@ class Block(CoreBlock, Drawable):
 
         # Try to increment the enum by direction
         try:
-            keys = list(type_param.options)
-            old_index = keys.index(type_param.get_value())
-            new_index = (old_index + direction + len(keys)) % len(keys)
-            type_param.set_value(keys[new_index])
+            values = list(type_param.options)
+            old_index = values.index(type_param.get_value())
+            new_index = (old_index + direction + len(values)) % len(values)
+            type_param.set_value(values[new_index])
             return True
         except:
             return False

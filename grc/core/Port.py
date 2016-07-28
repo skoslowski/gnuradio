@@ -106,27 +106,27 @@ class Port(Element):
     is_port = True
     is_clone = False
 
-    def __init__(self, parent, direction, **n):
+    def __init__(self, parent, direction, key, name='', domain='', dtype='',
+                 vlen='', nports='', optional=False, hide='', **kwargs):
         """Make a new port from nested data."""
         Element.__init__(self, parent)
 
         self._dir = direction
-        self.key = key = n['key']
-        self.name = self._base_name = n.get(
-            'name', key if not key.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + key
-        )
+        self.key = key
+        default_name = key if not key.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + key
+        self.name = self._base_name = name or default_name
 
-        self.domain = domain = n.get('domain', Constants.DEFAULT_DOMAIN)
-        self._type = n.get('dtype', '')
-        self._vlen = n.get('vlen', '')
+        self.domain = domain or Constants.DEFAULT_DOMAIN
+        self._type = dtype
+        self._vlen = vlen
 
         if domain == Constants.GR_MESSAGE_DOMAIN:
             self.key = self.name
             self._type = 'message'  # For port color FIXME
 
-        self._nports = n.get('nports', '')
-        self.optional = bool(n.get('optional', ''))
-        self._hide = n.get('hide', '')
+        self._nports = nports
+        self.optional = bool(optional)
+        self._hide = hide
         # end of args ########################################################
 
         self.inherit_type = not self._type

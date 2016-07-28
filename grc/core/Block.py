@@ -53,20 +53,21 @@ class Block(Element):
 
     STATE_LABELS = ['disabled', 'enabled', 'bypassed']
 
-    def __init__(self, parent, key, **n):
+    def __init__(self, parent, key, name='', category='', flags='',
+                 params=None, sinks=None, sources=None, **n):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
 
         self.key = key
-        self.name = n.get('name', key.title())
-        self.category = [cat.strip() for cat in n.get('category', '').split('/') if cat.strip()]
-        self.flags = n.get('flags', '')
+        self.name = name or key.title()
+        self.category = [cat.strip() for cat in category.split('/') if cat.strip()]
+        self.flags = flags
 
-        params_n = n.get('params', [])
-        sources_n = n.get('sources', [])
-        sinks_n = n.get('sinks', [])
+        # params_n = n.get('params', [])
+        # sources_n = n.get('sources', [])
+        # sinks_n = n.get('sinks', [])
 
-        self._var_value = n.get('var_value', '$value')
+        self._var_value = n.get('value', '')
         self._checks = n.get('checks', [])
 
         self._imports = [i.strip() for i in n.get('imports', [])]
@@ -77,43 +78,32 @@ class Block(Element):
         self._doc = n.get('documentation', '').strip('\n').replace('\\\n', '')
         self._grc_source = n.get('grc_source', '')
         self.block_wrapper_path = n.get('block_wrapper_path')
+
         # end of args ########################################################
 
-        # Virtual source/sink and pad source/sink blocks are
-        # indistinguishable from normal GR blocks. Make explicit
-        # checks for them here since they have no work function or
-        # buffers to manage.
-        self.is_virtual_or_pad = self.key in (
-            "virtual_source", "virtual_sink", "pad_source", "pad_sink")
-        self.is_variable = self.key.startswith('variable')
-        self.is_import = (self.key == 'import')
-
-        # Disable blocks that are virtual/pads or variables
         if self.is_virtual_or_pad or self.is_variable:
             self.flags += BLOCK_FLAG_DISABLE_BYPASS
 
-        # Get list of param tabs
-        self.params = collections.OrderedDict()
-        self._init_params(
-            params_n=params_n,
-            has_sinks=len(sinks_n),
-            has_sources=len(sources_n)
-        )
+        self.params = self._init_params(params or [], has_sinks=bool(sinks),
+                                        has_sources=bool(sources))
+        self.sinks = self._init_ports(sinks or [], direction='sink')
+        self.sources = self._init_ports(sources or [], direction='source')
 
-        self.sources = self._init_ports(sources_n, direction='source')
-        self.sinks = self._init_ports(sinks_n, direction='sink')
+        # end of sub args ####################################################
+
         self.active_sources = []  # on rewrite
         self.active_sinks = []  # on rewrite
 
         self.states = {'_enabled': True}
 
-        self._init_bus_ports(n)
+        self._init_bus_ports(n)  # todo: rewrite
 
     def _init_params(self, params_n, has_sources, has_sinks):
+        params = collections.OrderedDict()
         param_factory = self.parent_platform.get_new_param
 
         def add_param(key, **kwargs):
-            self.params[key] = param_factory(self, key=key, **kwargs)
+            params[key] = param_factory(self, key=key, **kwargs)
 
         add_param(key='id', name='ID', dtype='id')
 
@@ -134,19 +124,20 @@ class Block(Element):
         base_params_n = {n['key']: n for n in params_n}
         for param_n in params_n:
             key = param_n['key']
-            if key in self.params:
+            if key in params:
                 raise Exception('Key "{}" already exists in params'.format(key))
 
             extended_param_n = base_params_n.get(param_n.pop('base_key', None), {})
             extended_param_n.update(param_n)
-            self.params[key] = param_factory(self, **extended_param_n)
+            params[key] = param_factory(self, **extended_param_n)
 
         add_param(key='comment', name='Comment', dtype='_multiline', hide='part',
                   value='', category=ADVANCED_PARAM_TAB)
+        return params
 
     def _init_ports(self, ports_n, direction):
-        port_factory = self.parent_platform.get_new_port
         ports = []
+        port_factory = self.parent_platform.get_new_port
         port_keys = set()
         stream_port_keys = itertools.count()
         for i, port_n in enumerate(ports_n):
@@ -258,6 +249,18 @@ class Block(Element):
     ##############################################
     # props
     ##############################################
+
+    @lazy_property
+    def is_virtual_or_pad(self):
+        return self.key in ("virtual_source", "virtual_sink", "pad_source", "pad_sink")
+
+    @lazy_property
+    def is_variable(self):
+        return bool(self._var_value)
+
+    @lazy_property
+    def is_import(self):
+        return self.key == 'import'
 
     @lazy_property
     def is_throtteling(self):
