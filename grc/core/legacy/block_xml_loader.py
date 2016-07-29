@@ -134,7 +134,7 @@ def convert_param_xml(node, converter):
         option['value'] = option_n.findtext('key')
 
         opts = (opt.text for opt in option_n.getiterator('opt'))
-        option['extra'] = OrderedDictFlowing(
+        option['attributes'] = OrderedDictFlowing(
             opt_n.split(':', 2) for opt_n in opts if ':' in opt_n
         )
         options.append(option)

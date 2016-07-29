@@ -52,11 +52,9 @@ class TemplateArg(object):
         self._param = param
 
     def __getitem__(self, item):
-        try:
-            attribs = self._param.options.opts[item]
-        except KeyError:
-            return NotImplemented
-        return str(attribs[self._param.get_value()])
+        param = self._param
+        attributes = param.options.attributes[param.get_value()]
+        return str(attributes.get(item)) or NotImplemented
 
     def __str__(self):
         return str(self._param.to_code())
@@ -92,44 +90,26 @@ class Param(Element):
     def _init_options(self, options_n):
         """Create the Option objects from the n data"""
         options = collections.OrderedDict()
+        options.attributes = collections.defaultdict(dict)
 
-        option_values = set()
         for option_n in options_n:
             value, name = option_n['value'], str(option_n['name'])
             # Test against repeated keys
-            if value in option_values:
+            if value in options:
                 raise KeyError('Value "{}" already exists in options'.format(value))
-            option_values.add(value)
             # Store the option
             options[value] = name
+            options.attributes[value] = option_n.get('attributes', {})
 
         default = next(iter(options)) if options else ''
         if not self.value:
             self.value = self.default = default
 
-        if self.is_enum():
-            options.opts = self._init_enum(options_n)
-
-            if self.value not in options:
-                self.value = self.default = default  # TODO: warn
-                # raise ValueError('The value {!r} is not in the possible values of {}.'
-                #                  ''.format(self.get_value(), ', '.join(self.options)))
-        else:
-            options.opts = {}
+        if self.is_enum() and self.value not in options:
+            self.value = self.default = default  # TODO: warn
+            # raise ValueError('The value {!r} is not in the possible values of {}.'
+            #                  ''.format(self.get_value(), ', '.join(self.options)))
         return options
-
-    def _init_enum(self, options_n):
-        opts = collections.defaultdict(dict)
-        for option_n in options_n:
-            value, attribs = option_n['value'], option_n.get('extra', {})
-            for key in (attribs if opts.default_factory else opts):
-                try:
-                    opts[key][value] = attribs[key]
-                except KeyError:
-                    raise ValueError('attrib keys ({}) are not identical across all options.'
-                                     ''.format(', '.join(opts)))
-            opts.default_factory = None
-        return opts
 
     def __str__(self):
         return 'Param - {}({})'.format(self.name, self.key)

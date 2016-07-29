@@ -209,12 +209,13 @@ class Platform(Element):
             for on in options:
                 on['value'] = on.pop('key')
                 try:
-                    on['extra'] = dict(opt.split(':') for opt in on.pop('opt', []))
+                    on['attributes'] = dict(opt.split(':') for opt in on.pop('opt', []))
                 except TypeError:
                     raise ValueError('Error separating opts into key:value')
 
         for pn in (n['sinks'] + n['sources']):
             pn['dtype'] = pn.pop('type', '')
+            pn['multiplicity'] = pn.pop('nports', '')
             if pn['dtype'] == 'message':
                 pn['domain'] = Constants.GR_MESSAGE_DOMAIN
 
