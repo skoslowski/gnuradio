@@ -46,6 +46,8 @@ OPTIONS_SCHEME = expand(
 )
 
 PARAM_SCHEME = expand(
+    base_key=str_,   # todo: rename/remove
+
     key=Spec(types=str_, required=True, item_scheme=None),
     name=str_,
     dtype=str_,
@@ -81,7 +83,7 @@ BLOCK_SCHEME = expand(
     sources=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
 
     checks=(list, str_),
-    var_value=str_,
+    value=str_,
 
     imports=(list, str),
     var_make=str_,
@@ -89,6 +91,10 @@ BLOCK_SCHEME = expand(
     callbacks=(list, str_),
 
     documentation=str_,
+
+    block_wrapper_path=str_,  # todo: rename/remove
+    grc_source=str_,  # todo: rename/remove
+    param_tab_order=(list, str_)  # todo: rename/remove
 )
 
 
