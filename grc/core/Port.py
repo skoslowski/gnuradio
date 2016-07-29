@@ -137,7 +137,7 @@ class Port(Element):
     is_clone = False
 
     def __init__(self, parent, direction, key, name='', domain='', dtype='',
-                 vlen='', nports='', optional=False, hide='', **kwargs):
+                 vlen='', multiplicity='', optional=False, hide='', **kwargs):
         """Make a new port from nested data."""
         Element.__init__(self, parent)
 
@@ -154,7 +154,7 @@ class Port(Element):
             self.key = self.name
             self._type = 'message'  # For port color FIXME
 
-        self._nports = nports
+        self._nports = multiplicity
         self._optional = bool(optional)
         self._hide = hide
         # end of args ########################################################

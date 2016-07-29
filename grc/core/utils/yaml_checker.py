@@ -42,7 +42,7 @@ str_ = six.string_types
 OPTIONS_SCHEME = expand(
     name=str_,
     value=object,
-    extra=dict,
+    attributes=dict,
 )
 
 PARAM_SCHEME = expand(
@@ -65,7 +65,7 @@ PORT_SCHEME = expand(
     dtype=str_,
     vlen=(int, str_),
 
-    nports=(int, str_),
+    multiplicity=(int, str_),
     optional=(bool, int, str_),
     hide=(bool, str_),
 )
