@@ -33,11 +33,9 @@ from .Element import Element
 from .generator import Generator
 from .FlowGraph import FlowGraph
 from .Connection import Connection
-from . import Block
+from . import Block, utils
 from .Port import Port, PortClone
 from .Param import Param
-
-from .utils import extract_docs
 
 
 class Platform(Element):
@@ -52,7 +50,7 @@ class Platform(Element):
         self.block_docstrings = {}
         self.block_docstrings_loaded_callback = lambda: None  # dummy to be replaced by BlockTreeWindow
 
-        self._docstring_extractor = extract_docs.SubprocessLoader(
+        self._docstring_extractor = utils.extract_docs.SubprocessLoader(
             callback_query_result=self._save_docstring_extraction_result,
             callback_finished=lambda: self.block_docstrings_loaded_callback()
         )
@@ -199,6 +197,7 @@ class Platform(Element):
             n[name + 's'] = n.pop(name, [])
         n['documentation'] = n.pop('doc', '')
         n['value'] = n.pop('var_value', '$value' if n['key'].startswith('variable') else '')
+        n['param_tab_order'] = n.get('param_tab_order', {'tab': []})['tab']
 
         for pn in n['params']:
             pn['dtype'] = pn.pop('type', '')
@@ -226,6 +225,13 @@ class Platform(Element):
         n = ParseXML.from_file(xml_file).get('block', {})
         n['block_wrapper_path'] = xml_file  # inject block wrapper path
         self._adapt_block(n)
+        checker = utils.SchemaChecker()
+        passed = checker.run(n)
+        if not passed:
+            raise ValueError('YAML schema check failed for file: ' + xml_file)
+        for msg in checker.messages:
+            print('{:<40s} {}'.format(os.path.basename(xml_file), msg))
+
         key = n.pop('key')
 
         if key in self.blocks:
