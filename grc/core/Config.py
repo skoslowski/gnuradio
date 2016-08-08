@@ -32,10 +32,15 @@ class Config(object):
 
     hier_block_lib_dir = os.environ.get('GRC_HIER_PATH', Constants.DEFAULT_HIER_BLOCK_LIB_DIR)
 
+    yml_block_cache = os.path.expanduser('~/.cache/grc_gnuradio')
+
     def __init__(self, version, version_parts=None, prefs=None):
         self._gr_prefs = prefs if prefs else DummyPrefs()
         self.version = version
         self.version_parts = version_parts or version[1:].split('-', 1)[0].split('.')[:3]
+
+        if not os.path.exists(self.yml_block_cache):
+            os.mkdir(self.yml_block_cache)
 
     @property
     def block_paths(self):
@@ -44,6 +49,7 @@ class Config(object):
         paths_sources = (
             self.hier_block_lib_dir,
             os.environ.get('GRC_BLOCKS_PATH', ''),
+            self.yml_block_cache,
             self._gr_prefs.get_string('grc', 'local_blocks_path', ''),
             self._gr_prefs.get_string('grc', 'global_blocks_path', ''),
         )

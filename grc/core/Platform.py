@@ -25,8 +25,9 @@ import sys
 
 import six
 from six.moves import range
+import yaml
 
-from . import ParseXML, Messages, Constants
+from . import ParseXML, Messages, Constants, legacy
 
 from .Config import Config
 from .Element import Element
@@ -100,7 +101,7 @@ class Platform(Element):
         try:
             flow_graph = self.get_new_flow_graph()
             flow_graph.grc_file_path = file_path
-            # Other, nested higiter_blocks might be auto-loaded here
+            # Other, nested hier_blocks might be auto-loaded here
             flow_graph.import_data(self.parse_flow_graph(file_path))
             flow_graph.rewrite()
             flow_graph.validate()
@@ -139,14 +140,7 @@ class Platform(Element):
         ParseXML.xml_failures.clear()
 
         # Try to parse and load blocks
-        for file_path in self.iter_yml_files():
-            try:
-                if file_path.endswith('.block.yml'):
-                    self.load_block_description()
-            except Exception as e:
-                raise
-
-        for xml_file in self.iter_xml_files():
+        for xml_file in self.iter_files_in_block_path(ext='xml'):
             try:
                 if xml_file.endswith("block_tree.xml"):
                     self.load_category_tree_xml(xml_file)
@@ -157,6 +151,15 @@ class Platform(Element):
             except ParseXML.XMLSyntaxError as e:
                 # print >> sys.stderr, 'Warning: Block validation failed:\n\t%s\n\tIgnoring: %s' % (e, xml_file)
                 pass
+            except Exception as e:
+                raise
+
+        for file_path in self.iter_files_in_block_path():
+            with open(file_path) as fp:
+                data = yaml.safe_load(fp)
+            try:
+                if file_path.endswith('.block.yml'):
+                    self.load_block_description(data, file_path)
             except Exception as e:
                 raise
 
@@ -176,77 +179,43 @@ class Platform(Element):
         self._docstring_extractor.finish()
         # self._docstring_extractor.wait()
 
-    def iter_xml_files(self):
+    def iter_files_in_block_path(self, ext='yml'):
         """Iterator for block descriptions and category trees"""
         for block_path in self.config.block_paths:
             if os.path.isfile(block_path):
                 yield block_path
             elif os.path.isdir(block_path):
-                for dirpath, dirnames, filenames in os.walk(block_path):
-                    for filename in sorted(f for f in filenames if f.endswith('.xml')):
-                        yield os.path.join(dirpath, filename)
-
-    @staticmethod
-    def _adapt_block(n):
-        if n.pop('throttle', ''):
-            flags = n.setdefault('flags', '')
-            n['flags'] = flags + ' ' + Constants.BLOCK_FLAG_THROTTLE
-
-        # renames
-        for name in 'import check callback param sink source'.split():
-            n[name + 's'] = n.pop(name, [])
-        n['documentation'] = n.pop('doc', '')
-        n['value'] = n.pop('var_value', '$value' if n['key'].startswith('variable') else '')
-        n['param_tab_order'] = n.get('param_tab_order', {'tab': []})['tab']
-
-        for pn in n['params']:
-            pn['dtype'] = pn.pop('type', '')
-            category = pn.pop('tab', None)
-            if category:
-                pn['category'] = category
-            pn['options'] = options = pn.pop('option', [])
-            for on in options:
-                on['value'] = on.pop('key')
-                try:
-                    on['attributes'] = dict(opt.split(':') for opt in on.pop('opt', []))
-                except TypeError:
-                    raise ValueError('Error separating opts into key:value')
-
-        for pn in (n['sinks'] + n['sources']):
-            pn['dtype'] = pn.pop('type', '')
-            pn['multiplicity'] = pn.pop('nports', '')
-            if pn['dtype'] == 'message':
-                pn['domain'] = Constants.GR_MESSAGE_DOMAIN
+                pattern = os.path.join(block_path, '**.' + ext)
+                yield_from = glob.iglob(pattern)
+                for file_path in yield_from:
+                    yield file_path
 
     def load_block_xml(self, xml_file):
         """Load block description from xml file"""
-        # Validate and import
-        ParseXML.validate_dtd(xml_file, Constants.BLOCK_DTD)
-        n = ParseXML.from_file(xml_file).get('block', {})
-        n['block_wrapper_path'] = xml_file  # inject block wrapper path
-        self._adapt_block(n)
-        checker = utils.SchemaChecker()
-        passed = checker.run(n)
-        if not passed:
-            raise ValueError('YAML schema check failed for file: ' + xml_file)
-        for msg in checker.messages:
-            print('{:<40s} {}'.format(os.path.basename(xml_file), msg))
-
-        key = n.pop('key')
-
-        if key in self.blocks:
-            print('Warning: Block with key "{}" already exists.\n'
-                  '\tIgnoring: {}'.format(key, xml_file), file=sys.stderr)
+        if 'qtgui_' in xml_file or '.grc_gnuradio/' in xml_file:
             return
 
-        # Store the block
-        self.blocks[key] = block = self.get_new_block(self._flow_graph, key, **n)
-        self._blocks_n[key] = n
-        self._docstring_extractor.query(
-            key,
-            block.get_imports(raw=True),
-            block.get_make(raw=True)
-        )
+        key_from_xml = os.path.basename(xml_file)[:-4]
+        yml_file = os.path.join(self.config.yml_block_cache,
+                                key_from_xml + '.block.yml')
+
+        if os.path.exists(yml_file):
+            xml_time = os.stat(xml_file).st_mtime
+            yml_time = os.stat(yml_file).st_mtime
+            converter_time = os.stat(
+                legacy.block_xml_converter.__file__.rstrip('c')
+            ).st_mtime
+            if yml_time > xml_time and yml_time > converter_time:
+                return  # yml file up-to-date
+
+        print('Converting', xml_file)
+        key, data = legacy.convert_xml(xml_file)
+
+        if key_from_xml != key:
+            print('Warning: key is not filename in', xml_file)
+
+        with open(yml_file, 'w') as yml_file:
+            yml_file.write(data)
 
     def load_category_tree_xml(self, xml_file):
         """Validate and parse category tree file and add it to list"""
@@ -320,19 +289,30 @@ class Platform(Element):
     ##############################################
     # YAML
     ##############################################
-    def iter_yml_files(self):
-        """Iterator for block descriptions and category trees"""
-        for block_path in self.config.block_paths:
-            if os.path.isfile(block_path):
-                yield block_path
-            elif os.path.isdir(block_path):
-                pattern = os.path.join(block_path, '**.yml')
-                yield_from = glob.iglob(pattern)
-                for file_path in yield_from:
-                    yield file_path
 
-    def load_block_description(self):
-        pass
+    def load_block_description(self, data, file_path):
+        checker = utils.SchemaChecker()
+        passed = checker.run(data)
+        for msg in checker.messages:
+            print('{:<40s} {}'.format(os.path.basename(file_path), msg))
+        if not passed:
+            raise ValueError('YAML schema check failed for file: ' + file_path)
+
+        key = data.pop('key').rstrip('_')
+
+        if key in self.blocks:
+            print('Warning: Block with key "{}" already exists.\n'
+                  '\tIgnoring: {}'.format(key, file_path), file=sys.stderr)
+            return
+
+        # Store the block
+        self.blocks[key] = block = self.get_new_block(self._flow_graph, key, **data)
+        self._blocks_n[key] = data
+        self._docstring_extractor.query(
+            key,
+            block.get_imports(raw=True),
+            block.get_make(raw=True)
+        )
 
     ##############################################
     # Access

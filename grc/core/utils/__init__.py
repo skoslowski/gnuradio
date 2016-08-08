@@ -20,6 +20,7 @@ from __future__ import absolute_import
 from . import expr_utils
 from . import epy_block_io
 from . import extract_docs
+
 from .yaml_checker import SchemaChecker
 
 from ._complexity import calculate_flowgraph_complexity

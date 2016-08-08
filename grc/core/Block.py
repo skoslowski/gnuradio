@@ -47,6 +47,10 @@ def _get_elem(iterable, key):
     return ValueError('Key "{}" not found in {}.'.format(key, items))
 
 
+def ensure_list(value):
+    return [] if not value else [value] if not isinstance(value, list) else value
+
+
 class Block(Element):
 
     is_block = True
@@ -70,10 +74,10 @@ class Block(Element):
         self._var_value = n.get('value', '')
         self._checks = n.get('checks', [])
 
-        self._imports = [i.strip() for i in n.get('imports', [])]
+        self._imports = [i.strip() for i in ensure_list(n.get('imports'))]
         self._var_make = n.get('var_make')
         self._make = n.get('make')
-        self._callbacks = n.get('callbacks', [])
+        self._callbacks = ensure_list(n.get('callbacks'))
 
         self._doc = n.get('documentation', '').strip('\n').replace('\\\n', '')
         self._grc_source = n.get('grc_source', '')
@@ -145,7 +149,7 @@ class Block(Element):
             port = port_factory(parent=self, direction=direction, **port_n)
             key = port.key
             if key in port_keys:
-                raise Exception('Key "{}" already exists in {}'.format(key, direction))
+                raise Exception('Key "{}" already exists in {}s'.format(key, direction))
             port_keys.add(key)
             ports.append(port)
         return ports
@@ -682,7 +686,7 @@ class EPyBlock(Block):
         self._epy_source_hash = src_hash
         self.name = blk_io.name or blk_io.cls
         self._doc = blk_io.doc
-        self._imports[0] = 'import ' + self.get_id()
+        self._imports = ['import ' + self.get_id()]
         self._make = '{0}.{1}({2})'.format(self.get_id(), blk_io.cls, ', '.join(
             '{0}=${{ {0} }}'.format(key) for key, _ in blk_io.params))
         self._callbacks = ['{0} = ${{ {0} }}'.format(attr) for attr in blk_io.callbacks]

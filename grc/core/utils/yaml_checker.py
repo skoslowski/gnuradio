@@ -50,20 +50,20 @@ PARAM_SCHEME = expand(
 
     key=Spec(types=str_, required=True, item_scheme=None),
     name=str_,
-    dtype=str_,
+    category=str_,
 
+    dtype=str_,
     value=object,
     options=Spec(types=list, required=False, item_scheme=OPTIONS_SCHEME),
 
-    category=str_,
     hide=str_,
 )
 
 PORT_SCHEME = expand(
     name=str_,
-    key=str_,
     domain=str_,
 
+    key=str_,
     dtype=str_,
     vlen=(int, str_),
 

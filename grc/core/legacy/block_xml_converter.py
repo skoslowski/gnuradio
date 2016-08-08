@@ -34,6 +34,8 @@ from os import path
 from .yaml_output import OrderedDictFlowing, scalar_node, GRCDumper
 from . import cheetah_converter
 
+from .. import Constants
+
 
 BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), '..', 'block.dtd'))
 reserved_block_keys = ('import', )  # todo: add more keys
@@ -55,17 +57,18 @@ def convert_xml(xml_file):
         ('params:', '\nparams:'),
         ('sinks:', '\nsinks:'),
         ('sources:', '\nsources:'),
-        ('import:', '\nimport:'),
+        ('imports:', '\nimports:'),
         ('documentation:', '\ndocumentation:'),
     ]
     for r in replace:
         out = out.replace(*r)
 
-    return out
+    return data['key'], out
+
+no_value = object()
 
 
 def convert_block_xml(node):
-    no_value = object()
 
     converter = cheetah_converter.Converter(names={
         param_node.findtext('key'): {
@@ -73,6 +76,7 @@ def convert_block_xml(node):
             for opt_node in next(param_node.getiterator('option'), param_node).getiterator('opt')
         } for param_node in node.getiterator('param')
     })
+    converter = cheetah_converter.DummyConverter()
 
     key = node.findtext('key')
     if key in reserved_block_keys:
@@ -82,6 +86,7 @@ def convert_block_xml(node):
     data['key'] = key
     data['name'] = node.findtext('name') or no_value
     data['category'] = node.findtext('category') or no_value
+    data['flags'] = node.findtext('flags') or no_value
 
     data['params'] = [convert_param_xml(param_node, converter)
                       for param_node in node.getiterator('param')] or no_value
@@ -93,11 +98,20 @@ def convert_block_xml(node):
     data['sources'] = [convert_port_xml(port_node, converter)
                        for port_node in node.getiterator('source')] or no_value
 
+    data['checks'] = [converter.to_mako(check_node.text)
+                      for check_node in node.getiterator('checks')] or no_value
+    data['value'] = (
+        node.findtext('var_value') or
+        '$value' if key.startswith('variable') else None or
+        no_value
+    )
+
     imports = [converter.to_mako(import_node.text)
                for import_node in node.getiterator('import')]
     if imports:
         data['imports'] = (imports if len(imports) > 1 else imports[0]) or no_value
 
+    data['var_make'] = converter.to_mako(node.findtext('var_make') or '') or no_value
     make = node.findtext('make') or ''
     if '\n' in make:
         make = converter.to_mako(make)
@@ -105,7 +119,8 @@ def convert_block_xml(node):
     else:
         data['make'] = converter.to_mako(make) or no_value
 
-    data['callbacks'] = [] or no_value # todo
+    data['callbacks'] = [converter.to_mako(cb_node.text)
+                         for cb_node in node.getiterator('callback')] or no_value
 
     docs = node.findtext('doc')
     if docs:
@@ -119,13 +134,10 @@ def convert_param_xml(node, converter):
     param = OrderedDict()
     param['key'] = node.findtext('key').strip()
     param['name'] = node.findtext('name').strip()
+    param['category'] = node.findtext('tab') or no_value
+
     param['dtype'] = converter.to_python(node.findtext('type') or '')
-
-    value = node.findtext('value')
-    if value:
-        param['value'] = value
-
-    # todo: parse hide, tab tags
+    param['value'] = node.findtext('value') or no_value
 
     options = []
     for option_n in node.getiterator('option'):
@@ -139,14 +151,11 @@ def convert_param_xml(node, converter):
         )
         options.append(option)
 
-    if options:
-        param['options'] = options
+    param['options'] = options or no_value
 
-    hide = node.findtext('hide')
-    if hide:
-        param['hide'] = converter.to_python(hide.strip())
+    param['hide'] = converter.to_python(node.findtext('hide')) or no_value
 
-    return param
+    return OrderedDict((key, value) for key, value in param.items() if value is not no_value)
 
 
 def convert_port_xml(node, converter):
@@ -156,13 +165,15 @@ def convert_port_xml(node, converter):
     dtype = converter.to_python(node.findtext('type'))
     # TODO: detect dyn message ports
     # todo: parse hide, tab tags
-    port['domain'] = 'message' if dtype == 'message' else 'stream'
-    if dtype == 'message':
+    port['domain'] = domain = Constants.GR_MESSAGE_DOMAIN if dtype == 'message' else Constants.DEFAULT_DOMAIN
+    if domain == Constants.GR_MESSAGE_DOMAIN:
         port['key'] = port['name']
     else:
         port['dtype'] = dtype
-        vlen = node.findtext('vlen')
-        if vlen:
-            port['vlen'] = converter.to_python(vlen)
+        port['vlen'] = converter.to_python(node.findtext('vlen')) or no_value
 
-    return port
+    port['multiplicity'] = converter.to_python(node.findtext('nports')) or no_value
+    port['optional'] = bool(node.findtext('optional')) or no_value
+    port['hide'] = converter.to_python(node.findtext('hide')) or no_value
+
+    return OrderedDict((key, value) for key, value in port.items() if value is not no_value)
