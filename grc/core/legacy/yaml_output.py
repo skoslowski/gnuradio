@@ -4,7 +4,7 @@ import functools
 import six
 import yaml
 
-from ..utils.yaml_loader import Eval, Mako
+from ..utils.yaml_loader import Eval, Mako, Cheetah
 
 
 class GRCDumper(yaml.Dumper):
@@ -28,6 +28,11 @@ def represent_code_string(representer, data):
 @GRCDumper.add(Mako)
 def represent_mako_string(representer, data):
     return representer.represent_scalar(tag=Mako.tag, value=data)
+
+
+@GRCDumper.add(Cheetah)
+def represent_cheetah_string(representer, data):
+    return representer.represent_scalar(tag=Cheetah.tag, value=data)
 
 
 @GRCDumper.add(OrderedDict)

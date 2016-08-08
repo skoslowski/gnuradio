@@ -201,3 +201,18 @@ class Converter(object):
             raise ValueError('No conditionals in format strings: ' + expr)
         expr = cheetah_inline_if.sub(r'(\g<then> if \g<cond> else \g<else>)', expr)
         return spec.type(self.convert_hard(expr, spec))
+
+
+class DummyConverter(object):
+
+    def __init__(self, names={}):
+        pass
+
+    def to_python(self, expr):
+        return expr
+
+    def to_format_string(self, expr):
+        return expr
+
+    def to_mako(self, expr):
+        return expr
