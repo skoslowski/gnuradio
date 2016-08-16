@@ -23,8 +23,8 @@ from itertools import chain
 
 from six.moves import filter
 
-from .Element import Element, lazy_property
 from . import Constants
+from .Element import Element, lazy_property, Evaluated, EvaluatedPInt, EvaluatedEnum
 
 
 class LoopError(Exception):
@@ -136,8 +136,14 @@ class Port(Element):
     is_port = True
     is_clone = False
 
+    vlen = EvaluatedPInt(name='vlen')
+    multiplicity = EvaluatedPInt(name='multiplicity')
+    hidden = Evaluated((bool, int), default=False, name='hidden')
+    optional = Evaluated((bool, int), default=False, name='optional')
+    dtype = EvaluatedEnum(Constants.TYPE_TO_SIZEOF.keys(), default='complex', name='dtype')
+
     def __init__(self, parent, direction, key, name='', domain='', dtype='',
-                 vlen='', multiplicity='', optional=False, hide='', **kwargs):
+                 vlen='', multiplicity=1, optional=False, hide='', **kwargs):
         """Make a new port from nested data."""
         Element.__init__(self, parent)
 
@@ -147,21 +153,20 @@ class Port(Element):
         self.name = self._base_name = name or default_name
 
         self.domain = domain or Constants.DEFAULT_DOMAIN
-        self._type = dtype
-        self._vlen = vlen
+        self.dtype = dtype
+        self.vlen = vlen
 
         if domain == Constants.GR_MESSAGE_DOMAIN:
             self.key = self.name
-            self._type = 'message'  # For port color FIXME
+            self.dtype = 'message'  # For port color FIXME
 
-        self._nports = multiplicity
-        self._optional = bool(optional)
-        self._hide = hide
+        self.multiplicity = multiplicity
+        self.optional = optional
+        self.hidden = hide
         # end of args ########################################################
 
-        self.inherit_type = not self._type
-        self._hide_evaluated = False  # Updated on rewrite()
-        self._optional_evaluated = False  # Updated on rewrite()
+        self.inherit_type = not dtype
+
         self.clones = []  # References to cloned ports (for nports > 1)
 
     def __str__(self):
@@ -170,30 +175,41 @@ class Port(Element):
         if self.is_sink:
             return 'Sink - {}({})'.format(self.name, self.key)
 
+    def __repr__(self):
+        return '{!r}.{}[{}]'.format(self.parent, 'sinks' if self.is_sink else 'sources', self.key)
+
     def validate(self):
         Element.validate(self)
-        if self.get_type() not in Constants.TYPE_TO_SIZEOF.keys():
-            self.add_error_message('Type "{}" is not a possible type.'.format(self.get_type()))
+        if self.dtype not in Constants.TYPE_TO_SIZEOF.keys():
+            self.add_error_message('Type "{}" is not a possible type.'.format(self.dtype))
         if self.domain not in self.parent_platform.domains:
             self.add_error_message('Domain key "{}" is not registered.'.format(self.domain))
-        if not self.get_enabled_connections() and not self.get_optional():
+        if not self.get_enabled_connections() and not self.optional:
             self.add_error_message('Port is not connected.')
 
     def rewrite(self):
         """
         Handle the port cloning for virtual blocks.
         """
-        del self._error_messages[:]
-        if self.inherit_type:
-            self.resolve_empty_type()
+        del self.vlen
+        del self.multiplicity
+        del self.hidden
+        del self.optional
+        del self.dtype
 
-        hide = self.parent_block.resolve_dependencies(self._hide).strip().lower()
-        self._hide_evaluated = False if hide in ('false', 'off', '0') else bool(hide)
-        optional = self.parent_block.resolve_dependencies(self._optional).strip().lower()
-        self._optional_evaluated = False if optional in ('false', 'off', '0') else bool(optional)
+        if self.inherit_type:
+            try:
+                # Clone type and vlen
+                source = self.resolve_empty_type()
+                self.dtype = source.dtype
+                self.vlen = source.vlen
+            except:
+                pass
+
+        Element.rewrite(self)
 
         # Update domain if was deduced from (dynamic) port type
-        type_ = self.get_type()
+        type_ = self.dtype
         if self.domain == Constants.GR_STREAM_DOMAIN and type_ == "message":
             self.domain = Constants.GR_MESSAGE_DOMAIN
             self.key = self.name
@@ -222,40 +238,9 @@ class Port(Element):
             # Reset type and vlen
             self._type = self._vlen = ''
 
-    def get_vlen(self):
-        """
-        Get the vector length.
-        If the evaluation of vlen cannot be cast to an integer, return 1.
-
-        Returns:
-            the vector length or 1
-        """
-        vlen = self.parent_block.resolve_dependencies(self._vlen)
-        try:
-            return max(1, int(self.parent_flowgraph.evaluate(vlen)))
-        except:
-            return 1
-
-    def get_nports(self):
-        """
-        Get the number of ports.
-        If already blank, return a blank
-        If the evaluation of nports cannot be cast to a positive integer, return 1.
-
-        Returns:
-            the number of ports or 1
-        """
-        if self._nports == '':
-            return 1
-
-        nports = self.parent_block.resolve_dependencies(self._nports)
-        try:
-            return max(1, int(self.parent_flowgraph.evaluate(nports)))
-        except:
-            return 1
-
-    def get_optional(self):
-        return self._optional_evaluated
+    @property
+    def item_size(self):
+        return Constants.TYPE_TO_SIZEOF[self.dtype] * self.vlen
 
     def add_clone(self):
         """
@@ -308,12 +293,6 @@ class Port(Element):
     def is_source(self):
         return self._dir == 'source'
 
-    def get_type(self):
-        return self.parent_block.resolve_dependencies(self._type)
-
-    def get_hide(self):
-        return self._hide_evaluated
-
     def get_connections(self):
         """
         Get all connections that use this port.
@@ -322,8 +301,7 @@ class Port(Element):
             a list of connection objects
         """
         connections = self.parent_flowgraph.connections
-        connections = [c for c in connections if c.source_port is self or c.sink_port is self]
-        return connections
+        return [c for c in connections if c.source_port is self or c.sink_port is self]
 
     def get_enabled_connections(self):
         """
@@ -335,7 +313,7 @@ class Port(Element):
         return [c for c in self.get_connections() if c.enabled]
 
     def get_associated_ports(self):
-        if not self.get_type() == 'bus':
+        if not self.dtype == 'bus':
             return [self]
 
         block = self.parent_block
@@ -346,9 +324,9 @@ class Port(Element):
             block_ports = block.sinks
             bus_structure = block.current_bus_structure['sink']
 
-        ports = [i for i in block_ports if not i.get_type() == 'bus']
+        ports = [i for i in block_ports if not i.dtype == 'bus']
         if bus_structure:
-            bus_index = [i for i in block_ports if i.get_type() == 'bus'].index(self)
+            bus_index = [i for i in block_ports if i.dtype == 'bus'].index(self)
             ports = [p for i, p in enumerate(ports) if i in bus_structure[bus_index]]
         return ports
 
@@ -370,7 +348,7 @@ class PortClone(Port):
         self.master = master
         self.name = name
         self._key = key
-        self._nports = '1'
+        self.multiplicity = 1
 
     def __getattr__(self, item):
         return getattr(self.master, item)

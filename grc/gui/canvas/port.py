@@ -77,10 +77,9 @@ class Port(CorePort, Drawable):
             color = colors.BLOCK_DISABLED_COLOR
         else:
             self._font_color[-1] = 1.0
-            color = colors.PORT_TYPE_TO_COLOR.get(self.get_type()) or colors.PORT_TYPE_TO_COLOR.get('')
-            vlen = self.get_vlen()
-            if vlen > 1:
-                dark = (0, 0, 30 / 255.0, 50 / 255.0, 70 / 255.0)[min(4, vlen)]
+            color = colors.PORT_TYPE_TO_COLOR.get(self.dtype) or colors.PORT_TYPE_TO_COLOR.get('')
+            if self.vlen > 1:
+                dark = (0, 0, 30 / 255.0, 50 / 255.0, 70 / 255.0)[min(4, self.vlen)]
                 color = tuple(max(c - dark, 0) for c in color)
         self._bg_color = color
         self._border_color = tuple(max(c - 0.3, 0) for c in color)
@@ -124,7 +123,7 @@ class Port(CorePort, Drawable):
         self.width = 2 * Constants.PORT_LABEL_PADDING + label_width / Pango.SCALE
         self.height = 2 * Constants.PORT_LABEL_PADDING + label_height / Pango.SCALE
         self._label_layout_offsets = [0, Constants.PORT_LABEL_PADDING]
-        if self.get_type() == 'bus':
+        if self.dtype == 'bus':
             self.height += Constants.PORT_EXTRA_BUS_HEIGHT
             self._label_layout_offsets[1] += Constants.PORT_EXTRA_BUS_HEIGHT / 2
         self.height += self.height % 2  # uneven height

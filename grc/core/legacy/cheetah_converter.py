@@ -61,6 +61,12 @@ class Converter(object):
     def to_python(self, expr):
         return self.convert(expr=expr, spec=Python)
 
+    def to_python_dec(self, expr):
+        converted = self.convert(expr=expr, spec=Python)
+        if converted != expr:
+            converted = '${' + converted + '}'
+        return converted
+
     def to_format_string(self, expr):
         return self.convert(expr=expr, spec=FormatString)
 
@@ -68,7 +74,7 @@ class Converter(object):
         return self.convert(expr=expr, spec=Mako)
 
     def convert(self, expr, spec=Python):
-        if '$' not in expr:
+        if not expr or '$' not in expr:
             return expr
         try:
             return self.convert_simple(expr, spec)
@@ -88,7 +94,7 @@ class Converter(object):
 
         identifier = match.group('arg')
         if identifier not in self.extended:
-            raise NameError('Unknown substitution {!r}'.format(identifier)+ repr(self.extended))
+            raise NameError('Unknown substitution {!r}'.format(identifier))
         if match.group('eval'):
             identifier += spec.eval
 
