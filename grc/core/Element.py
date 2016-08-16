@@ -25,11 +25,95 @@ class lazy_property(object):
         self.func = func
         functools.update_wrapper(self, func)
 
-    def __get__(self, instance, cls):
+    def __get__(self, instance, owner):
         if instance is None:
             return self
         value = self.func(instance)
         setattr(instance, self.func.__name__, value)
+        return value
+
+
+class Evaluated(object):
+    def __init__(self, expected_type, default, name=None):
+        self.expected_type = expected_type
+        self.default = default
+
+        self.name = name or 'evaled_property_{}'.format(id(self))
+        self.eval_function = self.default_eval_func
+
+    @property
+    def name_raw(self):
+        return '_' + self.name
+
+    def default_eval_func(self, instance):
+        raw = getattr(instance, self.name_raw)
+        try:
+            value = instance.parent_block.evaluate(raw)
+        except Exception as error:
+            instance.add_error_message("Failed to eval '{}': {}".format(raw, error))
+            return self.default
+
+        if not isinstance(value, self.expected_type):
+            instance.add_error_message("Can not cast evaluated value '{}' to type {}"
+                                       "".format(value, self.expected_type))
+            return self.default
+
+        print(instance, self.name, raw, value)
+        return value
+
+    def __call__(self, func):
+        self.name = func.__name__
+        self.eval_function = func
+        return self
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        attribs = instance.__dict__
+        try:
+            value = attribs[self.name]
+        except KeyError:
+            value = attribs[self.name] = self.eval_function(instance)
+        return value
+
+    def __set__(self, instance, value):
+        attribs = instance.__dict__
+        value = value or self.default
+        if isinstance(value, str) and value.startswith('${') and value.endswith('}'):
+            attribs[self.name_raw] = value[2:-1]
+        else:
+            attribs[self.name] = value
+
+    def __delete__(self, instance):
+        attribs = instance.__dict__
+        if self.name_raw in attribs:
+            attribs.pop(self.name, None)
+
+
+class EvaluatedEnum(Evaluated):
+    def __init__(self, allowed_values, default=None, name=None):
+        self.allowed_values = allowed_values if isinstance(allowed_values, (list, tuple)) else \
+            allowed_values.split()
+        default = default if default is not None else self.allowed_values[0]
+        super(EvaluatedEnum, self).__init__(str, default, name)
+
+    def default_eval_func(self, instance):
+        value = super(EvaluatedEnum, self).default_eval_func(instance)
+        if value not in self.allowed_values:
+            instance.add_error_message("Value '{}' not in allowed values".format(value))
+            return self.default
+        return value
+
+
+class EvaluatedPInt(Evaluated):
+    def __init__(self, name=None):
+        super(EvaluatedPInt, self).__init__(int, 1, name)
+
+    def default_eval_func(self, instance):
+        value = super(EvaluatedPInt, self).default_eval_func(instance)
+        if value < 1:
+            # todo: log
+            return self.default
         return value
 
 
@@ -178,3 +262,9 @@ class Element(object):
     is_variable = False
 
     is_import = False
+
+    def get_raw(self, name):
+        descriptor = getattr(self.__class__, name, None)
+        if not descriptor:
+            raise ValueError("No evaluated property '{}' found".format(name))
+        return getattr(self, descriptor.name_raw, None) or getattr(self, descriptor.name, None)

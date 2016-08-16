@@ -69,6 +69,8 @@ class Platform(Element):
         Element.__init__(self._flow_graph, self)
         self._flow_graph.connections = []
 
+        if not yaml.__with_libyaml__:
+            print("Warning: slow block loading")
         self.build_block_library()
 
     def __str__(self):
@@ -156,7 +158,7 @@ class Platform(Element):
 
         for file_path in self.iter_files_in_block_path():
             with open(file_path) as fp:
-                data = yaml.safe_load(fp)
+                data = yaml.load(fp)
             try:
                 if file_path.endswith('.block.yml'):
                     self.load_block_description(data, file_path)
@@ -208,11 +210,11 @@ class Platform(Element):
             if yml_time > xml_time and yml_time > converter_time:
                 return  # yml file up-to-date
 
-        print('Converting', xml_file)
+        # print('Converting', xml_file)
         key, data = legacy.convert_xml(xml_file)
 
-        if key_from_xml != key:
-            print('Warning: key is not filename in', xml_file)
+        # if key_from_xml != key:
+        #     print('Warning: key is not filename in', xml_file)
 
         with open(yml_file, 'w') as yml_file:
             yml_file.write(data)

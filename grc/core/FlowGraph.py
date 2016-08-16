@@ -241,7 +241,7 @@ class FlowGraph(Element):
         self._eval_cache.clear()
         self.namespace.update(namespace)
 
-    def evaluate(self, expr):
+    def evaluate(self, expr, namespace=None):
         """
         Evaluate the expression.
 
@@ -255,7 +255,10 @@ class FlowGraph(Element):
         # Evaluate
         if not expr:
             raise Exception('Cannot evaluate empty statement.')
-        return self._eval_cache.setdefault(expr, eval(expr, self.namespace))
+        if namespace is not None:
+            return eval(expr, namespace)
+        else:
+            return self._eval_cache.setdefault(expr, eval(expr, self.namespace))
 
     ##############################################
     # Add/remove stuff
@@ -411,7 +414,7 @@ class FlowGraph(Element):
             for port in ports:
                 if key == port.key:
                     break
-                if not key.isdigit() and port.get_type() == '' and key == port.name:
+                if not key.isdigit() and port.dtype == '' and key == port.name:
                     break
             else:
                 if block.is_dummy_block:
@@ -467,7 +470,7 @@ def _update_old_message_port_keys(source_key, sink_key, source_block, sink_block
         # get ports using the "old way" (assuming liner indexed keys)
         source_port = source_block.sources[int(source_key)]
         sink_port = sink_block.sinks[int(sink_key)]
-        if source_port.get_type() == "message" and sink_port.get_type() == "message":
+        if source_port.dtype == "message" and sink_port.dtype == "message":
             source_key, sink_key = source_port.key, sink_port.key
     except (ValueError, IndexError):
         pass

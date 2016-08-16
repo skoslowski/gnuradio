@@ -283,10 +283,10 @@ class ActionHandler:
                                 source = source_block.get_source(pad['key'])
 
                                 # Ensure the port types match
-                                while pad_sink.get_type() != source.get_type():
+                                while pad_sink.dtype != source.dtype:
 
                                     # Special case for some blocks that have non-standard type names, e.g. uhd
-                                    if pad_sink.get_type() == 'complex' and source.get_type() == 'fc32':
+                                    if pad_sink.dtype == 'complex' and source.dtype == 'fc32':
                                         break;
                                     pad_block.type_controller_modify(1)
 
@@ -304,9 +304,9 @@ class ActionHandler:
                                 sink = sink_block.get_sink(pad['key'])
 
                                 # Ensure the port types match
-                                while sink.get_type() != pad_source.get_type():
+                                while sink.dtype != pad_source.dtype:
                                     # Special case for some blocks that have non-standard type names, e.g. uhd
-                                    if pad_source.get_type() == 'complex' and sink.get_type() == 'fc32':
+                                    if pad_source.dtype == 'complex' and sink.dtype == 'fc32':
                                         break;
                                     pad_block.type_controller_modify(1)
 

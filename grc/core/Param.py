@@ -26,7 +26,7 @@ import collections
 from six.moves import builtins, filter, map, range, zip
 
 from . import Constants
-from .Element import Element, nop_write
+from .Element import Element, nop_write, EvaluatedEnum, Evaluated
 
 # Blacklist certain ids, its not complete, but should help
 ID_BLACKLIST = ['self', 'options', 'gr', 'blks2', 'math', 'firdes'] + dir(builtins)
@@ -67,19 +67,24 @@ class Param(Element):
 
     is_param = True
 
+    name = Evaluated(str, default='no name', name='name')
+    dtype = EvaluatedEnum(Constants.PARAM_TYPE_NAMES, default='raw', name='dtype')
+    # hidden = Evaluated((bool, int), default=False, name='hidden')
+
     def __init__(self, parent, key, name='', dtype='raw', value='',
-                 options=None, category='', hide=False, **kwargs):
+                 options=None, category='', hide='none', **kwargs):
         """Make a new param from nested data"""
         super(Param, self).__init__(parent)
         self.key = key
-        self._name = name or key.title()
-        self._type = dtype
+        self.name = name.strip() or key.title()
+        self.category = category or Constants.DEFAULT_PARAM_TAB
 
+        self.dtype = dtype
         self.value = self.default = value
+
         self.options = self._init_options(options or [])
 
-        self.category = category or Constants.DEFAULT_PARAM_TAB
-        self._hide = hide or ''
+        self.hide = hide or 'none'
         # end of args ########################################################
 
         self._evaluated = None
@@ -114,7 +119,11 @@ class Param(Element):
     def __str__(self):
         return 'Param - {}({})'.format(self.name, self.key)
 
-    def get_hide(self):
+    def __repr__(self):
+        return '{!r}.param[{}]'.format(self.parent, self.key)
+
+    @EvaluatedEnum('none all part')
+    def hide(self):
         """
         Get the hide value from the base class.
         Hide the ID parameter for most blocks. Exceptions below.
@@ -125,17 +134,20 @@ class Param(Element):
         Returns:
             hide the hide property string
         """
-        hide = self.parent.resolve_dependencies(self._hide).strip()
-        if hide:
+        block = self.parent_block
+
+        hide = EvaluatedEnum.default_eval_func(Param.hide, self)
+        if hide != 'none':
             return hide
+
         # Hide ID in non variable blocks
-        if self.key == 'id' and not _show_id_matcher.match(self.parent.key):
+        if self.key == 'id' and not _show_id_matcher.match(block.key):
             return 'part'
         # Hide port controllers for type and nports
-        if self.key in ' '.join([' '.join([p._type, p._nports]) for p in self.parent.get_ports()]):
+        if self.key in ' '.join(p.get_raw('dtype') + ' ' + str(p.get_raw('multiplicity')) for p in self.parent.get_ports()):
             return 'part'
         # Hide port controllers for vlen, when == 1
-        if self.key in ' '.join(p._vlen for p in self.parent.get_ports()):
+        if self.key in ' '.join(str(p.get_raw('vlen')) for p in self.parent.get_ports()):
             try:
                 if int(self.get_evaluated()) == 1:
                     return 'part'
@@ -143,20 +155,26 @@ class Param(Element):
                 pass
         return hide
 
-    def validate(self):
-        """
-        Validate the param.
-        The value must be evaluated and type must a possible type.
-        """
-        Element.validate(self)
-        if self.get_type() not in Constants.PARAM_TYPE_NAMES:
-            self.add_error_message('Type "{}" is not a possible type.'.format(self.get_type()))
+    def rewrite(self):
+        Element.rewrite(self)
+        del self.name
+        del self.dtype
+        del self.hide
 
         self._evaluated = None
         try:
             self._evaluated = self.evaluate()
         except Exception as e:
             self.add_error_message(str(e))
+
+    def validate(self):
+        """
+        Validate the param.
+        The value must be evaluated and type must a possible type.
+        """
+        Element.validate(self)
+        if self.dtype not in Constants.PARAM_TYPE_NAMES:
+            self.add_error_message('Type "{}" is not a possible type.'.format(self.dtype))
 
     def get_evaluated(self):
         return self._evaluated
@@ -172,7 +190,7 @@ class Param(Element):
         self._lisitify_flag = False
         self._stringify_flag = False
         self._hostage_cells = list()
-        t = self.get_type()
+        t = self.dtype
         v = self.get_value()
 
         #########################
@@ -361,8 +379,9 @@ class Param(Element):
         Returns:
             a string representing the code
         """
+        self._init = True
         v = self.get_value()
-        t = self.get_type()
+        t = self.dtype
         # String types
         if t in ('string', 'file_open', 'file_save', '_multiline', '_multiline_python_external'):
             if not self._init:
@@ -392,11 +411,11 @@ class Param(Element):
         """
         params = []
         for block in self.parent_flowgraph.get_enabled_blocks():
-            params.extend(p for p in block.params.values() if p.get_type() == type)
+            params.extend(p for p in block.params.values() if p.dtype == type)
         return params
 
     def is_enum(self):
-        return self._type == 'enum'
+        return self.dtype == 'enum'
 
     def get_value(self):
         value = self.value
@@ -413,14 +432,6 @@ class Param(Element):
         if self.default == self.value:
             self.set_value(value)
         self.default = str(value)
-
-    def get_type(self):
-        return self.parent.resolve_dependencies(self._type)
-
-    @nop_write
-    @property
-    def name(self):
-        return self.parent.resolve_dependencies(self._name).strip()
 
     ##############################################
     # Import/Export Methods

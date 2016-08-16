@@ -39,20 +39,20 @@ class Param(CoreParam):
         Returns:
             gtk input class
         """
-        type_ = self.get_type()
-        if type_ in ('file_open', 'file_save'):
+        dtype = self.dtype
+        if dtype in ('file_open', 'file_save'):
             input_widget_cls = ParamWidgets.FileParam
 
-        elif self.is_enum():
+        elif dtype == 'enum':
             input_widget_cls = ParamWidgets.EnumParam
 
         elif self.options:
             input_widget_cls = ParamWidgets.EnumEntryParam
 
-        elif type_ == '_multiline':
+        elif dtype == '_multiline':
             input_widget_cls = ParamWidgets.MultiLineEntryParam
 
-        elif type_ == '_multiline_python_external':
+        elif dtype == '_multiline_python_external':
             input_widget_cls = ParamWidgets.PythonEditorParam
 
         else:
@@ -76,7 +76,7 @@ class Param(CoreParam):
 
     def format_tooltip_text(self):
         errors = self.get_error_messages()
-        tooltip_lines = ['Key: ' + self.key, 'Type: ' + self.get_type()]
+        tooltip_lines = ['Key: ' + self.key, 'Type: ' + self.dtype]
         if self.is_valid():
             value = str(self.get_evaluated())
             if len(value) > 100:
@@ -125,7 +125,7 @@ class Param(CoreParam):
         # Default center truncate
         truncate = 0
         e = self.get_evaluated()
-        t = self.get_type()
+        t = self.dtype
         if isinstance(e, bool):
             return str(e)
         elif isinstance(e, Constants.COMPLEX_TYPES):

@@ -102,7 +102,7 @@ class Connection(Element):
         )
 
     def is_bus(self):
-        return self.source_port.get_type() == 'bus'
+        return self.source_port.dtype == 'bus'
 
     def validate(self):
         """
@@ -133,8 +133,8 @@ class Connection(Element):
             self.add_error_message(
                 'Domain "{}" can have only one upstream block'.format(sink_domain))
 
-        source_size = Constants.TYPE_TO_SIZEOF[self.source_port.get_type()] * self.source_port.get_vlen()
-        sink_size = Constants.TYPE_TO_SIZEOF[self.sink_port.get_type()] * self.sink_port.get_vlen()
+        source_size = self.source_port.item_size
+        sink_size = self.sink_port.item_size
         if source_size != sink_size:
             self.add_error_message('Source IO size "{}" does not match sink IO size "{}".'.format(source_size, sink_size))
 
@@ -158,7 +158,7 @@ class Connection(Element):
     def _make_bus_connect(self):
         source, sink = self.source_port, self.sink_port
 
-        if source.get_type() == sink.get_type() == 'bus':
+        if source.dtype == sink.dtype == 'bus':
             raise ValueError('busses must get with busses')
 
         sources = source.get_associated_ports()

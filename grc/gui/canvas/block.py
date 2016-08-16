@@ -163,7 +163,7 @@ class Block(CoreBlock, Drawable):
         # update the params layout
         if not self.is_dummy_block:
             markups = [param.format_block_surface_markup()
-                       for param in self.params.values() if param.get_hide() not in ('all', 'part')]
+                       for param in self.params.values() if param.hide not in ('all', 'part')]
         else:
             markups = ['<span font_desc="{font}"><b>key: </b>{key}</span>'.format(font=PARAM_FONT, key=self.key)]
 
@@ -196,7 +196,7 @@ class Block(CoreBlock, Drawable):
 
         def get_min_height_for_bus_ports(ports):
             return 2 * PORT_BORDER_SEPARATION + sum(
-                port.height + PORT_SPACING for port in ports if port.get_type() == 'bus'
+                port.height + PORT_SPACING for port in ports if port.dtype == 'bus'
             ) - PORT_SPACING
 
         if self.current_bus_structure['sink']:
@@ -336,7 +336,8 @@ class Block(CoreBlock, Drawable):
         Returns:
             true for change
         """
-        type_templates = ' '.join(p._type for p in self.get_children())
+        type_templates = ' '.join(p._type for p in self.params.values())
+        type_templates += ' '.join(p.get_raw('dtype') for p in (self.sinks + self.sources))
         type_param = None
         for key, param in six.iteritems(self.params):
             if not param.is_enum():
@@ -373,7 +374,7 @@ class Block(CoreBlock, Drawable):
         """
         changed = False
         # Concat the nports string from the private nports settings of all ports
-        nports_str = ' '.join(port._nports for port in self.get_ports())
+        nports_str = ' '.join(str(port.get_raw('multiplicity')) for port in self.get_ports())
         # Modify all params whose keys appear in the nports string
         for key, param in six.iteritems(self.params):
             if param.is_enum() or param.key not in nports_str:

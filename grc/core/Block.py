@@ -181,19 +181,18 @@ class Block(Element):
 
         # disconnect hidden ports
         for port in itertools.chain(self.sources, self.sinks):
-            if port.get_hide():
+            if port.hidden:
                 for connection in port.get_connections():
                     self.parent_flowgraph.remove_element(connection)
 
-
-        self.active_sources = [p for p in self.get_sources_gui() if not p.get_hide()]
-        self.active_sinks = [p for p in self.get_sinks_gui() if not p.get_hide()]
+        self.active_sources = [p for p in self.get_sources_gui() if not p.hidden]
+        self.active_sinks = [p for p in self.get_sinks_gui() if not p.hidden]
 
     def _rewrite_nports(self, ports):
         for port in ports:
             if port.is_clone:  # Not a master port and no left-over clones
                 continue
-            nports = port.get_nports() or 1
+            nports = port.multiplicity
             for clone in port.clones[nports-1:]:
                 # Remove excess connections
                 for connection in clone.get_connections():
@@ -384,7 +383,7 @@ class Block(Element):
         # Could possibly support 1 to many blocks
         if len(self.sources) != 1 or len(self.sinks) != 1:
             return False
-        if not (self.sources[0].get_type() == self.sinks[0].get_type()):
+        if not (self.sources[0].dtype == self.sinks[0].dtype):
             return False
         if BLOCK_FLAG_DISABLE_BYPASS in self.flags:
             return False
@@ -392,6 +391,13 @@ class Block(Element):
 
     def __str__(self):
         return 'Block - {} - {}({})'.format(self.get_id(), self.name, self.key)
+
+    def __repr__(self):
+        try:
+            id_ = self.get_id()
+        except:
+            id_ = self.key
+        return 'block[' + id_ + ']'
 
     def get_id(self):
         return self.params['id'].get_value()
@@ -406,7 +412,7 @@ class Block(Element):
         return itertools.chain(self.active_sources, self.active_sinks)
 
     def get_children(self):
-        return self.get_ports() + self.params.values()
+        return self.params.values() + self.get_ports()
 
     def get_children_gui(self):
         return self.get_ports_gui() + self.params.values()
@@ -456,6 +462,10 @@ class Block(Element):
         except Exception as err:
             return "Template error: {}\n    {}".format(tmpl, err)
 
+    def evaluate(self, expr):
+        n = {key: param.get_evaluated() for key, param in six.iteritems(self.params)}
+        return self.parent_flowgraph.evaluate(expr, n)
+
     ##############################################
     # Import/Export Methods
     ##############################################
@@ -474,9 +484,9 @@ class Block(Element):
                   for key, value in six.iteritems(self.states))
         n['param'] = sorted(itertools.chain(states, params), key=lambda p: p['key'])
 
-        if any('bus' in a.get_type() for a in self.sinks):
+        if any('bus' in a.dtype for a in self.sinks):
             n['bus_sink'] = '1'
-        if any('bus' in a.get_type() for a in self.sources):
+        if any('bus' in a.dtype for a in self.sources):
             n['bus_source'] = '1'
         return n
 
@@ -531,11 +541,11 @@ class Block(Element):
 
     @staticmethod
     def back_ofthe_bus(portlist):
-        portlist.sort(key=lambda p: p._type == 'bus')
+        portlist.sort(key=lambda p: p.get_raw('dtype') == 'bus')
 
     @staticmethod
     def filter_bus_port(ports):
-        buslist = [p for p in ports if p._type == 'bus']
+        buslist = [p for p in ports if p.get_raw('dtype') == 'bus']
         return buslist or ports
 
     def _import_bus_stuff(self, n):
@@ -559,11 +569,11 @@ class Block(Element):
         if not struct:
             struct = [list(range(len(ports)))]
 
-        elif any(isinstance(p.get_nports(), int) for p in ports):
+        else:
             last = 0
             structlet = []
             for port in ports:
-                nports = port.get_nports()
+                nports = port.multiplicity
                 if not isinstance(nports, int):
                     continue
                 structlet.extend(a + last for a in range(nports))
@@ -580,10 +590,10 @@ class Block(Element):
             for connect in elt.get_connections():
                 self.parent.remove_element(connect)
 
-        if ports and all('bus' != p.get_type() for p in ports):
+        if ports and all('bus' != p.dtype for p in ports):
             struct = self.current_bus_structure[direc] = self.form_bus_structure(direc)
             n = {'type': 'bus'}
-            if ports[0].get_nports():
+            if ports[0].multiplicity:
                 n['nports'] = '1'
 
             for i, structlet in enumerate(struct):
@@ -591,7 +601,7 @@ class Block(Element):
                 port = self.parent_platform.get_new_port(
                     self, direction=direc, key=str(len(ports)), name=name, **n)
                 ports.append(port)
-        elif any('bus' == p.get_type() for p in ports):
+        elif any('bus' == p.dtype for p in ports):
             get_p_gui = self.get_sources_gui if direc == 'source' else self.get_sinks_gui
             for elt in get_p_gui():
                 ports.remove(elt)
@@ -632,7 +642,7 @@ class Block(Element):
         doit(self.sources, self.get_sources_gui(), 'source')
         doit(self.sinks, self.get_sinks_gui(), 'sink')
 
-        if 'bus' in [a.get_type() for a in self.get_sources_gui()]:
+        if 'bus' in [a.dtype for a in self.get_sources_gui()]:
             for i in range(len(self.get_sources_gui())):
                 if not self.get_sources_gui()[i].get_connections():
                     continue
@@ -727,7 +737,7 @@ class EPyBlock(Block):
         for key, port_type in port_specs:
             reuse_port = (
                 port_current is not None and
-                port_current.get_type() == port_type and
+                port_current.dtype == port_type and
                 (key.isdigit() or port_current.key == key)
             )
             if reuse_port:

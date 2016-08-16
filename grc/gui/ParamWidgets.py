@@ -61,12 +61,12 @@ class InputParam(Gtk.HBox):
 
         # fixme: find a non-deprecated way to change colors
         # self.set_color(Colors.PARAM_ENTRY_COLORS.get(
-        #     self.param.get_type(), Colors.PARAM_ENTRY_DEFAULT_COLOR)
+        #     self.param.dtype, Colors.PARAM_ENTRY_DEFAULT_COLOR)
         # )
 
         self.set_tooltip_text(self.param.format_tooltip_text())
 
-        if self.param.get_hide() == 'all':
+        if self.param.hide == 'all':
             self.hide()
         else:
             self.show_all()
@@ -277,16 +277,16 @@ class FileParam(EntryParam):
             dirname = os.getcwd()  # fix bad paths
 
         #build the dialog
-        if self.param.get_type() == 'file_open':
+        if self.param.dtype == 'file_open':
             file_dialog = Gtk.FileChooserDialog('Open a Data File...', None,
                 Gtk.FileChooserAction.OPEN, ('gtk-cancel',Gtk.ResponseType.CANCEL,'gtk-open',Gtk.ResponseType.OK))
-        elif self.param.get_type() == 'file_save':
+        elif self.param.dtype == 'file_save':
             file_dialog = Gtk.FileChooserDialog('Save a Data File...', None,
                 Gtk.FileChooserAction.SAVE, ('gtk-cancel',Gtk.ResponseType.CANCEL, 'gtk-save',Gtk.ResponseType.OK))
             file_dialog.set_do_overwrite_confirmation(True)
             file_dialog.set_current_name(basename) #show the current filename
         else:
-            raise ValueError("Can't open file chooser dialog for type " + repr(self.param.get_type()))
+            raise ValueError("Can't open file chooser dialog for type " + repr(self.param.dtype))
         file_dialog.set_current_folder(dirname) #current directory
         file_dialog.set_select_multiple(False)
         file_dialog.set_local_only(True)
