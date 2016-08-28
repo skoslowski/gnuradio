@@ -110,15 +110,16 @@ class Port(Element):
     hidden = Evaluated((bool, int), default=False, name='hidden')
     dtype = EvaluatedEnum(Constants.TYPE_TO_SIZEOF.keys(), default='complex', name='dtype')
 
-    def __init__(self, parent, direction, key, name='', domain='', dtype='',
+    def __init__(self, parent, direction, key, label='', domain='', dtype='',
                  vlen='', multiplicity=1, optional=False, hide='', **kwargs):
         """Make a new port from nested data."""
         Element.__init__(self, parent)
 
         self._dir = direction
         self.key = key
-        default_name = key if not key.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + key
-        self.name = self._base_name = name or default_name
+        if not label:
+            label = key if not key.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + key
+        self.name = self._base_name = label
 
         self.domain = domain or Constants.DEFAULT_DOMAIN
         self.dtype = dtype

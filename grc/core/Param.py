@@ -71,16 +71,16 @@ class Param(Element):
     dtype = EvaluatedEnum(Constants.PARAM_TYPE_NAMES, default='raw', name='dtype')
     # hidden = Evaluated((bool, int), default=False, name='hidden')
 
-    def __init__(self, parent, key, name='', dtype='raw', value='',
+    def __init__(self, parent, key, label='', dtype='raw', default='',
                  options=None, category='', hide='none', **kwargs):
         """Make a new param from nested data"""
         super(Param, self).__init__(parent)
         self.key = key
-        self.name = name.strip() or key.title()
+        self.name = label.strip() or key.title()
         self.category = category or Constants.DEFAULT_PARAM_TAB
 
         self.dtype = dtype
-        self.value = self.default = value
+        self.value = self.default = default
 
         self.options = self._init_options(options or [])
 

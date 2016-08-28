@@ -57,13 +57,13 @@ class Block(Element):
 
     STATE_LABELS = ['disabled', 'enabled', 'bypassed']
 
-    def __init__(self, parent, key, name='', category='', flags='',
+    def __init__(self, parent, key, label='', category='', flags='',
                  params=None, sinks=None, sources=None, **n):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
 
         self.key = key
-        self.name = name or key.title()
+        self.name = label or key.title()
         self.category = [cat.strip() for cat in category.split('/') if cat.strip()]
         self.flags = flags
 

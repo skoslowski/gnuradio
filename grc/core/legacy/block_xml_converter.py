@@ -57,7 +57,7 @@ def convert_xml(xml_file):
         ('params:', '\nparams:'),
         ('sinks:', '\nsinks:'),
         ('sources:', '\nsources:'),
-        ('imports:', '\nimports:'),
+        ('templates:', '\ntemplates:'),
         ('documentation:', '\ndocumentation:'),
     ]
     for r in replace:
@@ -83,7 +83,7 @@ def convert_block_xml(node):
 
     data = OrderedDict()
     data['key'] = key
-    data['name'] = node.findtext('name') or no_value
+    data['label'] = node.findtext('name') or no_value
     data['category'] = node.findtext('category') or no_value
     data['flags'] = node.findtext('flags') or no_value
 
@@ -105,21 +105,7 @@ def convert_block_xml(node):
         no_value
     )
 
-    imports = [dummy.to_mako(import_node.text)
-               for import_node in node.getiterator('import')]
-    if imports:
-        data['imports'] = (imports if len(imports) > 1 else imports[0]) or no_value
-
-    data['var_make'] = dummy.to_mako(node.findtext('var_make') or '') or no_value
-    make = node.findtext('make') or ''
-    if '\n' in make:
-        make = dummy.to_mako(make)
-        data['make'] = scalar_node(make, style='|' if '\n' in make else None)
-    else:
-        data['make'] = dummy.to_mako(make) or no_value
-
-    data['callbacks'] = [dummy.to_mako(cb_node.text)
-                         for cb_node in node.getiterator('callback')] or no_value
+    data['templates'] = convert_templates(node, converter.to_mako) or no_value
 
     docs = node.findtext('doc')
     if docs:
@@ -129,14 +115,36 @@ def convert_block_xml(node):
     return OrderedDict((key, value) for key, value in data.items() if value is not no_value)
 
 
-def convert_param_xml(node, convert, key=''):
+def convert_templates(node, convert):
+    templates = OrderedDict()
+
+    imports = [dummy.to_mako(import_node.text)
+               for import_node in node.getiterator('import')]
+    if imports:
+        templates['imports'] = (imports if len(imports) > 1 else imports[0]) or no_value
+
+        templates['var_make'] = dummy.to_mako(node.findtext('var_make') or '') or no_value
+    make = node.findtext('make') or ''
+    if '\n' in make:
+        make = dummy.to_mako(make)
+        templates['make'] = scalar_node(make, style='|' if '\n' in make else None)
+    else:
+        templates['make'] = dummy.to_mako(make) or no_value
+
+    templates['callbacks'] = [dummy.to_mako(cb_node.text)
+                              for cb_node in node.getiterator('callback')] or no_value
+
+    return OrderedDict((key, value) for key, value in templates.items() if value is not no_value)
+
+
+def convert_param_xml(node, convert, block_key=''):
     param = OrderedDict()
-    param['key'] = node.findtext('key').strip()
-    param['name'] = node.findtext('name').strip()
+    key = node.findtext('key').strip()
+    param['label'] = node.findtext('name').strip()
     param['category'] = node.findtext('tab') or no_value
 
     param['dtype'] = convert(node.findtext('type') or '')
-    param['value'] = node.findtext('value') or no_value
+    param['default'] = node.findtext('value') or no_value
 
     options = []
     for option_n in node.getiterator('option'):
@@ -156,21 +164,21 @@ def convert_param_xml(node, convert, key=''):
 
     param['hide'] = hide = convert(node.findtext('hide')) or no_value
     if hide is not no_value:
-        print(key, hide)
+        print(block_key, hide)
 
-    return OrderedDict((key, value) for key, value in param.items() if value is not no_value)
+    return {key: OrderedDict((key, value) for key, value in param.items() if value is not no_value)}
 
 
 def convert_port_xml(node, convert):
     port = OrderedDict()
-    port['name'] = node.findtext('name')
+    port['label'] = node.findtext('name')
 
     dtype = convert(node.findtext('type'))
     # TODO: detect dyn message ports
     # todo: parse hide, tab tags
     port['domain'] = domain = Constants.GR_MESSAGE_DOMAIN if dtype == 'message' else Constants.DEFAULT_DOMAIN
     if domain == Constants.GR_MESSAGE_DOMAIN:
-        port['key'] = port['name']
+        port['key'] = port['label']
     else:
         port['dtype'] = dtype
         vlen = node.findtext('vlen')

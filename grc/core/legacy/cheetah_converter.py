@@ -196,7 +196,7 @@ class Converter(object):
             out.append(spec.end)
 
         out = ''.join(out)
-        # fix eval stuff
+        # fix: eval stuff
         out = re.sub(r'(?P<arg>' + r'|'.join(self.extended) + r')\(\)', '\g<arg>', out)
 
         self.stats['hard'] += 1
