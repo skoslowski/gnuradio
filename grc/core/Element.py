@@ -57,8 +57,7 @@ class Evaluated(object):
             instance.add_error_message("Can not cast evaluated value '{}' to type {}"
                                        "".format(value, self.expected_type))
             return self.default
-
-        print(instance, self.name, raw, value)
+        # print(instance, self.name, raw, value)
         return value
 
     def __call__(self, func):
@@ -80,7 +79,7 @@ class Evaluated(object):
         attribs = instance.__dict__
         value = value or self.default
         if isinstance(value, str) and value.startswith('${') and value.endswith('}'):
-            attribs[self.name_raw] = value[2:-1]
+            attribs[self.name_raw] = value[2:-1].strip()
         else:
             attribs[self.name] = value
 

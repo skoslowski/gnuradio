@@ -22,38 +22,39 @@ import yaml
 
 BLOCK1 = """
 key: block_key
-name: testname
+label: testname
 
 params:
--   key: vlen
-    name: Vec Length
+- vlen:
+    label: Vec Length
     dtype: int
-    value: '1'
--   key: out_type
-    name: Vec Length
+    default: 1
+- out_type:
+    label: Vec Length
     dtype: string
-    value: complex
--   key: a
-    name: Alpha
-    dtype: !eval '(out_type)'
-    value: '0'
+    default: complex
+-  a:
+    label: Alpha
+    dtype: ${ out_type }
+    default: '0'
 
 sinks:
--   name: in
+-   label: in
     domain: stream
     dtype: complex
-    vlen: !eval '2 * vlen'
+    vlen: ${ 2 * vlen }
 -   name: in2
     domain: message
     key: in2
 
 sources:
--   name: out
+-   label: out
     domain: stream
-    dtype: !eval 'out_type'
-    vlen: !eval 'vlen'
+    dtype: ${ out_type }
+    vlen: ${ vlen }
 
-make: blocks.complex_to_mag_squared({vlen})
+templates:
+    make: blocks.complex_to_mag_squared(${ vlen })
 """
 
 

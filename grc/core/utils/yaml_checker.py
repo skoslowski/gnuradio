@@ -48,19 +48,18 @@ OPTIONS_SCHEME = expand(
 PARAM_SCHEME = expand(
     base_key=str_,   # todo: rename/remove
 
-    key=Spec(types=str_, required=True, item_scheme=None),
-    name=str_,
+    label=str_,
     category=str_,
 
     dtype=str_,
-    value=object,
+    default=object,
     options=Spec(types=list, required=False, item_scheme=OPTIONS_SCHEME),
 
     hide=str_,
 )
 
 PORT_SCHEME = expand(
-    name=str_,
+    label=str_,
     domain=str_,
 
     key=str_,
@@ -72,23 +71,27 @@ PORT_SCHEME = expand(
     hide=(bool, str_),
 )
 
+TEMPLATES_SCHEME = expand(
+    imports=(list, str),
+    var_make=str_,
+    make=str_,
+    callbacks=(list, str_),
+)
+
 BLOCK_SCHEME = expand(
     key=Spec(types=str_, required=True, item_scheme=None),
-    name=str_,
+    label=str_,
     category=(list, str_),
     flags=(list, str_),
 
-    params=Spec(types=list, required=False, item_scheme=PARAM_SCHEME),
+    params=Spec(types=list, required=False, item_scheme=(str_, PARAM_SCHEME)),
     sinks=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
     sources=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
 
     checks=(list, str_),
     value=str_,
 
-    imports=(list, str),
-    var_make=str_,
-    make=str_,
-    callbacks=(list, str_),
+    templates=Spec(types=dict, required=False, item_scheme=TEMPLATES_SCHEME),
 
     documentation=str_,
 
@@ -99,10 +102,10 @@ BLOCK_SCHEME = expand(
 
 
 class Message(collections.namedtuple('Message', 'path type message')):
-    format = '{path}: {type}: {message}'
+    fmt = '{path}: {type}: {message}'
 
     def __str__(self):
-        return self.format.format(**self._asdict())
+        return self.fmt.format(**self._asdict())
 
 
 class SchemaChecker(object):
@@ -128,7 +131,19 @@ class SchemaChecker(object):
         if not data or not isinstance(data, types.DictType):
             self._error('Empty data or not a dict')
             return
+        if isinstance(scheme, types.DictType):
+            self._check_dict(data, scheme)
+        else:
+            self._check_var_key_dict(data, *scheme)
 
+    def _check_var_key_dict(self, data, key_type, value_scheme):
+        for key, value in six.iteritems(data):
+            if not isinstance(key, key_type):
+                self._error('Key type {!r} for {!r} not in valid types'.format(
+                    type(value).__name__, key))
+            self._check_dict(value, value_scheme)
+
+    def _check_dict(self, data, scheme):
         for key, (types_, required, item_scheme) in six.iteritems(scheme):
             try:
                 value = data[key]
@@ -137,21 +152,26 @@ class SchemaChecker(object):
                     self._error('Missing required entry {!r}'.format(key))
                 continue
 
-            if not isinstance(value, types_):
-                self._error('Value type {!r} for key {!r} not on valid types'.format(
-                    type(value).__name__, key))
-
-            if item_scheme and isinstance(value, types.ListType):
-                self._check_items(value, item_scheme, label=key)
+            self._check_value(value, types_, item_scheme, label=key)
 
         for key in set(data).difference(scheme):
             self._warn('Ignoring extra key {!r}'.format(key))
 
-    def _check_items(self, data, scheme, label):
+    def _check_list(self, data, scheme, label):
         for i, item in enumerate(data):
             self._path.append('{}[{}]'.format(label, i))
             self._check(item, scheme)
             self._path.pop()
+
+    def _check_value(self, value, types_, item_scheme, label):
+        if not isinstance(value, types_):
+            self._error('Value type {!r} for {!r} not in valid types'.format(
+                type(value).__name__, label))
+        if item_scheme:
+            if isinstance(value, types.ListType):
+                self._check_list(value, item_scheme, label)
+            elif isinstance(value, types.DictType):
+                self._check_dict(value, item_scheme)
 
     def _error(self, msg):
         self.messages.append(Message('.'.join(self._path), 'error', msg))

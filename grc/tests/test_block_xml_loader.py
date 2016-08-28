@@ -31,6 +31,7 @@ def test_block_xml():
     for filename in glob.iglob(path.join(test_file_dir, '*.xml')):
         with open(filename) as fp:
             _, out = convert_xml(fp)
+        print(out)
         data = yaml.load(out)
         passed = checker.run(data)
         assert passed, checker.messages
