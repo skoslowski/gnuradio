@@ -105,13 +105,13 @@ class Port(Element):
     is_port = True
     is_clone = False
 
+    dtype = EvaluatedEnum(Constants.TYPE_TO_SIZEOF.keys(), default='complex', name='dtype')
     vlen = EvaluatedPInt(name='vlen')
     multiplicity = EvaluatedPInt(name='multiplicity')
     hidden = Evaluated((bool, int), default=False, name='hidden')
-    dtype = EvaluatedEnum(Constants.TYPE_TO_SIZEOF.keys(), default='complex', name='dtype')
 
-    def __init__(self, parent, direction, key, label='', domain='', dtype='',
-                 vlen='', multiplicity=1, optional=False, hide='', **kwargs):
+    def __init__(self, parent, direction, key, label='', domain=Constants.DEFAULT_DOMAIN, dtype='complex',
+                 vlen='', multiplicity=1, optional=False, hide='', **_):
         """Make a new port from nested data."""
         Element.__init__(self, parent)
 
@@ -121,13 +121,12 @@ class Port(Element):
             label = key if not key.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + key
         self.name = self._base_name = label
 
-        self.domain = domain or Constants.DEFAULT_DOMAIN
+        self.domain = domain
         self.dtype = dtype
         self.vlen = vlen
 
         if domain == Constants.GR_MESSAGE_DOMAIN:
             self.key = self.name
-            self.dtype = 'message'  # For port color FIXME
 
         self.multiplicity = multiplicity
         self.optional = bool(optional)
@@ -135,8 +134,6 @@ class Port(Element):
         # end of args ########################################################
 
         self.inherit_type = not dtype
-        self._hide_evaluated = False  # Updated on rewrite()
-
         self.clones = []  # References to cloned ports (for nports > 1)
 
     def __str__(self):
