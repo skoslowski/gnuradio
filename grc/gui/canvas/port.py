@@ -75,6 +75,8 @@ class Port(CorePort, Drawable):
         if not self.parent_block.enabled:
             self._font_color[-1] = 0.4
             color = colors.BLOCK_DISABLED_COLOR
+        elif self.domain == 'gr-message':
+            color = colors.PORT_TYPE_TO_COLOR.get('message')
         else:
             self._font_color[-1] = 1.0
             color = colors.PORT_TYPE_TO_COLOR.get(self.dtype) or colors.PORT_TYPE_TO_COLOR.get('')
