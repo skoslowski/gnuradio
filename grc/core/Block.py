@@ -105,7 +105,8 @@ class Block(Element):
         def add_param(id, **kwargs):
             params[id] = param_factory(self, id=id, **kwargs)
 
-        add_param(id='id', name='ID', dtype='id')
+        add_param(id='id', name='ID', dtype='id',
+                  hide='none' if (self.key == 'options' or self.is_variable) else 'part')
 
         if not (self.is_virtual_or_pad or self.is_variable or self.key == 'options'):
             add_param(id='alias', name='Block Alias', dtype='string',

@@ -26,12 +26,13 @@ Converter for legacy block definitions in XML format
 from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
+import itertools
 
 import yaml
 from lxml import etree
 from os import path
 
-from .yaml_output import OrderedDictFlowing, scalar_node, GRCDumper
+from .yaml_output import ListFlowing, scalar_node, GRCDumper
 from . import cheetah_converter
 
 from .. import Constants
@@ -58,9 +59,9 @@ def convert_xml(xml_file):
     out = yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper)
 
     replace = [
-        ('params:', '\nparams:'),
-        ('sinks:', '\nsinks:'),
-        ('sources:', '\nsources:'),
+        ('parameters:', '\nparameters:'),
+        ('inputs:', '\ninputs:'),
+        ('outputs:', '\noutputs:'),
         ('templates:', '\ntemplates:'),
         ('documentation:', '\ndocumentation:'),
     ]
@@ -116,7 +117,26 @@ def convert_block_xml(node):
         docs = docs.strip().replace('\\\n', '').replace('\n\n', '\n')
         data['documentation'] = scalar_node(docs, style='>')
 
-    return OrderedDict((key, value) for key, value in data.items() if value is not no_value)
+    data = OrderedDict((key, value) for key, value in data.items() if value is not no_value)
+    auto_hide_params_for_item_sizes(data)
+    return data
+
+
+def auto_hide_params_for_item_sizes(data):
+    item_size_templates = []
+    vlen_templates = []
+    for port in itertools.chain(*[data.get(direction, []) for direction in ['inputs', 'outputs']]):
+        for key in ['dtype', 'multiplicity']:
+            item_size_templates.append(str(port.get(key, '')))
+        vlen_templates.append(str(port.get('vlen', '')))
+    item_size_templates = ' '.join(value for value in item_size_templates if '${' in value)
+    vlen_templates = ' '.join(value for value in vlen_templates if '${' in value)
+
+    for param in data.get('parameters', []):
+        if param['id'] in item_size_templates:
+            param.setdefault('hide', 'part')
+        if param['id'] in vlen_templates:
+            param.setdefault('hide', "${ 'part' if vlen == 1 else 'none' }")
 
 
 def convert_templates(node, convert):
@@ -150,15 +170,15 @@ def convert_param_xml(node, convert, block_key=''):
     param['dtype'] = convert(node.findtext('type') or '')
     param['default'] = node.findtext('value') or no_value
 
-    param['options'] = [on.findtext('key') for on in node.getiterator('option')] or no_value
-    param['option_labels'] = [on.findtext('name') for on in node.getiterator('option')] or no_value
+    param['options'] = ListFlowing(on.findtext('key') for on in node.getiterator('option')) or no_value
+    param['option_labels'] = ListFlowing(on.findtext('name') for on in node.getiterator('option')) or no_value
 
-    attributes = defaultdict(list)
+    attributes = defaultdict(ListFlowing)
     for option_n in node.getiterator('option'):
         for opt_n in option_n.getiterator('opt'):
             key, value = opt_n.text.split(':', 2)
             attributes[key].append(value)
-    param['option_attributes'] = attributes or no_value
+    param['option_attributes'] = dict(attributes) or no_value
 
     param['hide'] = hide = convert(node.findtext('hide')) or no_value
     if hide is not no_value:

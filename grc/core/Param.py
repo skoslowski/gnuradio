@@ -27,7 +27,7 @@ import six
 from six.moves import builtins, filter, map, range, zip
 
 from . import Constants
-from .Element import Element, nop_write, EvaluatedEnum, Evaluated
+from .Element import Element, EvaluatedEnum, Evaluated
 
 # Blacklist certain ids, its not complete, but should help
 ID_BLACKLIST = ['self', 'options', 'gr', 'blks2', 'math', 'firdes'] + dir(builtins)
@@ -38,7 +38,6 @@ except ImportError:
     pass
 
 _check_id_matcher = re.compile('^[a-z|A-Z]\w*$')
-_show_id_matcher = re.compile('^(variable\w*|parameter|options|notebook)$')
 
 
 class TemplateArg(object):
@@ -70,6 +69,7 @@ class Param(Element):
 
     name = Evaluated(str, default='no name', name='name')
     dtype = EvaluatedEnum(Constants.PARAM_TYPE_NAMES, default='raw', name='dtype')
+    hide = EvaluatedEnum('none all part', name='hide')
 
     def __init__(self, parent, id, label='', dtype='raw', default='',
                  options=None, option_labels=None, option_attributes=None,
@@ -129,39 +129,6 @@ class Param(Element):
 
     def __repr__(self):
         return '{!r}.param[{}]'.format(self.parent, self.key)
-
-    @EvaluatedEnum('none all part')
-    def hide(self):
-        """
-        Get the hide value from the base class.
-        Hide the ID parameter for most blocks. Exceptions below.
-        If the parameter controls a port type, vlen, or nports, return part.
-        If the parameter is an empty grid position, return part.
-        These parameters are redundant to display in the flow graph view.
-
-        Returns:
-            hide the hide property string
-        """
-        block = self.parent_block
-
-        hide = EvaluatedEnum.default_eval_func(Param.hide, self)
-        if hide != 'none':
-            return hide
-
-        # Hide ID in non variable blocks
-        if self.key == 'id' and not _show_id_matcher.match(block.key):
-            return 'part'
-        # Hide port controllers for type and nports
-        if self.key in ' '.join(p.get_raw('dtype') + ' ' + str(p.get_raw('multiplicity')) for p in self.parent.get_ports()):
-            return 'part'
-        # Hide port controllers for vlen, when == 1
-        if self.key in ' '.join(str(p.get_raw('vlen')) for p in self.parent.get_ports()):
-            try:
-                if int(self.get_evaluated()) == 1:
-                    return 'part'
-            except:
-                pass
-        return hide
 
     def rewrite(self):
         Element.rewrite(self)
