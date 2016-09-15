@@ -21,33 +21,33 @@ from grc.core.utils.yaml_checker import SchemaChecker
 import yaml
 
 BLOCK1 = """
-key: block_key
+id: block_key
 label: testname
 
-params:
-- vlen:
+parameters:
+-   id: vlen
     label: Vec Length
     dtype: int
     default: 1
-- out_type:
+-   id: out_type
     label: Vec Length
     dtype: string
     default: complex
--  a:
+-   id: a
     label: Alpha
     dtype: ${ out_type }
     default: '0'
 
-sinks:
+inputs:
 -   label: in
     domain: stream
     dtype: complex
     vlen: ${ 2 * vlen }
 -   name: in2
     domain: message
-    key: in2
+    id: in2
 
-sources:
+outputs:
 -   label: out
     domain: stream
     dtype: ${ out_type }
@@ -60,13 +60,13 @@ templates:
 
 def test_min():
     checker = SchemaChecker()
-    assert checker.run({'key': 'test'})
+    assert checker.run({'id': 'test'})
     assert not checker.run({'name': 'test'})
 
 
 def test_extra_keys():
     checker = SchemaChecker()
-    assert checker.run({'key': 'test', 'abcdefg': 'nonsense'})
+    assert checker.run({'id': 'test', 'abcdefg': 'nonsense'})
     assert checker.messages == [('block', 'warn', "Ignoring extra key 'abcdefg'")]
 
 

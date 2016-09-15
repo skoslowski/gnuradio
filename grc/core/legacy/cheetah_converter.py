@@ -205,7 +205,10 @@ class Converter(object):
     def convert_inline_conditional(self, expr, spec=Python):
         if spec == FormatString:
             raise ValueError('No conditionals in format strings: ' + expr)
-        expr = cheetah_inline_if.sub(r'(\g<then> if \g<cond> else \g<else>)', expr)
+        matcher = r'\g<then> if \g<cond> else \g<else>'
+        if spec == Python:
+            matcher = '(' + matcher + ')'
+        expr = cheetah_inline_if.sub(matcher, expr)
         return spec.type(self.convert_hard(expr, spec))
 
 

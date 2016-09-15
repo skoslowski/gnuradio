@@ -39,21 +39,19 @@ def expand(**kwargs):
 str_ = six.string_types
 
 
-OPTIONS_SCHEME = expand(
-    name=str_,
-    value=object,
-    attributes=dict,
-)
-
 PARAM_SCHEME = expand(
     base_key=str_,   # todo: rename/remove
 
+    id=str_,
     label=str_,
     category=str_,
 
     dtype=str_,
     default=object,
-    options=Spec(types=list, required=False, item_scheme=OPTIONS_SCHEME),
+
+    options=list,
+    option_labels=list,
+    option_attributes=Spec(types=dict, required=False, item_scheme=(str_, list)),
 
     hide=str_,
 )
@@ -62,7 +60,7 @@ PORT_SCHEME = expand(
     label=str_,
     domain=str_,
 
-    key=str_,
+    id=str_,
     dtype=str_,
     vlen=(int, str_),
 
@@ -79,14 +77,14 @@ TEMPLATES_SCHEME = expand(
 )
 
 BLOCK_SCHEME = expand(
-    key=Spec(types=str_, required=True, item_scheme=None),
+    id=Spec(types=str_, required=True, item_scheme=None),
     label=str_,
     category=(list, str_),
     flags=(list, str_),
 
-    params=Spec(types=list, required=False, item_scheme=(str_, PARAM_SCHEME)),
-    sinks=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
-    sources=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
+    parameters=Spec(types=list, required=False, item_scheme=PARAM_SCHEME),
+    inputs=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
+    outputs=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
 
     checks=(list, str_),
     value=str_,
@@ -141,7 +139,11 @@ class SchemaChecker(object):
             if not isinstance(key, key_type):
                 self._error('Key type {!r} for {!r} not in valid types'.format(
                     type(value).__name__, key))
-            self._check_dict(value, value_scheme)
+            if isinstance(value_scheme, Spec):
+                self._check_dict(value, value_scheme)
+            elif not isinstance(value, value_scheme):
+                self._error('Value type {!r} for {!r} not in valid types'.format(
+                    type(value).__name__, key))
 
     def _check_dict(self, data, scheme):
         for key, (types_, required, item_scheme) in six.iteritems(scheme):
@@ -171,7 +173,7 @@ class SchemaChecker(object):
             if isinstance(value, types.ListType):
                 self._check_list(value, item_scheme, label)
             elif isinstance(value, types.DictType):
-                self._check_dict(value, item_scheme)
+                self._check(value, item_scheme)
 
     def _error(self, msg):
         self.messages.append(Message('.'.join(self._path), 'error', msg))
