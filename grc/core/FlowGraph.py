@@ -184,11 +184,11 @@ class FlowGraph(Element):
     ##############################################
     # Access Elements
     ##############################################
-    def get_block(self, id):
+    def get_block(self, name):
         for block in self.blocks:
-            if block.get_id() == id:
+            if block.get_id() == name:
                 return block
-        raise KeyError('No block with ID {!r}'.format(id))
+        raise KeyError('No block with name {!r}'.format(name))
 
     def get_elements(self):
         return self.blocks + self.connections
@@ -264,21 +264,21 @@ class FlowGraph(Element):
     # Add/remove stuff
     ##############################################
 
-    def new_block(self, key, **kwargs):
+    def new_block(self, block_id, **kwargs):
         """
         Get a new block of the specified key.
         Add the block to the list of elements.
 
         Args:
-            key: the block key
+            block_id: the block key
 
         Returns:
             the new block or None if not found
         """
-        if key == 'options':
+        if block_id == 'options':
             return self._options_block
         try:
-            block = self.parent_platform.get_new_block(self, key, **kwargs)
+            block = self.parent_platform.get_new_block(self, block_id, **kwargs)
             self.blocks.append(block)
         except KeyError:
             block = None
@@ -382,27 +382,27 @@ class FlowGraph(Element):
         # build the blocks
         self.blocks.append(self._options_block)
         for block_n in fg_n.get('block', []):
-            key = block_n['key']
-            block = self.new_block(key)
+            block_id = block_n['key']
+            block = self.new_block(block_id)
 
             if not block:
                 # we're before the initial fg update(), so no evaluated values!
                 # --> use raw value instead
                 path_param = self._options_block.get_param('hier_block_src_path')
                 file_path = self.parent_platform.find_file_in_paths(
-                    filename=key + '.grc',
+                    filename=block_id + '.grc',
                     paths=path_param.get_value(),
                     cwd=self.grc_file_path
                 )
                 if file_path:  # grc file found. load and get block
                     self.parent_platform.load_and_generate_flow_graph(file_path)
-                    block = self.new_block(key)  # can be None
+                    block = self.new_block(block_id)  # can be None
 
             if not block:  # looks like this block key cannot be found
                 # create a dummy block instead
-                block = self.new_block('_dummy', missing_key=key,
+                block = self.new_block('_dummy', missing_block_id=block_id,
                                        params_n=block_n.get('param', []))
-                print('Block key "%s" not found' % key)
+                print('Block id "%s" not found' % block_id)
 
             block.import_data(block_n)
 

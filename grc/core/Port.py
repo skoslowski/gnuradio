@@ -110,15 +110,15 @@ class Port(Element):
     multiplicity = EvaluatedPInt(name='multiplicity')
     hidden = Evaluated((bool, int), default=False, name='hidden')
 
-    def __init__(self, parent, direction, key, label='', domain=Constants.DEFAULT_DOMAIN, dtype='complex',
+    def __init__(self, parent, direction, id, label='', domain=Constants.DEFAULT_DOMAIN, dtype='complex',
                  vlen='', multiplicity=1, optional=False, hide='', **_):
         """Make a new port from nested data."""
         Element.__init__(self, parent)
 
         self._dir = direction
-        self.key = key
+        self.key = id
         if not label:
-            label = key if not key.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + key
+            label = id if not id.isdigit() else {'sink': 'in', 'source': 'out'}[direction] + id
         self.name = self._base_name = label
 
         self.domain = domain

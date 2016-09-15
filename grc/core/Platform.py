@@ -300,18 +300,18 @@ class Platform(Element):
         if not passed:
             raise ValueError('YAML schema check failed for file: ' + file_path)
 
-        key = data.pop('key').rstrip('_')
+        block_id = data.pop('id').rstrip('_')
 
-        if key in self.blocks:
-            print('Warning: Block with key "{}" already exists.\n'
-                  '\tIgnoring: {}'.format(key, file_path), file=sys.stderr)
+        if block_id in self.blocks:
+            print('Warning: Block with id "{}" already exists.\n'
+                  '\tIgnoring: {}'.format(block_id, file_path), file=sys.stderr)
             return
 
         # Store the block
-        self.blocks[key] = block = self.get_new_block(self._flow_graph, key, **data)
-        self._blocks_n[key] = data
+        self.blocks[block_id] = block = self.get_new_block(self._flow_graph, block_id, **data)
+        self._blocks_n[block_id] = data
         self._docstring_extractor.query(
-            key,
+            block_id,
             block.get_imports(raw=True),
             block.get_make(raw=True)
         )
@@ -370,11 +370,11 @@ class Platform(Element):
     def get_new_flow_graph(self):
         return self.FlowGraph(parent=self)
 
-    def get_new_block(self, parent, key, **kwargs):
-        cls = self.block_classes.get(key, self.block_classes[None])
+    def get_new_block(self, parent, block_id, **kwargs):
+        cls = self.block_classes.get(block_id, self.block_classes[None])
         if not kwargs:
-            kwargs = self._blocks_n[key]
-        return cls(parent, key=key, **kwargs)
+            kwargs = self._blocks_n[block_id]
+        return cls(parent, id=block_id, **kwargs)
 
     def get_new_param(self, parent, **kwargs):
         cls = self.param_classes[kwargs.pop('cls_key', None)]

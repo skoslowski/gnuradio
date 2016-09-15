@@ -57,19 +57,15 @@ class Block(Element):
 
     STATE_LABELS = ['disabled', 'enabled', 'bypassed']
 
-    def __init__(self, parent, key, label='', category='', flags='',
-                 params=None, sinks=None, sources=None, **n):
+    def __init__(self, parent, id, label='', category='', flags='',
+                 parameters=None, inputs=None, outputs=None, **n):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
 
-        self.key = key
-        self.name = label or key.title()
+        self.key = id
+        self.name = label or id.title()
         self.category = [cat.strip() for cat in category.split('/') if cat.strip()]
         self.flags = flags
-
-        # params_n = n.get('params', [])
-        # sources_n = n.get('sources', [])
-        # sinks_n = n.get('sinks', [])
 
         self._var_value = n.get('value', '')
         self._checks = n.get('checks', [])
@@ -88,10 +84,10 @@ class Block(Element):
         if self.is_virtual_or_pad or self.is_variable:
             self.flags += BLOCK_FLAG_DISABLE_BYPASS
 
-        self.params = self._init_params(params or [], has_sinks=bool(sinks),
-                                        has_sources=bool(sources))
-        self.sinks = self._init_ports(sinks or [], direction='sink')
-        self.sources = self._init_ports(sources or [], direction='source')
+        self.params = self._init_params(parameters or [], has_sinks=bool(inputs),
+                                        has_sources=bool(outputs))
+        self.sinks = self._init_ports(inputs or [], direction='sink')
+        self.sources = self._init_ports(outputs or [], direction='source')
 
         # end of sub args ####################################################
 
@@ -106,28 +102,28 @@ class Block(Element):
         params = collections.OrderedDict()
         param_factory = self.parent_platform.get_new_param
 
-        def add_param(key, **kwargs):
-            params[key] = param_factory(self, key=key, **kwargs)
+        def add_param(id, **kwargs):
+            params[id] = param_factory(self, id=id, **kwargs)
 
-        add_param(key='id', name='ID', dtype='id')
+        add_param(id='id', name='ID', dtype='id')
 
         if not (self.is_virtual_or_pad or self.is_variable or self.key == 'options'):
-            add_param(key='alias', name='Block Alias', dtype='string',
+            add_param(id='alias', name='Block Alias', dtype='string',
                       hide='part', category=ADVANCED_PARAM_TAB)
 
         if not self.is_virtual_or_pad and (has_sources or has_sinks):
-            add_param(key='affinity', name='Core Affinity', dtype='int_vector',
-                      hide='part', tab=ADVANCED_PARAM_TAB)
+            add_param(id='affinity', name='Core Affinity', dtype='int_vector',
+                      hide='part', category=ADVANCED_PARAM_TAB)
 
         if not self.is_virtual_or_pad and has_sources:
-            add_param(key='minoutbuf', name='Min Output Buffer', dtype='int',
+            add_param(id='minoutbuf', name='Min Output Buffer', dtype='int',
                       hide='part', value='0', category=ADVANCED_PARAM_TAB)
-            add_param(key='maxoutbuf', name='Max Output Buffer', dtype='int',
+            add_param(id='maxoutbuf', name='Max Output Buffer', dtype='int',
                       hide='part', value='0', category=ADVANCED_PARAM_TAB)
 
-        base_params_n = {n['key']: n for n in params_n}
+        base_params_n = {n['id']: n for n in params_n}
         for param_n in params_n:
-            key = param_n['key']
+            key = param_n['id']
             if key in params:
                 raise Exception('Key "{}" already exists in params'.format(key))
 
@@ -135,7 +131,7 @@ class Block(Element):
             extended_param_n.update(param_n)
             params[key] = param_factory(self, **extended_param_n)
 
-        add_param(key='comment', name='Comment', dtype='_multiline', hide='part',
+        add_param(id='comment', name='Comment', dtype='_multiline', hide='part',
                   value='', category=ADVANCED_PARAM_TAB)
         return params
 
@@ -145,11 +141,11 @@ class Block(Element):
         port_keys = set()
         stream_port_keys = itertools.count()
         for i, port_n in enumerate(ports_n):
-            port_n.setdefault('key', str(next(stream_port_keys)))
+            port_n.setdefault('id', str(next(stream_port_keys)))
             port = port_factory(parent=self, direction=direction, **port_n)
             key = port.key
             if key in port_keys:
-                raise Exception('Key "{}" already exists in {}s'.format(key, direction))
+                raise Exception('Port id "{}" already exists in {}s'.format(key, direction))
             port_keys.add(key)
             ports.append(port)
         return ports
@@ -504,9 +500,9 @@ class Block(Element):
         """
         param_data = {p['key']: p['value'] for p in n.get('param', [])}
 
-        for key in self.states:
+        for param_id in self.states:
             try:
-                self.states[key] = ast.literal_eval(param_data.pop(key))
+                self.states[param_id] = ast.literal_eval(param_data.pop(param_id))
             except (KeyError, SyntaxError, ValueError):
                 pass
 
@@ -515,9 +511,9 @@ class Block(Element):
 
         pre_rewrite_hash = -1
         while pre_rewrite_hash != get_hash():
-            for key, value in six.iteritems(param_data):
+            for param_id, value in six.iteritems(param_data):
                 try:
-                    self.params[key].set_value(value)
+                    self.params[param_id].set_value(value)
                 except KeyError:
                     continue
             # Store hash and call rewrite
@@ -769,12 +765,12 @@ class DummyBlock(Block):
     is_dummy_block = True
     build_in_param_keys = 'id alias affinity minoutbuf maxoutbuf comment'
 
-    def __init__(self, parent, key, missing_key, params_n):
-        super(DummyBlock, self).__init__(parent=parent, key=missing_key, name='Missing Block')
+    def __init__(self, parent, id, missing_block_id, params_n):
+        super(DummyBlock, self).__init__(parent=parent, id=missing_block_id, label='Missing Block')
         param_factory = self.parent_platform.get_new_param
         for param_n in params_n:
-            key = param_n['key']
-            self.params.setdefault(key, param_factory(self, key=key, name=key, dtype='string'))
+            param_id = param_n['id']
+            self.params.setdefault(param_id, param_factory(self, key=param_id, label=param_id, dtype='string'))
 
     def is_valid(self):
         return False
@@ -783,9 +779,9 @@ class DummyBlock(Block):
     def enabled(self):
         return False
 
-    def add_missing_port(self, key, dir):
+    def add_missing_port(self, port_id, direction):
         port = self.parent_platform.get_new_port(
-            parent=self, direction=dir, key=key, name='?', dtype='',
+            parent=self, direction=direction, id=port_id, name='?', dtype='',
         )
         if port.is_source:
             self.sources.append(port)

@@ -25,7 +25,7 @@ Converter for legacy block definitions in XML format
 
 from __future__ import absolute_import, division, print_function
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 import yaml
 from lxml import etree
@@ -49,8 +49,12 @@ def convert_xml(xml_file):
         BLOCK_DTD.validate(xml)
     except etree.LxmlError:
         return
+    try:
+        data = convert_block_xml(xml)
+    except NameError:
+        print('Broken XML', xml_file)
+        raise
 
-    data = convert_block_xml(xml)
     out = yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper)
 
     replace = [
@@ -63,7 +67,7 @@ def convert_xml(xml_file):
     for r in replace:
         out = out.replace(*r)
 
-    return data['key'], out
+    return data['id'], out
 
 no_value = object()
 dummy = cheetah_converter.DummyConverter()
@@ -82,19 +86,19 @@ def convert_block_xml(node):
         key += '_'
 
     data = OrderedDict()
-    data['key'] = key
+    data['id'] = key
     data['label'] = node.findtext('name') or no_value
     data['category'] = node.findtext('category') or no_value
     data['flags'] = node.findtext('flags') or no_value
 
-    data['params'] = [convert_param_xml(param_node, converter.to_python_dec, key)
-                      for param_node in node.getiterator('param')] or no_value
+    data['parameters'] = [convert_param_xml(param_node, converter.to_python_dec, key)
+                          for param_node in node.getiterator('param')] or no_value
     # data['params'] = {p.pop('key'): p for p in data['params']}
 
-    data['sinks'] = [convert_port_xml(port_node, converter.to_python_dec)
-                     for port_node in node.getiterator('sink')] or no_value
+    data['inputs'] = [convert_port_xml(port_node, converter.to_python_dec)
+                      for port_node in node.getiterator('sink')] or no_value
 
-    data['sources'] = [convert_port_xml(port_node, converter.to_python_dec)
+    data['outputs'] = [convert_port_xml(port_node, converter.to_python_dec)
                        for port_node in node.getiterator('source')] or no_value
 
     data['checks'] = [dummy.to_mako(check_node.text)
@@ -139,34 +143,28 @@ def convert_templates(node, convert):
 
 def convert_param_xml(node, convert, block_key=''):
     param = OrderedDict()
-    key = node.findtext('key').strip()
+    param['id'] = node.findtext('key').strip()
     param['label'] = node.findtext('name').strip()
     param['category'] = node.findtext('tab') or no_value
 
     param['dtype'] = convert(node.findtext('type') or '')
     param['default'] = node.findtext('value') or no_value
 
-    options = []
+    param['options'] = [on.findtext('key') for on in node.getiterator('option')] or no_value
+    param['option_labels'] = [on.findtext('name') for on in node.getiterator('option')] or no_value
+
+    attributes = defaultdict(list)
     for option_n in node.getiterator('option'):
-        option = OrderedDict()
-        option['name'] = option_n.findtext('name')
-        option['value'] = option_n.findtext('key')
-
-        opts = (opt.text for opt in option_n.getiterator('opt'))
-        attributes = OrderedDictFlowing(
-            opt_n.split(':', 2) for opt_n in opts if ':' in opt_n
-        )
-        if attributes:
-            option['attributes'] = attributes
-        options.append(option)
-
-    param['options'] = options or no_value
+        for opt_n in option_n.getiterator('opt'):
+            key, value = opt_n.text.split(':', 2)
+            attributes[key].append(value)
+    param['option_attributes'] = attributes or no_value
 
     param['hide'] = hide = convert(node.findtext('hide')) or no_value
     if hide is not no_value:
         print(block_key, hide)
 
-    return {key: OrderedDict((key, value) for key, value in param.items() if value is not no_value)}
+    return OrderedDict((key, value) for key, value in param.items() if value is not no_value)
 
 
 def convert_port_xml(node, convert):
@@ -178,7 +176,7 @@ def convert_port_xml(node, convert):
     # todo: parse hide, tab tags
     port['domain'] = domain = Constants.GR_MESSAGE_DOMAIN if dtype == 'message' else Constants.DEFAULT_DOMAIN
     if domain == Constants.GR_MESSAGE_DOMAIN:
-        port['key'] = port['label']
+        port['id'] = port['label']
     else:
         port['dtype'] = dtype
         vlen = node.findtext('vlen')

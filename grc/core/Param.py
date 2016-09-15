@@ -23,6 +23,7 @@ import ast
 import re
 import collections
 
+import six
 from six.moves import builtins, filter, map, range, zip
 
 from . import Constants
@@ -69,21 +70,21 @@ class Param(Element):
 
     name = Evaluated(str, default='no name', name='name')
     dtype = EvaluatedEnum(Constants.PARAM_TYPE_NAMES, default='raw', name='dtype')
-    # hidden = Evaluated((bool, int), default=False, name='hidden')
 
-    def __init__(self, parent, key, label='', dtype='raw', default='',
-                 options=None, category='', hide='none', **kwargs):
+    def __init__(self, parent, id, label='', dtype='raw', default='',
+                 options=None, option_labels=None, option_attributes=None,
+                 category='', hide='none', **kwargs):
         """Make a new param from nested data"""
         super(Param, self).__init__(parent)
-        self.key = key
-        self.name = label.strip() or key.title()
+        self.key = id
+        self.name = label.strip() or id.title()
         self.category = category or Constants.DEFAULT_PARAM_TAB
 
         self.dtype = dtype
-        self.value = self.default = default
+        self.value = self.default = str(default)
 
-        self.options = self._init_options(options or [])
-
+        self.options = self._init_options(options or [], option_labels or [],
+                                          option_attributes or {})
         self.hide = hide or 'none'
         # end of args ########################################################
 
@@ -92,19 +93,26 @@ class Param(Element):
         self._hostage_cells = list()
         self.template_arg = TemplateArg(self)
 
-    def _init_options(self, options_n):
+    def _init_options(self, values, labels, attributes):
         """Create the Option objects from the n data"""
         options = collections.OrderedDict()
         options.attributes = collections.defaultdict(dict)
 
-        for option_n in options_n:
-            value, name = option_n['value'], str(option_n['name'])
+        padding = [''] * max(len(values), len(labels))
+        attributes = {key: values + padding for key, value in six.iteritems(attributes)}
+
+        for i, option in enumerate(values):
             # Test against repeated keys
-            if value in options:
-                raise KeyError('Value "{}" already exists in options'.format(value))
+            if option in options:
+                raise KeyError('Value "{}" already exists in options'.format(option))
+            # get label
+            try:
+                label = str(labels[i])
+            except IndexError:
+                label = str(option)
             # Store the option
-            options[value] = name
-            options.attributes[value] = option_n.get('attributes', {})
+            options[option] = label
+            options.attributes[option] = {attrib: values[i] for attrib, values in six.iteritems(attributes)}
 
         default = next(iter(options)) if options else ''
         if not self.value:
