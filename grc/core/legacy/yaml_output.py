@@ -8,7 +8,6 @@ from ..utils.yaml_loader import Eval, Mako, Cheetah
 
 
 class GRCDumper(yaml.Dumper):
-
     @classmethod
     def add(cls, data_type):
         def decorator(func):
@@ -67,5 +66,17 @@ def represent_ordered_mapping_flowing(representer, data):
 @GRCDumper.add(yaml.nodes.ScalarNode)
 def represent_node(representer, node):
     return node
+
+
+class ListFlowing(list):
+    pass
+
+
+@GRCDumper.add(ListFlowing)
+def represent_list_flowing(representer, data):
+    node = representer.represent_list(data)
+    node.flow_style = True
+    return node
+
 
 scalar_node = functools.partial(yaml.ScalarNode, u'tag:yaml.org,2002:str')
