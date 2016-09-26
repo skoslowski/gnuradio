@@ -2,7 +2,7 @@ import collections
 
 import six
 
-from grc.core.schema_checker.yaml_checker import Spec
+Spec = collections.namedtuple('Spec', 'types required item_scheme')
 
 
 def expand(**kwargs):
@@ -25,6 +25,3 @@ class Message(collections.namedtuple('Message', 'path type message')):
 
     def __str__(self):
         return self.fmt.format(**self._asdict())
-
-
-Spec = collections.namedtuple('Spec', 'types required item_scheme')

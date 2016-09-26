@@ -713,19 +713,19 @@ class EPyBlock(Block):
                 params[param.key] = param
                 del self.params[param.key]
 
-        for key, value in params_in_src:
+        for id_, value in params_in_src:
             try:
-                param = params[key]
+                param = params[id_]
                 if param.default == param.value:
                     param.set_value(value)
                 param.default = str(value)
             except KeyError:  # need to make a new param
                 param = param_factory(
-                    parent=self,  key=key, dtype='raw', value=value,
-                    name=key.replace('_', ' ').title(),
+                    parent=self,  id=id_, dtype='raw', value=value,
+                    name=id_.replace('_', ' ').title(),
                 )
                 setattr(param, '__epy_param__', True)
-            self.params[key] = param
+            self.params[id_] = param
 
     def _update_ports(self, label, ports, port_specs, direction):
         port_factory = self.parent_platform.get_new_port
@@ -744,7 +744,7 @@ class EPyBlock(Block):
                 ports_to_remove.remove(port_current)
                 port, port_current = port_current, next(iter_ports, None)
             else:
-                n = dict(name=label + str(key), dtype=port_type, key=key)
+                n = dict(name=label + str(key), dtype=port_type, id=key)
                 if port_type == 'message':
                     n['name'] = key
                     n['optional'] = '1'

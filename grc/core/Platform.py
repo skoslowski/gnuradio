@@ -151,7 +151,7 @@ class Platform(Element):
                 if xml_file.endswith("block_tree.xml"):
                     self.load_category_tree_xml(xml_file)
                 elif xml_file.endswith('domain.xml'):
-                    self.load_domain_xml(xml_file)
+                    pass
                 else:
                     self.load_block_xml(xml_file)
             except ParseXML.XMLSyntaxError as e:
@@ -257,49 +257,6 @@ class Platform(Element):
 
         load_category(xml.get('cat', {}))
 
-    def load_domain_xml(self, xml_file):
-        """Load a domain properties and connection templates from XML"""
-        ParseXML.validate_dtd(xml_file, Constants.DOMAIN_DTD)
-        n = ParseXML.from_file(xml_file).get('domain')
-
-        key = n.get('key')
-        if not key:
-            print('Warning: Domain with emtpy key.\n\tIgnoring: {}'.format(xml_file), file=sys.stderr)
-            return
-        if key in self.domains:  # test against repeated keys
-            print('Warning: Domain with key "{}" already exists.\n\tIgnoring: {}'.format(key, xml_file), file=sys.stderr)
-            return
-
-        # to_bool = lambda s, d: d if s is None else s.lower() not in ('false', 'off', '0', '')
-        def to_bool(s, d):
-            if s is not None:
-                return s.lower() not in ('false', 'off', '0', '')
-            return d
-
-        color = n.get('color') or ''
-        try:
-            chars_per_color = 2 if len(color) > 4 else 1
-            tuple(int(color[o:o + 2], 16) / 255.0 for o in range(1, 3 * chars_per_color, chars_per_color))
-        except ValueError:
-            if color:  # no color is okay, default set in GUI
-                print('Warning: Can\'t parse color code "{}" for domain "{}" '.format(color, key), file=sys.stderr)
-                color = None
-
-        self.domains[key] = dict(
-            name=n.get('name') or key,
-            multiple_sinks=to_bool(n.get('multiple_sinks'), True),
-            multiple_sources=to_bool(n.get('multiple_sources'), False),
-            color=color
-        )
-        for connection_n in n.get('connection', []):
-            key = (connection_n.get('source_domain'), connection_n.get('sink_domain'))
-            if not all(key):
-                print('Warning: Empty domain key(s) in connection template.\n\t{}'.format(xml_file), file=sys.stderr)
-            elif key in self.connection_templates:
-                print('Warning: Connection template "{}" already exists.\n\t{}'.format(key, xml_file), file=sys.stderr)
-            else:
-                self.connection_templates[key] = connection_n.get('make') or ''
-
     def _save_docstring_extraction_result(self, key, docstrings):
         docs = {}
         for match, docstring in six.iteritems(docstrings):
@@ -317,7 +274,7 @@ class Platform(Element):
         block_id = data.pop('id').rstrip('_')
 
         if block_id in self.blocks:
-            logger.warning('Block with id "%s" overwritten', file_path)
+            logger.warning('Block with id "%s" overwritten by %s', block_id, file_path)
 
         # Store the block
         self.blocks[block_id] = block = self.get_new_block(self._flow_graph, block_id, **data)

@@ -193,7 +193,7 @@ def convert_port_xml(node, convert):
 
     dtype = convert(node.findtext('type'))
     # TODO: detect dyn message ports
-    # todo: parse hide, tab tags
+    # todo: parse tab tag
     port['domain'] = domain = Constants.GR_MESSAGE_DOMAIN if dtype == 'message' else Constants.DEFAULT_DOMAIN
     if domain == Constants.GR_MESSAGE_DOMAIN:
         port['id'] = port['label']

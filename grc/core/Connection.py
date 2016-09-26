@@ -119,11 +119,11 @@ class Connection(Element):
             self.add_error_message('No connection known for domains "{}", "{}"'.format(
                 source_domain, sink_domain))
         too_many_other_sinks = (
-            not platform.domains.get(source_domain, []).get('multiple_sinks', False) and
+            not platform.domains.get(source_domain, {}).get('multiple_sinks', False) and
             len(self.source_port.get_enabled_connections()) > 1
         )
         too_many_other_sources = (
-            not platform.domains.get(sink_domain, []).get('multiple_sources', False) and
+            not platform.domains.get(sink_domain, {}).get('multiple_sources', False) and
             len(self.sink_port.get_enabled_connections()) > 1
         )
         if too_many_other_sinks:

@@ -2,8 +2,8 @@ id: message
 label: Message
 color: "#FFFFFF"
 
-multiple_connections_per_input: True,
-multiple_connections_per_output: True,
+multiple_connections_per_input: true
+multiple_connections_per_output: true
 
 templates:
 -   type: [message, message]

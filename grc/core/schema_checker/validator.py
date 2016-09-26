@@ -20,13 +20,12 @@ from __future__ import print_function
 import six
 import types
 
-from .block import BLOCK_SCHEME
 from .utils import Message, Spec
 
 
 class Validator(object):
 
-    def __init__(self, scheme=BLOCK_SCHEME):
+    def __init__(self, scheme=None):
         self._path = []
         self.scheme = scheme
         self.messages = []

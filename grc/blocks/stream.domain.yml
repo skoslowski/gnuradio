@@ -2,8 +2,8 @@ id: stream
 label: Stream
 color: "#000000"
 
-multiple_connections_per_input: False,
-multiple_connections_per_output: True,
+multiple_connections_per_input: false
+multiple_connections_per_output: true
 
 templates:
 -   type: [stream, stream]

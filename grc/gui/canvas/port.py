@@ -75,7 +75,7 @@ class Port(CorePort, Drawable):
         if not self.parent_block.enabled:
             self._font_color[-1] = 0.4
             color = colors.BLOCK_DISABLED_COLOR
-        elif self.domain == 'gr-message':
+        elif self.domain == Constants.GR_MESSAGE_DOMAIN:
             color = colors.PORT_TYPE_TO_COLOR.get('message')
         else:
             self._font_color[-1] = 1.0
@@ -109,7 +109,7 @@ class Port(CorePort, Drawable):
         if cr:
             PangoCairo.update_layout(cr, self.label_layout)
 
-        if self.domain in (Constants.GR_MESSAGE_DOMAIN, Constants.DEFAULT_DOMAIN):
+        if self.domain in (Constants.GR_MESSAGE_DOMAIN, Constants.GR_STREAM_DOMAIN):
             self._line_width_factor = 1.0
         else:
             self._line_width_factor = 2.0

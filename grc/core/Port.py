@@ -157,8 +157,9 @@ class Port(Element):
         self.dtype = dtype
         self.vlen = vlen
 
-        if domain == Constants.GR_MESSAGE_DOMAIN:
+        if domain == Constants.GR_MESSAGE_DOMAIN:  # ToDo: message port class
             self.key = self.name
+            self.dtype = 'message'
 
         self.multiplicity = multiplicity
         self.optional = optional
@@ -179,12 +180,13 @@ class Port(Element):
 
     def validate(self):
         Element.validate(self)
-        if self.dtype not in Constants.TYPE_TO_SIZEOF.keys():
-            self.add_error_message('Type "{}" is not a possible type.'.format(self.dtype))
-        if self.domain not in self.parent_platform.domains:
+        platform = self.parent_platform
+        if self.domain not in platform.domains:
             self.add_error_message('Domain key "{}" is not registered.'.format(self.domain))
         if not self.get_enabled_connections() and not self.optional:
             self.add_error_message('Port is not connected.')
+        if self.dtype not in Constants.TYPE_TO_SIZEOF.keys():
+            self.add_error_message('Type "{}" is not a possible type.'.format(self.dtype))
 
     def rewrite(self):
         """
