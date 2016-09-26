@@ -16,13 +16,14 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import print_function
+
 import glob
 
 from os import path
 
-from grc.core.legacy.yaml_output import yaml
-from grc.core.utils.yaml_checker import SchemaChecker
 from grc.core.legacy.block_xml_converter import convert_xml
+from grc.core.legacy.yaml_output import yaml
+from grc.core.schema_checker.yaml_checker import SchemaChecker
 
 
 def test_block_xml():

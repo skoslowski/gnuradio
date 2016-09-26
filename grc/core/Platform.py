@@ -22,6 +22,7 @@ from __future__ import absolute_import, print_function
 import glob
 import os
 import sys
+import logging
 
 import six
 from six.moves import range
@@ -34,9 +35,11 @@ from .Element import Element
 from .generator import Generator
 from .FlowGraph import FlowGraph
 from .Connection import Connection
-from . import Block, utils
+from . import Block, utils, schema_checker
 from .Port import Port, PortClone
 from .Param import Param
+
+logger = logging.getLogger(__name__)
 
 
 class Platform(Element):
@@ -160,10 +163,27 @@ class Platform(Element):
         for file_path in self.iter_files_in_block_path():
             with open(file_path) as fp:
                 data = yaml.load(fp)
+
+            if file_path.endswith('.block.yml'):
+                loader = self.load_block_description
+                scheme = schema_checker.BLOCK_SCHEME
+            elif file_path.endswith('.domain.yml'):
+                loader = self.load_domain_description
+                scheme = schema_checker.DOMAIN_SCHEME
+            else:
+                continue
+
             try:
-                if file_path.endswith('.block.yml'):
-                    self.load_block_description(data, file_path)
-            except Exception as e:
+                checker = schema_checker.Validator(scheme)
+                passed = checker.run(data)
+                for msg in checker.messages:
+                    logger.warning('{:<40s} {}'.format(os.path.basename(file_path), msg))
+                if not passed:
+                    logger.info('YAML schema check failed for: ' + file_path)
+
+                loader(data, file_path)
+            except Exception as error:
+                logger.exception(error)
                 raise
 
         # Add blocks to block tree
@@ -294,19 +314,10 @@ class Platform(Element):
     ##############################################
 
     def load_block_description(self, data, file_path):
-        checker = utils.SchemaChecker()
-        passed = checker.run(data)
-        for msg in checker.messages:
-            print('{:<40s} {}'.format(os.path.basename(file_path), msg))
-        if not passed:
-            raise ValueError('YAML schema check failed for file: ' + file_path)
-
         block_id = data.pop('id').rstrip('_')
 
         if block_id in self.blocks:
-            print('Warning: Block with id "{}" already exists.\n'
-                  '\tIgnoring: {}'.format(block_id, file_path), file=sys.stderr)
-            return
+            logger.warning('Block with id "%s" overwritten', file_path)
 
         # Store the block
         self.blocks[block_id] = block = self.get_new_block(self._flow_graph, block_id, **data)
@@ -316,6 +327,35 @@ class Platform(Element):
             block.get_imports(raw=True),
             block.get_make(raw=True)
         )
+
+    def load_domain_description(self, data, file_path):
+        log = logger.getChild('domain_loader')
+        domain_id = data['id']
+        if domain_id in self.domains:  # test against repeated keys
+            log.debug('Domain "{}" already exists. Ignoring: %s', file_path)
+            return
+
+        color = data.get('color', '')
+        if color.startswith('#'):
+            try:
+                tuple(int(color[o:o + 2], 16) / 255.0 for o in range(1, 6, 2))
+            except ValueError:
+                log.warning('Cannot parse color code "%s" in %s', color, file_path)
+                return
+
+        self.domains[domain_id] = dict(
+            name=data.get('label', domain_id),
+            multiple_sinks=data.get('multiple_connections_per_input', True),
+            multiple_sources=data.get('multiple_connections_per_output', False),
+            color=color
+        )
+        for connection in data.get('templates', []):
+            try:
+                source_id, sink_id = connection.get('type', [])
+            except ValueError:
+                continue
+            connection_id = str(source_id), str(sink_id)
+            self.connection_templates[connection_id] = connection.get('make', '')
 
     ##############################################
     # Access

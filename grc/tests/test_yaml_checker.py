@@ -15,10 +15,10 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from grc.core.utils.yaml_loader import GRCLoader
-from grc.core.utils.yaml_checker import SchemaChecker
-
 import yaml
+
+from grc.core.schema_checker.yaml_checker import SchemaChecker
+from grc.core.utils.yaml_loader import GRCLoader
 
 BLOCK1 = """
 id: block_key

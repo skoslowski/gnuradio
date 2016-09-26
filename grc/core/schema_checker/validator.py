@@ -17,106 +17,27 @@
 
 from __future__ import print_function
 
-import types
-import collections
-
 import six
+import types
 
-Spec = collections.namedtuple('Spec', 'types required item_scheme')
-
-
-def expand(**kwargs):
-    def expand_spec(spec):
-        if not isinstance(spec, Spec):
-            types_ = spec if isinstance(spec, tuple) else (spec,)
-            spec = Spec(types=types_, required=False, item_scheme=None)
-        elif not isinstance(spec.types, tuple):
-            spec = Spec(types=(spec.types,), required=spec.required,
-                        item_scheme=spec.item_scheme)
-        return spec
-    return {key: expand_spec(value) for key, value in kwargs.items()}
-
-str_ = six.string_types
+from .block import BLOCK_SCHEME
+from .utils import Message, Spec
 
 
-PARAM_SCHEME = expand(
-    base_key=str_,   # todo: rename/remove
+class Validator(object):
 
-    id=str_,
-    label=str_,
-    category=str_,
-
-    dtype=str_,
-    default=object,
-
-    options=list,
-    option_labels=list,
-    option_attributes=Spec(types=dict, required=False, item_scheme=(str_, list)),
-
-    hide=str_,
-)
-
-PORT_SCHEME = expand(
-    label=str_,
-    domain=str_,
-
-    id=str_,
-    dtype=str_,
-    vlen=(int, str_),
-
-    multiplicity=(int, str_),
-    optional=(bool, int, str_),
-    hide=(bool, str_),
-)
-
-TEMPLATES_SCHEME = expand(
-    imports=(list, str),
-    var_make=str_,
-    make=str_,
-    callbacks=(list, str_),
-)
-
-BLOCK_SCHEME = expand(
-    id=Spec(types=str_, required=True, item_scheme=None),
-    label=str_,
-    category=(list, str_),
-    flags=(list, str_),
-
-    parameters=Spec(types=list, required=False, item_scheme=PARAM_SCHEME),
-    inputs=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
-    outputs=Spec(types=list, required=False, item_scheme=PORT_SCHEME),
-
-    checks=(list, str_),
-    value=str_,
-
-    templates=Spec(types=dict, required=False, item_scheme=TEMPLATES_SCHEME),
-
-    documentation=str_,
-
-    block_wrapper_path=str_,  # todo: rename/remove
-    grc_source=str_,  # todo: rename/remove
-    param_tab_order=(list, str_)  # todo: rename/remove
-)
-
-
-class Message(collections.namedtuple('Message', 'path type message')):
-    fmt = '{path}: {type}: {message}'
-
-    def __str__(self):
-        return self.fmt.format(**self._asdict())
-
-
-class SchemaChecker(object):
-
-    def __init__(self):
+    def __init__(self, scheme=BLOCK_SCHEME):
         self._path = []
+        self.scheme = scheme
         self.messages = []
         self.passed = False
 
     def run(self, data):
+        if not self.scheme:
+            return True
         self._reset()
         self._path.append('block')
-        self._check(data, BLOCK_SCHEME)
+        self._check(data, self.scheme)
         self._path.pop()
         return self.passed
 

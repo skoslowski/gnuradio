@@ -38,7 +38,7 @@ from . import cheetah_converter
 from .. import Constants
 
 
-BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), '..', 'block.dtd'))
+BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
 reserved_block_keys = ('import', )  # todo: add more keys
 
 

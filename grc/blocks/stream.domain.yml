@@ -1,0 +1,10 @@
+id: stream
+label: Stream
+color: "#000000"
+
+multiple_connections_per_input: False,
+multiple_connections_per_output: True,
+
+templates:
+-   type: [stream, stream]
+    connect: self.connect(${ make_port_sig(source) }, ${ make_port_sig(sink) })

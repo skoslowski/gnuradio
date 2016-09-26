@@ -45,8 +45,8 @@ ADVANCED_PARAM_TAB = "Advanced"
 DEFAULT_BLOCK_MODULE_NAME = '(no module specified)'
 
 # Port domains
-GR_STREAM_DOMAIN = "gr_stream"
-GR_MESSAGE_DOMAIN = "gr_message"
+GR_STREAM_DOMAIN = "stream"
+GR_MESSAGE_DOMAIN = "message"
 DEFAULT_DOMAIN = GR_STREAM_DOMAIN
 
 BLOCK_FLAG_THROTTLE = 'throttle'
