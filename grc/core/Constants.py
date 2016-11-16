@@ -32,7 +32,6 @@ BLOCK_TREE_DTD = os.path.join(DATA_DIR, 'block_tree.dtd')
 BLOCK_DTD = os.path.join(DATA_DIR, 'block.dtd')
 DEFAULT_FLOW_GRAPH = os.path.join(DATA_DIR, 'default_flow_graph.grc')
 DEFAULT_HIER_BLOCK_LIB_DIR = os.path.expanduser('~/.grc_gnuradio')
-DOMAIN_DTD = os.path.join(DATA_DIR, 'domain.dtd')
 
 # File format versions:
 #  0: undefined / legacy

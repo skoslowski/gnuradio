@@ -4,6 +4,7 @@ DOMAIN_CONNECTION = expand(
     type=Spec(types=list, required=True, item_scheme=None),
     connect=str_,
 )
+
 DOMAIN_SCHEME = expand(
     id=Spec(types=str_, required=True, item_scheme=None),
     label=str_,

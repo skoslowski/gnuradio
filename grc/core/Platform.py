@@ -170,6 +170,9 @@ class Platform(Element):
             elif file_path.endswith('.domain.yml'):
                 loader = self.load_domain_description
                 scheme = schema_checker.DOMAIN_SCHEME
+            elif file_path.endswith('.tree.yml'):
+                loader = self.load_category_tree_description
+                scheme = None
             else:
                 continue
 
@@ -222,40 +225,27 @@ class Platform(Element):
         yml_file = os.path.join(self.config.yml_block_cache,
                                 key_from_xml + '.block.yml')
 
-        if os.path.exists(yml_file):
-            xml_time = os.stat(xml_file).st_mtime
-            yml_time = os.stat(yml_file).st_mtime
-            converter_time = os.stat(
-                legacy.block_xml_converter.__file__.rstrip('c')
-            ).st_mtime
-            if yml_time > xml_time and yml_time > converter_time:
-                return  # yml file up-to-date
+        if not need_conversion(xml_file, yml_file, legacy.block_xml_converter):
+            return  # yml file up-to-date
 
         # print('Converting', xml_file)
         key, data = legacy.convert_xml(xml_file)
-
         # if key_from_xml != key:
         #     print('Warning: key is not filename in', xml_file)
-
         with open(yml_file, 'w') as yml_file:
             yml_file.write(data)
 
     def load_category_tree_xml(self, xml_file):
         """Validate and parse category tree file and add it to list"""
-        ParseXML.validate_dtd(xml_file, Constants.BLOCK_TREE_DTD)
-        xml = ParseXML.from_file(xml_file)
-        path = []
+        module_name = os.path.basename(xml_file)[:-len('block_tree.xml')].rstrip('._-')
+        yml_file = os.path.join(self.config.yml_block_cache, module_name + '.tree.yml')
 
-        def load_category(cat_n):
-            path.append(cat_n.get('name').strip())
-            for block_key in cat_n.get('block', []):
-                if block_key not in self._block_categories:
-                    self._block_categories[block_key] = list(path)
-            for sub_cat_n in cat_n.get('cat', []):
-                load_category(sub_cat_n)
-            path.pop()
+        if not need_conversion(xml_file, yml_file, legacy.block_xml_converter):
+            return  # yml file up-to-date
 
-        load_category(xml.get('cat', {}))
+        data = legacy.convert_block_tree_xml(xml_file)
+        with open(yml_file, 'w') as yml_file:
+            yml_file.write(data)
 
     def _save_docstring_extraction_result(self, key, docstrings):
         docs = {}
@@ -313,6 +303,41 @@ class Platform(Element):
                 continue
             connection_id = str(source_id), str(sink_id)
             self.connection_templates[connection_id] = connection.get('make', '')
+
+    def load_category_tree_description(self, data, file_path):
+        """Parse category tree file and add it to list"""
+        log = logger.getChild('tree_loader')
+        log.debug('Loading %s', file_path)
+        path = []
+
+        def load_category(name, elements):
+            if not isinstance(name, str):
+                log.debug('invalid name %r', name)
+                return
+            if isinstance(elements, list):
+                pass
+            elif isinstance(elements, str):
+                elements = [elements]
+            else:
+                log.debug('Ignoring elements of %s', name)
+                return
+            path.append(name)
+            for element in elements:
+                if isinstance(element, str):
+                    block_id = element
+                    self._block_categories[block_id] = list(path)
+                elif isinstance(element, dict):
+                    load_category(*next(six.iteritems(element)))
+                else:
+                    log.debug('Ignoring some elements of %s', name)
+            path.pop()
+
+        try:
+            module_name, categories = next(six.iteritems(data))
+        except (AttributeError, StopIteration):
+            log.warning('no valid data found')
+        else:
+            load_category(module_name, categories)
 
     ##############################################
     # Access
@@ -381,3 +406,17 @@ class Platform(Element):
     def get_new_port(self, parent, **kwargs):
         cls = self.port_classes[kwargs.pop('cls_key', None)]
         return cls(parent, **kwargs)
+
+
+def need_conversion(source, destination, converter=None):
+    """Check if source has already been converted and destination is up-to-date"""
+    if not os.path.exists(destination):
+        return True
+    xml_time = os.path.getmtime(source)
+    yml_time = os.path.getmtime(destination)
+    if converter:
+        converter_time = os.path.getmtime(converter.__file__.rstrip('c'))
+    else:
+        converter_time = yml_time
+
+    return yml_time < xml_time or yml_time < converter_time
