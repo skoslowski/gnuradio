@@ -420,9 +420,6 @@ class Block(Element):
     # Access
     ##############################################
 
-    def get_param(self, key):
-        return self.params[key]
-
     def get_sink(self, key):
         return _get_elem(self.sinks, key)
 

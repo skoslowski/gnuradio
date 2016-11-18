@@ -64,7 +64,7 @@ class Converter(object):
     def to_python_dec(self, expr):
         converted = self.convert(expr=expr, spec=Python)
         if converted != expr:
-            converted = '${' + converted + '}'
+            converted = '${ ' + converted.strip() + ' }'
         return converted
 
     def to_format_string(self, expr):

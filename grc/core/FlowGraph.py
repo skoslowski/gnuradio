@@ -108,7 +108,7 @@ class FlowGraph(Element):
         """Iterate over custom code block ID and Source"""
         for block in self.iter_enabled_blocks():
             if block.key == 'epy_module':
-                yield block.get_id(), block.get_param('source_code').get_value()
+                yield block.get_id(), block.params[1].get_value()
 
     def get_bussink(self):
         bussink = [b for b in self.get_enabled_blocks() if _bussink_searcher.search(b.key)]
@@ -180,7 +180,7 @@ class FlowGraph(Element):
         Returns:
             the value held by that param
         """
-        return self._options_block.get_param(key).get_evaluated()
+        return self._options_block.params[key].get_evaluated()
 
     def get_run_command(self, file_path, split=False):
         run_command = self.get_option('run_command')
@@ -234,7 +234,7 @@ class FlowGraph(Element):
         np = {}  # params don't know each other
         for parameter in self.get_parameters():
             try:
-                value = eval(parameter.get_param('value').to_code(), namespace)
+                value = eval(parameter.params['value'].to_code(), namespace)
                 np[parameter.get_id()] = value
             except:
                 pass
@@ -399,7 +399,7 @@ class FlowGraph(Element):
             if not block:
                 # we're before the initial fg update(), so no evaluated values!
                 # --> use raw value instead
-                path_param = self._options_block.get_param('hier_block_src_path')
+                path_param = self._options_block.params['hier_block_src_path']
                 file_path = self.parent_platform.find_file_in_paths(
                     filename=block_id + '.grc',
                     paths=path_param.get_value(),

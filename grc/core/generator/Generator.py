@@ -136,7 +136,7 @@ class TopBlockGenerator(object):
         def _get_block_sort_text(block):
             code = block.get_make().replace(block.get_id(), ' ')
             try:
-                code += block.get_param('gui_hint').get_value()  # Newer gui markup w/ qtgui
+                code += block.params['gui_hint'].get_value()  # Newer gui markup w/ qtgui
             except:
                 pass
             return code
@@ -156,10 +156,10 @@ class TopBlockGenerator(object):
             key = block.key
             file_path = os.path.join(self._dirname, block.get_id() + '.py')
             if key == 'epy_block':
-                src = block.get_param('_source_code').get_value()
+                src = block.params['_source_code'].get_value()
                 output.append((file_path, src))
             elif key == 'epy_module':
-                src = block.get_param('source_code').get_value()
+                src = block.params['source_code'].get_value()
                 output.append((file_path, src))
 
         # Filter out bus and virtual sink connections
@@ -324,9 +324,9 @@ class HierBlockGenerator(TopBlockGenerator):
         block_n['param'] = list()
         for param in parameters:
             param_n = collections.OrderedDict()
-            param_n['name'] = param.get_param('label').get_value() or param.get_id()
+            param_n['name'] = param.params['label'].get_value() or param.get_id()
             param_n['key'] = param.get_id()
-            param_n['value'] = param.get_param('value').get_value()
+            param_n['value'] = param.params['value'].get_value()
             param_n['type'] = 'raw'
             param_n['hide'] = param.get_param('hide').get_value()
             block_n['param'].append(param_n)
@@ -353,10 +353,10 @@ class HierBlockGenerator(TopBlockGenerator):
         # More bus stuff
         bus_struct_sink = self._flow_graph.get_bus_structure_sink()
         if bus_struct_sink:
-            block_n['bus_structure_sink'] = bus_struct_sink[0].get_param('struct').get_value()
+            block_n['bus_structure_sink'] = bus_struct_sink[0].params['struct'].get_value()
         bus_struct_src = self._flow_graph.get_bus_structure_src()
         if bus_struct_src:
-            block_n['bus_structure_source'] = bus_struct_src[0].get_param('struct').get_value()
+            block_n['bus_structure_source'] = bus_struct_src[0].params['struct'].get_value()
 
         # Documentation
         block_n['doc'] = "\n".join(field for field in (

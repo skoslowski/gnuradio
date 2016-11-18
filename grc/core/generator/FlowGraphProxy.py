@@ -66,15 +66,15 @@ class FlowGraphProxy(object):  # TODO: move this in a refactored Generator
             self.get_pad_sinks() if direction in ('source', 'out') else []
         ports = []
         for pad in pads:
-            type_param = pad.get_param('type')
+            type_param = pad.params['type']
             master = {
-                'label': str(pad.get_param('label').get_evaluated()),
-                'type': str(pad.get_param('type').get_evaluated()),
-                'vlen': str(pad.get_param('vlen').get_value()),
+                'label': str(pad.params['label'].get_evaluated()),
+                'type': str(pad.params['type'].get_evaluated()),
+                'vlen': str(pad.params['vlen'].get_value()),
                 'size':  type_param.options.attributes[type_param.get_value()]['size'],
-                'optional': bool(pad.get_param('optional').get_evaluated()),
+                'optional': bool(pad.params['optional'].get_evaluated()),
             }
-            num_ports = pad.get_param('num_streams').get_evaluated()
+            num_ports = pad.params['num_streams'].get_evaluated()
             if num_ports > 1:
                 for i in range(num_ports):
                     clone = master.copy()
@@ -117,10 +117,10 @@ class FlowGraphProxy(object):  # TODO: move this in a refactored Generator
         for pad in pads:
             # using the block param 'type' instead of the port domain here
             # to emphasize that hier block generation is domain agnostic
-            is_message_pad = pad.get_param('type').get_evaluated() == "message"
+            is_message_pad = pad.params['type'].get_evaluated() == "message"
             if port.parent == pad:
                 if is_message_pad:
-                    key = pad.get_param('label').get_value()
+                    key = pad.params['label'].get_value()
                 else:
                     key = str(key_offset + int(port.key))
                 return key

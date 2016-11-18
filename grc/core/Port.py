@@ -73,7 +73,7 @@ def _sources_from_virtual_source_port(source_port, _traversed=None):
     # but in the future it may...
     connected_virtual_sink_blocks = (
         b for b in flow_graph.iter_enabled_blocks()
-        if b.is_virtual_sink() and b.get_param('stream_id').get_value() == stream_id
+        if b.is_virtual_sink() and b.params['stream_id'].get_value() == stream_id
     )
     source_ports_per_virtual_connection = (
         _sources_from_virtual_sink_port(b.sinks[0], _traversed)  # type: list
@@ -122,7 +122,7 @@ def _sinks_from_virtual_sink_port(sink_port, _traversed=None):
 
     connected_virtual_source_blocks = (
         b for b in flow_graph.iter_enabled_blocks()
-        if b.is_virtual_source() and b.get_param('stream_id').get_value() == stream_id
+        if b.is_virtual_source() and b.params['stream_id'].get_value() == stream_id
     )
     sink_ports_per_virtual_connection = (
         _sinks_from_virtual_source_port(b.sources[0], _traversed)  # type: list

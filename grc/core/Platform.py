@@ -364,7 +364,7 @@ class Platform(Element):
         return list(self.blocks.values())
 
     def get_generate_options(self):
-        gen_opts = self.blocks['options'].get_param('generate_options')
+        gen_opts = self.blocks['options'].params['generate_options']
         generate_mode_default = gen_opts.get_value()
         return [(value, name, value == generate_mode_default)
                 for value, name in gen_opts.options.items()]

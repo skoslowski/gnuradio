@@ -246,9 +246,9 @@ class PropsDialog(Gtk.Dialog):
         key = block.key
 
         if key == 'epy_block':
-            src = block.get_param('_source_code').get_value()
+            src = block.params['_source_code'].get_value()
         elif key == 'epy_module':
-            src = block.get_param('source_code').get_value()
+            src = block.params['source_code'].get_value()
         else:
             src = ''
 
