@@ -27,7 +27,8 @@ import six
 from six.moves import builtins, filter, map, range, zip
 
 from . import Constants
-from .Element import Element, EvaluatedEnum, Evaluated
+from .Element import Element
+from .eval import Evaluated, EvaluatedEnum
 
 # Blacklist certain ids, its not complete, but should help
 ID_BLACKLIST = ['self', 'options', 'gr', 'math', 'firdes'] + dir(builtins)
@@ -399,7 +400,7 @@ class Param(Element):
         return params
 
     def is_enum(self):
-        return self.dtype == 'enum'
+        return self.get_raw('dtype') == 'enum'
 
     def get_value(self):
         value = self.value

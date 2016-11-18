@@ -37,6 +37,7 @@ from . Constants import (
     BLOCK_FLAG_DEPRECATED,
 )
 from . Element import Element, lazy_property
+from .eval import Templated
 
 
 def _get_elem(iterable, key):
@@ -58,7 +59,7 @@ class Block(Element):
     STATE_LABELS = ['disabled', 'enabled', 'bypassed']
 
     def __init__(self, parent, id, label='', category='', flags='',
-                 parameters=None, inputs=None, outputs=None, **n):
+                 parameters=None, inputs=None, outputs=None, templates=None, **kwargs):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
 
@@ -67,17 +68,18 @@ class Block(Element):
         self.category = [cat.strip() for cat in category.split('/') if cat.strip()]
         self.flags = flags
 
-        self._var_value = n.get('value', '')
-        self._checks = n.get('checks', [])
+        self._var_value = kwargs.get('value', '')
+        self._checks = kwargs.get('checks', [])
 
-        self._imports = [i.strip() for i in ensure_list(n.get('imports'))]
-        self._var_make = n.get('var_make')
-        self._make = n.get('make')
-        self._callbacks = ensure_list(n.get('callbacks'))
+        templates = templates or {}
+        self.imports = '\n'.join(i.strip() for i in ensure_list(templates.get('imports')))
+        self._var_make = templates.get('var_make')
+        self._make = templates.get('make')
+        self.callbacks = ensure_list(kwargs.get('callbacks'))
 
-        self._doc = n.get('documentation', '').strip('\n').replace('\\\n', '')
-        self._grc_source = n.get('grc_source', '')
-        self.block_wrapper_path = n.get('block_wrapper_path')
+        self._doc = kwargs.get('documentation', '').strip('\n').replace('\\\n', '')
+        self._grc_source = kwargs.get('grc_source', '')
+        self.block_wrapper_path = kwargs.get('block_wrapper_path')
 
         # end of args ########################################################
 
@@ -96,7 +98,7 @@ class Block(Element):
 
         self.states = {'_enabled': True}
 
-        self._init_bus_ports(n)  # todo: rewrite
+        self._init_bus_ports(kwargs)  # todo: rewrite
 
     def _init_params(self, params_n, has_sources, has_sinks):
         params = collections.OrderedDict()
@@ -311,20 +313,8 @@ class Block(Element):
     # Getters (old)
     ##############################################
 
-    def get_imports(self, raw=False):
-        """
-        Resolve all import statements.
-        Split each import statement at newlines.
-        Combine all import statements into a list.
-        Filter empty imports.
-
-        Returns:
-            a list of import statements
-        """
-        if raw:
-            return self._imports
-        return [i for i in sum((self.resolve_dependencies(i).split('\n')
-                                for i in self._imports), []) if i]
+    imports = Templated(name='imports')
+    callbacks = Templated(name='callbacks')
 
     def get_make(self, raw=False):
         if raw:
@@ -458,9 +448,12 @@ class Block(Element):
         except Exception as err:
             return "Template error: {}\n    {}".format(tmpl, err)
 
+    @property
+    def namespace(self):
+        return {key: param.get_evaluated() for key, param in six.iteritems(self.params)}
+
     def evaluate(self, expr):
-        n = {key: param.get_evaluated() for key, param in six.iteritems(self.params)}
-        return self.parent_flowgraph.evaluate(expr, n)
+        return self.parent_flowgraph.evaluate(expr, self.namespace)
 
     ##############################################
     # Import/Export Methods
@@ -655,8 +648,8 @@ class Block(Element):
 
 class EPyBlock(Block):
 
-    def __init__(self, flow_graph, **n):
-        super(EPyBlock, self).__init__(flow_graph, **n)
+    def __init__(self, flow_graph, **kwargs):
+        super(EPyBlock, self).__init__(flow_graph, **kwargs)
         self._epy_source_hash = -1  # for epy blocks
         self._epy_reload_error = None
 

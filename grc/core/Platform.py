@@ -21,7 +21,6 @@ from __future__ import absolute_import, print_function
 
 import glob
 import os
-import sys
 import logging
 
 import six
@@ -271,7 +270,7 @@ class Platform(Element):
         self._blocks_n[block_id] = data
         self._docstring_extractor.query(
             block_id,
-            block.get_imports(raw=True),
+            block.get_raw('imports'),
             block.get_make(raw=True)
         )
 

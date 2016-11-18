@@ -259,7 +259,7 @@ class PropsDialog(Gtk.Dialog):
             buf.insert(buf.get_end_iter(), text)
 
         buf.delete(buf.get_start_iter(), buf.get_end_iter())
-        insert('# Imports\n', '\n'.join(block.get_imports()))
+        insert('# Imports\n', block.imports.strip('\n'))
         if block.is_variable:
             insert('\n\n# Variables\n', block.get_var_make())
         insert('\n\n# Blocks\n', block.get_make())

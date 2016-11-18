@@ -1,6 +1,7 @@
 """"""
 
 import functools
+from textwrap import dedent
 import grc.core.legacy.cheetah_converter as parser
 
 
@@ -88,3 +89,18 @@ def test_with_string():
     assert 'abc "$(abc)" abc' == c2p('$abc "$(abc)" ${abc}')
     assert 'abc \'$(abc)\' abc' == c2p('$abc \'$(abc)\' ${abc}')
     assert 'abc "\'\'$(abc)" abc' == c2p('$abc "\'\'$(abc)" ${abc}')
+
+
+def test_if():
+    result = converter.to_mako("""
+        #if $abc > 0
+            test
+        #end if
+    """)
+
+    expected = """
+        % if abc > 0:
+            test
+        % endif
+    """
+    assert result == expected

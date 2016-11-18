@@ -73,8 +73,10 @@ class FlowGraph(Element):
         Returns:
             a set of import statements
         """
-        imports = sum([block.get_imports() for block in self.iter_enabled_blocks()], [])
-        return sorted(set(imports))
+        imports = set()
+        for block in self.iter_enabled_blocks():
+            imports.union(block.imports.split('\n'))
+        return sorted(imports)
 
     def get_variables(self):
         """

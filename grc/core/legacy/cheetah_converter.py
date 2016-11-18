@@ -1,3 +1,22 @@
+# Copyright 2016 Free Software Foundation, Inc.
+# This file is part of GNU Radio
+#
+# GNU Radio Companion is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# GNU Radio Companion is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+
+from __future__ import absolute_import, print_function
+
 import collections
 import re
 import string
@@ -74,16 +93,18 @@ class Converter(object):
         return self.convert(expr=expr, spec=Mako)
 
     def convert(self, expr, spec=Python):
-        if not expr or '$' not in expr:
+        if not expr:
+            return ''
+        elif '$' not in expr:
             return expr
         try:
             return self.convert_simple(expr, spec)
         except ValueError:
             pass
         try:
-            if '#if' in expr:
+            if '#if' in expr and '\n' not in expr:
                 expr = self.convert_inline_conditional(expr, spec)
-            return self.convert_hard(expr, spec)
+            return '\n'.join(self.convert_hard(line, spec) for line in expr.split('\n'))
         except ValueError:
             return yaml_output.Cheetah(expr)
 
@@ -106,6 +127,16 @@ class Converter(object):
         return spec.type(out)
 
     def convert_hard(self, expr, spec=Python):
+        if spec == Mako:
+            if '#if' in expr:
+                ws, if_, condition = expr.partition('#if ')
+                return '{ws}% if {condition}:'.format(
+                    ws=ws, condition=self.to_python(condition))
+            elif '#end if' in expr:
+                return expr.replace('#end if', '% endif')
+        return self.convert_hard_replace(expr, spec)
+
+    def convert_hard_replace(self, expr, spec=Python):
         counts = collections.Counter()
 
         def all_delims_closed():

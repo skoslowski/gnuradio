@@ -24,7 +24,8 @@ from itertools import chain
 from six.moves import filter
 
 from . import Constants
-from .Element import Element, lazy_property, Evaluated, EvaluatedPInt, EvaluatedEnum
+from .Element import Element, lazy_property
+from .eval import Evaluated, EvaluatedEnum, EvaluatedPInt
 
 
 class LoopError(Exception):
