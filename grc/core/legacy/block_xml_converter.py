@@ -146,14 +146,14 @@ def convert_templates(node, convert, block_key=''):
     if imports:
         templates['imports'] = (imports if len(imports) > 1 else imports[0]) or no_value
 
-    templates['var_make'] = dummy.to_mako(node.findtext('var_make') or '') or no_value
+    templates['var_make'] = convert(node.findtext('var_make') or '') or no_value
     make = node.findtext('make') or ''
     if '\n' in make:
-        make = dummy.to_mako(make)
+        make = convert(make)
         templates['make'] = scalar_node(make, style='|' if '\n' in make else None)
     else:
-        templates['make'] = dummy.to_mako(make) or no_value
-
+        templates['make'] = convert(make) or no_value
+    print(block_key, templates['make'], '', sep='\n')
     templates['callbacks'] = [
          convert(cb_node.text) for cb_node in node.iterfind('callback')
      ] or no_value

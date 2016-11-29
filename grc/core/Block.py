@@ -26,8 +26,6 @@ import ast
 import six
 from six.moves import map, range
 
-from Cheetah.Template import Template
-
 from . import utils
 
 from . Constants import (
@@ -37,7 +35,7 @@ from . Constants import (
     BLOCK_FLAG_DEPRECATED,
 )
 from . Element import Element, lazy_property
-from .eval import Templated
+from .block_templates import MakoTemplates
 
 
 def _get_elem(iterable, key):
@@ -69,13 +67,19 @@ class Block(Element):
         self.flags = flags
 
         self._var_value = kwargs.get('value', '')
-        self._checks = kwargs.get('checks', [])
+        self._checks = [check.lstrip('${').rstrip('}') for check in kwargs.get('checks', [])]
 
         templates = templates or {}
-        self.imports = '\n'.join(i.strip() for i in ensure_list(templates.get('imports')))
+        self.templates = MakoTemplates(
+            block=self,
+            imports=ensure_list(templates.get('imports')),
+            make=templates.get('make'),
+            callbacks=ensure_list(kwargs.get('callbacks')),
+
+            var_make=templates.get('var_make'),
+        )
+
         self._var_make = templates.get('var_make')
-        self._make = templates.get('make')
-        self.callbacks = ensure_list(kwargs.get('callbacks'))
 
         self._doc = kwargs.get('documentation', '').strip('\n').replace('\\\n', '')
         self._grc_source = kwargs.get('grc_source', '')
@@ -219,9 +223,8 @@ class Block(Element):
     def _run_checks(self):
         """Evaluate the checks"""
         for check in self._checks:
-            check_res = self.resolve_dependencies(check)
             try:
-                if not self.parent.evaluate(check_res):
+                if not self.evaluate(check):
                     self.add_error_message('Check "{}" failed.'.format(check))
             except:
                 self.add_error_message('Check "{}" did not evaluate.'.format(check))
@@ -313,19 +316,14 @@ class Block(Element):
     # Getters (old)
     ##############################################
 
-    imports = Templated(name='imports')
-    callbacks = Templated(name='callbacks')
-
     def get_make(self, raw=False):
-        if raw:
-            return self._make
-        return self.resolve_dependencies(self._make)
+        raise PendingDeprecationWarning()
 
     def get_var_make(self):
-        return self.resolve_dependencies(self._var_make)
+        return self.templates.render('var_make')
 
     def get_var_value(self):
-        return self.resolve_dependencies(self._var_value)
+        return self.templates.render('var_value')
 
     def get_callbacks(self):
         """
@@ -335,11 +333,10 @@ class Block(Element):
             a list of strings
         """
         def make_callback(callback):
-            callback = self.resolve_dependencies(callback)
             if 'self.' in callback:
                 return callback
             return 'self.{}.{}'.format(self.get_id(), callback)
-        return [make_callback(c) for c in self._callbacks]
+        return [make_callback(c) for c in self.templates.render('callbacks')]
 
     def is_virtual_sink(self):
         return self.key == 'virtual_sink'
@@ -428,26 +425,6 @@ class Block(Element):
     ##############################################
     # Resolve
     ##############################################
-    def resolve_dependencies(self, tmpl):
-        """
-        Resolve a paramater dependency with cheetah templates.
-
-        Args:
-            tmpl: the string with dependencies
-
-        Returns:
-            the resolved value
-        """
-        tmpl = str(tmpl)
-        if '$' not in tmpl:
-            return tmpl
-        # TODO: cache that
-        n = {key: param.template_arg for key, param in six.iteritems(self.params)}
-        try:
-            return str(Template(tmpl, n))
-        except Exception as err:
-            return "Template error: {}\n    {}".format(tmpl, err)
-
     @property
     def namespace(self):
         return {key: param.get_evaluated() for key, param in six.iteritems(self.params)}
@@ -520,7 +497,7 @@ class Block(Element):
     ##############################################
 
     def get_bus_structure(self, direction):
-        bus_structure = self.resolve_dependencies(self._bus_structure[direction])
+        bus_structure = self._bus_structure[direction]  # todo: render template
         if not bus_structure:
             return
         try:

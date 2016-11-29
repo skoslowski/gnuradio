@@ -225,7 +225,7 @@ class PropsDialog(Gtk.Dialog):
             buf.insert(pos, '\n')
 
         # if given the current parameters an exact match can be made
-        block_constructor = self._block.get_make().rsplit('.', 2)[-1]
+        block_constructor = self._block.templates.render('make').rsplit('.', 2)[-1]
         block_class = block_constructor.partition('(')[0].strip()
         if block_class in docstrings:
             docstrings = {block_class: docstrings[block_class]}
@@ -259,10 +259,10 @@ class PropsDialog(Gtk.Dialog):
             buf.insert(buf.get_end_iter(), text)
 
         buf.delete(buf.get_start_iter(), buf.get_end_iter())
-        insert('# Imports\n', block.imports.strip('\n'))
+        insert('# Imports\n', '\n'.join(block.templates.render('imports')).strip('\n'))
         if block.is_variable:
-            insert('\n\n# Variables\n', block.get_var_make())
-        insert('\n\n# Blocks\n', block.get_make())
+            insert('\n\n# Variables\n', block.templates.render('var_make'))
+        insert('\n\n# Blocks\n', block.templates.render('make'))
         if src:
             insert('\n\n# External Code ({}.py)\n'.format(block.get_id()), src)
 

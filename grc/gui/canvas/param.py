@@ -64,8 +64,8 @@ class Param(CoreParam):
         block = self.parent
         # fixme: using non-public attribute here
         has_callback = \
-            hasattr(block, 'get_callbacks') and \
-            any(self.key in callback for callback in block._callbacks)
+            hasattr(block, 'templates') and \
+            any(self.key in callback for callback in block.templates.get('callbacks', ''))
 
         return '<span {underline} {foreground} font_desc="Sans 9">{label}</span>'.format(
             underline='underline="low"' if has_callback else '',

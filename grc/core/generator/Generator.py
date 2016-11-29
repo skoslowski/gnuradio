@@ -134,7 +134,7 @@ class TopBlockGenerator(object):
 
         # List of blocks not including variables and imports and parameters and disabled
         def _get_block_sort_text(block):
-            code = block.get_make().replace(block.get_id(), ' ')
+            code = block.templates.render('make').replace(block.get_id(), ' ')
             try:
                 code += block.params['gui_hint'].get_value()  # Newer gui markup w/ qtgui
             except:

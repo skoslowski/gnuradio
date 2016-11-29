@@ -58,3 +58,5 @@ def test_mako_render_error():
     with pytest.raises(TemplateError) as excinfo:
         a.foo
     assert isinstance(excinfo.value[0], TypeError)
+
+

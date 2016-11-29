@@ -270,8 +270,8 @@ class Platform(Element):
         self._blocks_n[block_id] = data
         self._docstring_extractor.query(
             block_id,
-            block.get_raw('imports'),
-            block.get_make(raw=True)
+            block.templates.get('imports', ''),
+            block.templates.get('make', ''),
         )
 
     def load_domain_description(self, data, file_path):
