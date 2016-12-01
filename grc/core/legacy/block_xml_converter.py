@@ -82,17 +82,17 @@ def convert_block_xml(node):
         } for param_node in node.iterfind('param')
     })
 
-    key = node.findtext('key')
-    if key in reserved_block_keys:
-        key += '_'
+    block_id = node.findtext('key')
+    if block_id in reserved_block_keys:
+        block_id += '_'
 
     data = OrderedDict()
-    data['id'] = key
+    data['id'] = block_id
     data['label'] = node.findtext('name') or no_value
     data['category'] = node.findtext('category') or no_value
     data['flags'] = node.findtext('flags') or no_value
 
-    data['parameters'] = [convert_param_xml(param_node, converter.to_python_dec, key)
+    data['parameters'] = [convert_param_xml(param_node, converter.to_python_dec)
                           for param_node in node.iterfind('param')] or no_value
     # data['params'] = {p.pop('key'): p for p in data['params']}
 
@@ -106,11 +106,11 @@ def convert_block_xml(node):
                       for check_node in node.iterfind('checks')] or no_value
     data['value'] = (
         node.findtext('var_value') or
-        '$value' if key.startswith('variable') else None or
+        '$value' if block_id.startswith('variable') else None or
         no_value
     )
 
-    data['templates'] = convert_templates(node, converter.to_mako, key) or no_value
+    data['templates'] = convert_templates(node, converter.to_mako, block_id) or no_value
 
     docs = node.findtext('doc')
     if docs:
@@ -139,7 +139,7 @@ def auto_hide_params_for_item_sizes(data):
             param.setdefault('hide', "${ 'part' if vlen == 1 else 'none' }")
 
 
-def convert_templates(node, convert, block_key=''):
+def convert_templates(node, convert, block_id=''):
     templates = OrderedDict()
 
     imports = [convert(import_node.text) for import_node in node.iterfind('import')]
@@ -147,21 +147,20 @@ def convert_templates(node, convert, block_key=''):
         templates['imports'] = (imports if len(imports) > 1 else imports[0]) or no_value
 
     templates['var_make'] = convert(node.findtext('var_make') or '') or no_value
-    make = node.findtext('make') or ''
-    if '\n' in make:
-        make = convert(make)
-        templates['make'] = scalar_node(make, style='|' if '\n' in make else None)
-    else:
-        templates['make'] = convert(make) or no_value
-    print(block_key, templates['make'], '', sep='\n')
+
+    make = convert(node.findtext('make') or '')
+    if make:
+        check_mako_template(block_id, make)
+    templates['make'] = scalar_node(make, style='|' if '\n' in make else None) if make else no_value
+
     templates['callbacks'] = [
          convert(cb_node.text) for cb_node in node.iterfind('callback')
-     ] or no_value
+    ] or no_value
 
     return OrderedDict((key, value) for key, value in templates.items() if value is not no_value)
 
 
-def convert_param_xml(node, convert, block_key=''):
+def convert_param_xml(node, convert):
     param = OrderedDict()
     param['id'] = node.findtext('key').strip()
     param['label'] = node.findtext('name').strip()
@@ -180,9 +179,7 @@ def convert_param_xml(node, convert, block_key=''):
             attributes[key].append(value)
     param['option_attributes'] = dict(attributes) or no_value
 
-    param['hide'] = hide = convert(node.findtext('hide')) or no_value
-    # if hide is not no_value:
-    #     print(block_key, hide)
+    param['hide'] = convert(node.findtext('hide')) or no_value
 
     return OrderedDict((key, value) for key, value in param.items() if value is not no_value)
 
@@ -207,3 +204,12 @@ def convert_port_xml(node, convert):
     port['hide'] = convert(node.findtext('hide')) or no_value
 
     return OrderedDict((key, value) for key, value in port.items() if value is not no_value)
+
+
+def check_mako_template(block_id, expr):
+    import sys
+    from mako.template import Template
+    try:
+        Template(expr)
+    except Exception as error:
+        print(block_id, expr, type(error), error, '', sep='\n', file=sys.stderr)

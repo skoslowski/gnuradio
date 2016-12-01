@@ -95,12 +95,39 @@ def test_if():
     result = converter.to_mako("""
         #if $abc > 0
             test
+        #else if $abc < 0
+            test
+        #else
+            bla
         #end if
     """)
 
     expected = """
         % if abc > 0:
             test
+        % elif abc < 0:
+            test
+        % else:
+            bla
         % endif
     """
     assert result == expected
+
+
+def test_hash_end():
+    result = converter.to_mako('$abc#slurp')
+    assert result == '${abc}\\'
+
+
+def test_slurp_if():
+    result = converter.to_mako("""
+        $abc#slurp
+        #if $abc
+    """)
+
+    expected = """
+        ${abc}
+        % if abc:
+    """
+    assert result == expected
+

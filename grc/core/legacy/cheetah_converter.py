@@ -23,7 +23,7 @@ import string
 
 from . import yaml_output
 
-delims = {'(': ')', '[': ']', '{': '}', '': ', '}
+delims = {'(': ')', '[': ']', '{': '}', '': ', #\\'}
 identifier_start = '_' + string.ascii_letters + ''.join(delims.keys())
 string_delims = '"\''
 
@@ -104,7 +104,7 @@ class Converter(object):
         try:
             if '#if' in expr and '\n' not in expr:
                 expr = self.convert_inline_conditional(expr, spec)
-            return '\n'.join(self.convert_hard(line, spec) for line in expr.split('\n'))
+            return self.convert_hard(expr, spec)
         except ValueError:
             return yaml_output.Cheetah(expr)
 
@@ -127,13 +127,31 @@ class Converter(object):
         return spec.type(out)
 
     def convert_hard(self, expr, spec=Python):
+        lines = '\n'.join(self.convert_hard_line(line, spec) for line in expr.split('\n'))
         if spec == Mako:
+            # no line-continuation before a mako control structure
+            lines = re.sub(r'\\\n(\s*%)', r'\n\1', lines)
+        return lines
+
+    def convert_hard_line(self, expr, spec=Python):
+        if spec == Mako:
+            if '#set' in expr:
+                ws, set_, statement = expr.partition('#set ')
+                return ws + '<% ' + self.to_python(statement) + ' %>'
+
             if '#if' in expr:
                 ws, if_, condition = expr.partition('#if ')
-                return '{ws}% if {condition}:'.format(
-                    ws=ws, condition=self.to_python(condition))
-            elif '#end if' in expr:
+                return ws + '% if ' + self.to_python(condition) + ':'
+            if '#else if' in expr:
+                ws, elif_, condition = expr.partition('#else if ')
+                return ws + '% elif ' + self.to_python(condition) + ':'
+            if '#else' in expr:
+                return expr.replace('#else', '% else:')
+            if '#end if' in expr:
                 return expr.replace('#end if', '% endif')
+
+            if '#slurp' in expr:
+                expr = expr.split('#slurp', 1)[0] + '\\'
         return self.convert_hard_replace(expr, spec)
 
     def convert_hard_replace(self, expr, spec=Python):
