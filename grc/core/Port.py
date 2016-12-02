@@ -179,6 +179,18 @@ class Port(Element):
     def __repr__(self):
         return '{!r}.{}[{}]'.format(self.parent, 'sinks' if self.is_sink else 'sources', self.key)
 
+    @property
+    def item_size(self):
+        return Constants.TYPE_TO_SIZEOF[self.dtype] * self.vlen
+
+    @lazy_property
+    def is_sink(self):
+        return self._dir == 'sink'
+
+    @lazy_property
+    def is_source(self):
+        return self._dir == 'source'
+
     def validate(self):
         Element.validate(self)
         platform = self.parent_platform
@@ -240,10 +252,6 @@ class Port(Element):
             # Reset type and vlen
             self._type = self._vlen = ''
 
-    @property
-    def item_size(self):
-        return Constants.TYPE_TO_SIZEOF[self.dtype] * self.vlen
-
     def add_clone(self):
         """
         Create a clone of this (master) port and store a reference in self._clones.
@@ -286,14 +294,6 @@ class Port(Element):
             # Also update key for none stream ports
             if not self.key.isdigit():
                 self.key = self.name
-
-    @lazy_property
-    def is_sink(self):
-        return self._dir == 'sink'
-
-    @lazy_property
-    def is_source(self):
-        return self._dir == 'source'
 
     def get_connections(self):
         """
@@ -338,18 +338,11 @@ class PortClone(Port):
     is_clone = True
 
     def __init__(self, parent, direction, master, name, key):
-        """
-        Make a new port from nested data.
-
-        Args:
-            block: the parent element
-            n: the nested odict
-            dir: the direction
-        """
         Element.__init__(self, parent)
         self.master = master
+
         self.name = name
-        self._key = key
+        self.key = key
         self.multiplicity = 1
 
     def __getattr__(self, item):

@@ -429,6 +429,10 @@ class Block(Element):
     def namespace(self):
         return {key: param.get_evaluated() for key, param in six.iteritems(self.params)}
 
+    @property
+    def namespace_templates(self):
+        return {key: param.template_arg for key, param in six.iteritems(self.params)}
+
     def evaluate(self, expr):
         return self.parent_flowgraph.evaluate(expr, self.namespace)
 

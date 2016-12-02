@@ -47,14 +47,14 @@ class MakoTemplates(dict):
 
     def render(self, item):
         text = self[item] or ''
-        if isinstance(text, list):
-            template = [self._get_template(t) for t in text]
-        else:
-            template = self._get_template(text)
+
         try:
-            if isinstance(template, list):
-                return [t.render(**self.block.namespace) for t in template]
+            if isinstance(text, list):
+                templates = (self._get_template(t) for t in text)
+                return [template.render(**self.block.namespace_templates)
+                        for template in templates]
             else:
-                return template.render(**self.block.namespace)
+                template = self._get_template(text)
+                return template.render(**self.block.namespace_templates)
         except Exception as error:
-            raise TemplateError(error, template)
+            raise TemplateError(error, text)

@@ -5,10 +5,10 @@ from grc.core.errors import TemplateError
 
 
 class Block(object):
-    namespace = {}
+    namespace_templates = templates ={}
 
     def __init__(self, **kwargs):
-        self.namespace.update(kwargs)
+        self.namespace_templates.update(kwargs)
 
 
 def test_simple():

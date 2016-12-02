@@ -38,10 +38,8 @@ try:
 except ImportError:
     pass
 
-_check_id_matcher = re.compile('^[a-z|A-Z]\w*$')
 
-
-class TemplateArg(object):
+class TemplateArg(str):
     """
     A cheetah template argument created from a param.
     The str of this class evaluates to the param's to code method.
@@ -49,16 +47,16 @@ class TemplateArg(object):
     The __call__ or () method can return the param evaluated to a raw python data type.
     """
 
-    def __init__(self, param):
-        self._param = param
+    def __new__(cls, param):
+        value = param.to_code()
+        instance = str.__new__(cls, value)
+        setattr(instance, '_param', param)
+        return instance
 
-    def __getitem__(self, item):
+    def __getattr__(self, item):
         param = self._param
         attributes = param.options.attributes[param.get_value()]
         return str(attributes.get(item)) or NotImplemented
-
-    def __str__(self):
-        return str(self._param.to_code())
 
     def __call__(self):
         return self._param.get_evaluated()
@@ -90,9 +88,14 @@ class Param(Element):
         # end of args ########################################################
 
         self._evaluated = None
+        self._stringify_flag = False
+        self._lisitify_flag = False
         self._init = False
         self._hostage_cells = list()
-        self.template_arg = TemplateArg(self)
+
+    @property
+    def template_arg(self):
+        return TemplateArg(self)
 
     def _init_options(self, values, labels, attributes):
         """Create the Option objects from the n data"""
@@ -261,7 +264,7 @@ class Param(Element):
         #########################
         elif t == 'id':
             # Can python use this as a variable?
-            if not _check_id_matcher.match(v):
+            if not re.match(r'^[a-z|A-Z]\w*$', v):
                 raise Exception('ID "{}" must begin with a letter and may contain letters, numbers, and underscores.'.format(v))
             ids = [param.get_value() for param in self.get_all_params(t, 'id')]
 
