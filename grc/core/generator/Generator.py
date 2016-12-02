@@ -19,12 +19,13 @@
 from __future__ import absolute_import
 
 import codecs
+import collections
+import operator
 import os
 import tempfile
-import operator
-import collections
+import time
 
-from Cheetah.Template import Template
+from mako.template import Template
 import six
 
 from .FlowGraphProxy import FlowGraphProxy
@@ -36,7 +37,7 @@ from ..Constants import (
 from ..utils import expr_utils
 
 DATA_DIR = os.path.dirname(__file__)
-FLOW_GRAPH_TEMPLATE = os.path.join(DATA_DIR, 'flow_graph.tmpl')
+FLOW_GRAPH_TEMPLATE = os.path.join(DATA_DIR, 'flow_graph.py.mako')
 
 
 class Generator(object):
@@ -242,10 +243,14 @@ class TopBlockGenerator(object):
             'connection_templates': connection_templates,
             'generate_options': self._generate_options,
             'callbacks': callbacks,
+            'generated_time': time.ctime(),
         }
         # Build the template
-        t = Template(open(FLOW_GRAPH_TEMPLATE, 'r').read(), namespace)
-        output.append((self.file_path, "\n".join(line.rstrip() for line in str(t).split("\n"))))
+        template = Template(filename=FLOW_GRAPH_TEMPLATE)
+        rendered = template.render(**namespace)
+        # strip trailing white-space
+        rendered = "\n".join(line.rstrip() for line in rendered.split("\n"))
+        output.append((self.file_path, rendered))
         return output
 
 
