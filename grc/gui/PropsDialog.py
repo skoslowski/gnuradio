@@ -40,7 +40,7 @@ class PropsDialog(Gtk.Dialog):
 
         Gtk.Dialog.__init__(
             self,
-            title='Properties: ' + block.name,
+            title='Properties: ' + block.label,
             transient_for=parent,
             modal=True,
             destroy_with_parent=True,
@@ -264,7 +264,7 @@ class PropsDialog(Gtk.Dialog):
             insert('\n\n# Variables\n', block.templates.render('var_make'))
         insert('\n\n# Blocks\n', block.templates.render('make'))
         if src:
-            insert('\n\n# External Code ({}.py)\n'.format(block.get_id()), src)
+            insert('\n\n# External Code ({}.py)\n'.format(block.name), src)
 
     def _handle_key_press(self, widget, event):
         close_dialog = (

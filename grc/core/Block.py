@@ -56,13 +56,14 @@ class Block(Element):
 
     STATE_LABELS = ['disabled', 'enabled', 'bypassed']
 
+    #region Init
     def __init__(self, parent, id, label='', category='', flags='',
                  parameters=None, inputs=None, outputs=None, templates=None, **kwargs):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
 
         self.key = id
-        self.name = label or id.title()
+        self.label = label or id.title()
         self.category = [cat.strip() for cat in category.split('/') if cat.strip()]
         self.flags = flags
 
@@ -158,10 +159,9 @@ class Block(Element):
             port_keys.add(key)
             ports.append(port)
         return ports
+    #endregion
 
-    ##############################################
-    # validation and rewrite
-    ##############################################
+    #region Rewrite_and_Validation
     def rewrite(self):
         """
         Add and remove ports to adjust for the nports.
@@ -235,7 +235,7 @@ class Block(Element):
 
         def check_generate_mode(label, flag, valid_options):
             block_requires_mode = (
-                flag in self.flags or self.name.upper().startswith(label)
+                flag in self.flags or self.label.upper().startswith(label)
             )
             if block_requires_mode and current_generate_option not in valid_options:
                 self.add_error_message("Can't generate this block in mode: {} ".format(
@@ -252,10 +252,23 @@ class Block(Element):
                 self.parent.evaluate(value)
             except Exception as err:
                 self.add_error_message('Value "{}" cannot be evaluated:\n{}'.format(value, err))
+    #endregion
 
-    ##############################################
-    # props
-    ##############################################
+    #region Properties
+
+    def __str__(self):
+        return 'Block - {} - {}({})'.format(self.name, self.label, self.key)
+
+    def __repr__(self):
+        try:
+            name = self.name
+        except Exception:
+            name = self.key
+        return 'block[' + name + ']'
+
+    @property
+    def name(self):
+        return self.params['id'].get_value()
 
     @lazy_property
     def is_virtual_or_pad(self):
@@ -312,6 +325,8 @@ class Block(Element):
         """Get the enabled state of the block"""
         return self.state != 'disabled'
 
+    #endregion
+
     ##############################################
     # Getters (old)
     ##############################################
@@ -335,7 +350,7 @@ class Block(Element):
         def make_callback(callback):
             if 'self.' in callback:
                 return callback
-            return 'self.{}.{}'.format(self.get_id(), callback)
+            return 'self.{}.{}'.format(self.name, callback)
         return [make_callback(c) for c in self.templates.render('callbacks')]
 
     def is_virtual_sink(self):
@@ -374,19 +389,6 @@ class Block(Element):
         if BLOCK_FLAG_DISABLE_BYPASS in self.flags:
             return False
         return True
-
-    def __str__(self):
-        return 'Block - {} - {}({})'.format(self.get_id(), self.name, self.key)
-
-    def __repr__(self):
-        try:
-            id_ = self.get_id()
-        except:
-            id_ = self.key
-        return 'block[' + id_ + ']'
-
-    def get_id(self):
-        return self.params['id'].get_value()
 
     def get_ports(self):
         return self.sources + self.sinks
@@ -641,7 +643,7 @@ class EPyBlock(Block):
         param_src = self.params['_source_code']
 
         src = param_src.get_value()
-        src_hash = hash((self.get_id(), src))
+        src_hash = hash((self.name, src))
         if src_hash == self._epy_source_hash:
             return
 
@@ -661,13 +663,13 @@ class EPyBlock(Block):
             self._epy_reload_error = None  # Clear previous errors
             param_blk.set_value(repr(tuple(blk_io)))
 
-        # print "Rewriting embedded python block {!r}".format(self.get_id())
+        # print "Rewriting embedded python block {!r}".format(self.name)
 
         self._epy_source_hash = src_hash
         self.name = blk_io.name or blk_io.cls
         self._doc = blk_io.doc
-        self._imports = ['import ' + self.get_id()]
-        self._make = '{0}.{1}({2})'.format(self.get_id(), blk_io.cls, ', '.join(
+        self._imports = ['import ' + self.name]
+        self._make = '{0}.{1}({2})'.format(self.name, blk_io.cls, ', '.join(
             '{0}=${{ {0} }}'.format(key) for key, _ in blk_io.params))
         self._callbacks = ['{0} = ${{ {0} }}'.format(attr) for attr in blk_io.callbacks]
         self._update_params(blk_io.params)

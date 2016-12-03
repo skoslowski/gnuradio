@@ -149,8 +149,8 @@ class Connection(Element):
             a nested data odict
         """
         n = collections.OrderedDict()
-        n['source_block_id'] = self.source_block.get_id()
-        n['sink_block_id'] = self.sink_block.get_id()
+        n['source_block_id'] = self.source_block.name
+        n['sink_block_id'] = self.sink_block.name
         n['source_key'] = self.source_port.key
         n['sink_key'] = self.sink_port.key
         return n

@@ -92,7 +92,7 @@ class FlowGraphProxy(object):  # TODO: move this in a refactored Generator
             a list of pad source blocks in this flow graph
         """
         pads = [b for b in self.get_enabled_blocks() if b.key == 'pad_source']
-        return sorted(pads, lambda x, y: cmp(x.get_id(), y.get_id()))
+        return sorted(pads, key=lambda x: x.name)
 
     def get_pad_sinks(self):
         """
@@ -102,7 +102,7 @@ class FlowGraphProxy(object):  # TODO: move this in a refactored Generator
             a list of pad sink blocks in this flow graph
         """
         pads = [b for b in self.get_enabled_blocks() if b.key == 'pad_sink']
-        return sorted(pads, lambda x, y: cmp(x.get_id(), y.get_id()))
+        return sorted(pads, key=lambda x: x.name)
 
     def get_pad_port_global_key(self, port):
         """

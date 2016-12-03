@@ -20,7 +20,7 @@ from __future__ import absolute_import, print_function
 import imp
 import time
 import re
-from operator import methodcaller
+from operator import methodcaller, attrgetter
 import collections
 import sys
 
@@ -87,7 +87,7 @@ class FlowGraph(Element):
             a sorted list of variable blocks in order of dependency (indep -> dep)
         """
         variables = [block for block in self.iter_enabled_blocks() if block.is_variable]
-        return expr_utils.sort_objects(variables, methodcaller('get_id'), methodcaller('get_var_make'))
+        return expr_utils.sort_objects(variables, attrgetter('name'), methodcaller('get_var_make'))
 
     def get_parameters(self):
         """
@@ -110,7 +110,7 @@ class FlowGraph(Element):
         """Iterate over custom code block ID and Source"""
         for block in self.iter_enabled_blocks():
             if block.key == 'epy_module':
-                yield block.get_id(), block.params[1].get_value()
+                yield block.name, block.params[1].get_value()
 
     def get_bussink(self):
         bussink = [b for b in self.get_enabled_blocks() if _bussink_searcher.search(b.key)]
@@ -199,7 +199,7 @@ class FlowGraph(Element):
     ##############################################
     def get_block(self, name):
         for block in self.blocks:
-            if block.get_id() == name:
+            if block.name == name:
                 return block
         raise KeyError('No block with name {!r}'.format(name))
 
@@ -234,19 +234,19 @@ class FlowGraph(Element):
 
         # Load parameters
         np = {}  # params don't know each other
-        for parameter in self.get_parameters():
+        for parameter_block in self.get_parameters():
             try:
-                value = eval(parameter.params['value'].to_code(), namespace)
-                np[parameter.get_id()] = value
+                value = eval(parameter_block.params['value'].to_code(), namespace)
+                np[parameter_block.name] = value
             except:
                 pass
         namespace.update(np)  # Merge param namespace
 
         # Load variables
-        for variable in self.get_variables():
+        for variable_block in self.get_variables():
             try:
-                value = eval(variable.get_var_value(), namespace)
-                namespace[variable.get_id()] = value
+                value = eval(variable_block.get_var_value(), namespace)
+                namespace[variable_block.name] = value
             except:
                 pass
 

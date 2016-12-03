@@ -160,9 +160,9 @@ class Block(CoreBlock, Drawable):
             PangoCairo.update_layout(cr, params_layout)
 
         title_layout.set_markup(
-            '<span {foreground} font_desc="{font}"><b>{name}</b></span>'.format(
+            '<span {foreground} font_desc="{font}"><b>{label}</b></span>'.format(
                 foreground='foreground="red"' if not self.is_valid() else '', font=BLOCK_FONT,
-                name=Utils.encode(self.name)
+                label=Utils.encode(self.label)
             )
         )
         title_width, title_height = title_layout.get_size()

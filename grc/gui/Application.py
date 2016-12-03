@@ -230,11 +230,11 @@ class Application(Gtk.Application):
                             for param in block.params.values():
                                 for variable in flow_graph.get_variables():
                                     # If a block parameter exists that is a variable, create a parameter for it
-                                    if param.get_value() == variable.get_id():
+                                    if param.get_value() == variable.name:
                                         params.append(param.get_value())
                                 for flow_param in flow_graph.get_parameters():
                                     # If a block parameter exists that is a parameter, create a parameter for it
-                                    if param.get_value() == flow_param.get_id():
+                                    if param.get_value() == flow_param.name:
                                         params.append(param.get_value())
 
 
@@ -248,15 +248,15 @@ class Application(Gtk.Application):
                             for connection in block.connections:
 
                                 # Get id of connected blocks
-                                source_id = connection.source_block.get_id()
-                                sink_id = connection.sink_block.get_id()
+                                source_id = connection.source_block.name
+                                sink_id = connection.sink_block.name
 
                                 # If connected block is not in the list of selected blocks create a pad for it
                                 if flow_graph.get_block(source_id) not in flow_graph.selected_blocks():
-                                    pads.append({'key': connection.sink_port.key, 'coord': connection.source_port.coordinate, 'block_id' : block.get_id(), 'direction': 'source'})
+                                    pads.append({'key': connection.sink_port.key, 'coord': connection.source_port.coordinate, 'block_id' : block.name, 'direction': 'source'})
 
                                 if flow_graph.get_block(sink_id) not in flow_graph.selected_blocks():
-                                    pads.append({'key': connection.source_port.key, 'coord': connection.sink_port.coordinate, 'block_id' : block.get_id(), 'direction': 'sink'})
+                                    pads.append({'key': connection.source_port.key, 'coord': connection.sink_port.coordinate, 'block_id' : block.name, 'direction': 'sink'})
 
 
                         # Copy the selected blocks and paste them into a new page

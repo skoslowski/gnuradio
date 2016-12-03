@@ -228,7 +228,7 @@ class VariableEditor(Gtk.VBox):
         variables = self.treestore.append(None, [None, 'Variables'])
         for block in self._imports:
             self.treestore.append(imports, [block, block.params['id'].get_value()])
-        for block in sorted(self._variables, key=lambda v: v.get_id()):
+        for block in sorted(self._variables, key=lambda v: v.name):
             self.treestore.append(variables, [block, block.params['id'].get_value()])
 
     def _handle_name_edited_cb(self, cell, path, new_text):
@@ -256,7 +256,7 @@ class VariableEditor(Gtk.VBox):
         elif key == self.OPEN_PROPERTIES:
             Actions.BLOCK_PARAM_MODIFY(self._block)
         elif key == self.DELETE_BLOCK:
-            self.emit('remove_block', self._block.get_id())
+            self.emit('remove_block', self._block.name)
         elif key == self.DELETE_CONFIRM:
             if self._confirm_delete:
                 # Create a context menu to confirm the delete operation

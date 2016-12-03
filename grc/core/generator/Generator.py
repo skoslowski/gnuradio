@@ -135,7 +135,7 @@ class TopBlockGenerator(object):
 
         # List of blocks not including variables and imports and parameters and disabled
         def _get_block_sort_text(block):
-            code = block.templates.render('make').replace(block.get_id(), ' ')
+            code = block.templates.render('make').replace(block.name, ' ')
             try:
                 code += block.params['gui_hint'].get_value()  # Newer gui markup w/ qtgui
             except:
@@ -144,7 +144,7 @@ class TopBlockGenerator(object):
 
         blocks_all = expr_utils.sort_objects(
             [b for b in fg.blocks if b.enabled and not b.get_bypassed()],
-            operator.methodcaller('get_id'), _get_block_sort_text
+            operator.attrgetter('name'), _get_block_sort_text
         )
         deprecated_block_keys = set(b.name for b in blocks_all if b.is_deprecated)
         for key in deprecated_block_keys:
@@ -155,7 +155,7 @@ class TopBlockGenerator(object):
 
         for block in blocks:
             key = block.key
-            file_path = os.path.join(self._dirname, block.get_id() + '.py')
+            file_path = os.path.join(self._dirname, block.name + '.py')
             if key == 'epy_block':
                 src = block.params['_source_code'].get_value()
                 output.append((file_path, src))
@@ -209,13 +209,13 @@ class TopBlockGenerator(object):
         # List of connections where each endpoint is enabled (sorted by domains, block names)
         connections.sort(key=lambda c: (
             c.source_port.domain, c.sink_port.domain,
-            c.source_block.get_id(), c.sink_block.get_id()
+            c.source_block.name, c.sink_block.name
         ))
 
         connection_templates = fg.parent.connection_templates
 
         # List of variable names
-        var_ids = [var.get_id() for var in parameters + variables]
+        var_ids = [var.name for var in parameters + variables]
         replace_dict = dict((var_id, 'self.' + var_id) for var_id in var_ids)
         callbacks_all = []
         for block in blocks_all:
@@ -298,7 +298,7 @@ class HierBlockGenerator(TopBlockGenerator):
         parameters = self._flow_graph.get_parameters()
 
         def var_or_value(name):
-            if name in (p.get_id() for p in parameters):
+            if name in (p.name for p in parameters):
                 return "$" + name
             return name
 
@@ -315,22 +315,22 @@ class HierBlockGenerator(TopBlockGenerator):
             block_n['make'] = '{cls}(\n    {kwargs},\n)'.format(
                 cls=block_key,
                 kwargs=',\n    '.join(
-                    '{key}=${key}'.format(key=param.get_id()) for param in parameters
+                    '{key}=${key}'.format(key=param.name) for param in parameters
                 ),
             )
         else:
             block_n['make'] = '{cls}()'.format(cls=block_key)
         # Callback data
         block_n['callback'] = [
-            'set_{key}(${key})'.format(key=param.get_id()) for param in parameters
+            'set_{key}(${key})'.format(key=param.name) for param in parameters
         ]
 
         # Parameters
         block_n['param'] = list()
         for param in parameters:
             param_n = collections.OrderedDict()
-            param_n['name'] = param.params['label'].get_value() or param.get_id()
-            param_n['key'] = param.get_id()
+            param_n['name'] = param.params['label'].get_value() or param.name
+            param_n['key'] = param.name
             param_n['value'] = param.params['value'].get_value()
             param_n['type'] = 'raw'
             param_n['hide'] = param.get_param('hide').get_value()

@@ -77,7 +77,7 @@ ${imp}
 ##  Setup the IO signature (hier block only).
 ########################################################
 <% class_name = flow_graph.get_option('id') %>
-<% param_str = ', '.join(['self'] + ['%s=%s'%(param.get_id(), param.get_make()) for param in parameters]) %>
+<% param_str = ', '.join(['self'] + ['%s=%s'%(param.name, param.get_make()) for param in parameters]) %>
 % if generate_options == 'qt_gui':
 from gnuradio import qtgui
 
@@ -203,18 +203,18 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
     % if blk in variables:
         ${indent(lk.get_make())}
     % else:
-        self.${blk.get_id()} = ${indent(lk.get_make())}
+        self.${blk.name} = ${indent(lk.get_make())}
         % if 'alias' in blk.params and blk.params['alias'].get_evaluated():
-        (self.${blk.get_id()}).set_block_alias("$blk.params['alias'].get_evaluated()")
+        (self.${blk.name}).set_block_alias("$blk.params['alias'].get_evaluated()")
         % endif
         % if 'affinity' in blk.params and blk.params['affinity'].get_evaluated():
-        (self.${blk.get_id()}).set_processor_affinity(${blk.params['affinity'].get_evaluated()})
+        (self.${blk.name}).set_processor_affinity(${blk.params['affinity'].get_evaluated()})
         % endif
         % if len(blk.sources) > 0 and 'minoutbuf' in blk.params and int(blk.params['minoutbuf'].get_evaluated()) > 0:
-        (self.${blk.get_id()}).set_min_output_buffer(${blk.params['minoutbuf'].get_evaluated()})
+        (self.${blk.name}).set_min_output_buffer(${blk.params['minoutbuf'].get_evaluated()})
         % endif
         % if len(blk.sources) > 0 and 'maxoutbuf' in blk.params and int(blk.params['maxoutbuf'].get_evaluated()) > 0:
-        (self.${blk.get_id()}).set_max_output_buffer(${blk.params['maxoutbuf'].get_evaluated()})
+        (self.${blk.name}).set_max_output_buffer(${blk.params['maxoutbuf'].get_evaluated()})
         % endif
     % endif
 % endfor
@@ -229,7 +229,7 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
         <% block = 'self' %>
         <% key = flow_graph.get_pad_port_global_key(port) %>
     % else:
-        <% block = 'self.' + port.parent.get_id() %>
+        <% block = 'self.' + port.parent.name %>
         <% key = port.key %>
     % endif
     % if not key.isdigit():
@@ -277,7 +277,7 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
 ########################################################
 % for var in parameters + variables:
 
-    <% id_ = var.get_id() %>
+    <% id_ = var.name %>
     def get_${id_}(self):
         return self.${id_}
 
@@ -329,13 +329,13 @@ def argument_parser():
     % for param in parameters:
         <% type_ = param.params['type'].get_value() %>
         % if type_:
-            ${params_eq_list.append('%s=options.%s' % (param.get_id(), param.get_id()))}
+            ${params_eq_list.append('%s=options.%s' % (param.name, param.name))}
     parser.add_argument(
         % if make_short_id(param):
         "${make_short_id(param)}",
         % endif
-        "--${param.get_id().replace('_', '-')}", dest="${param.get_id()}", type=${type_}, default=${make_default(type_, param)},
-        help="Set ${param.params['label'].get_evaluated() or param.get_id()} [default=%(default)r]")
+        "--${param.name.replace('_', '-')}", dest="${param.name}", type=${type_}, default=${make_default(type_, param)},
+        help="Set ${param.params['label'].get_evaluated() or param.name} [default=%(default)r]")
         % endif
     % endfor
     return parser
@@ -378,9 +378,9 @@ def main(top_block_cls=${class_name}, options=None):
     % for m in monitors:
     if 'en' in m.params:
         if m.params['en'].get_value():
-            (tb.${m.get_id()}).start()
+            (tb.${m.name}).start()
     else:
-        sys.stderr.write("Monitor '{0}' does not have an enable ('en') parameter.".format("tb.$m.get_id()"))
+        sys.stderr.write("Monitor '{0}' does not have an enable ('en') parameter.".format("tb.$m.name"))
     % endfor
     qapp.exec_()
     #elif generate_options == 'no_gui'
@@ -393,7 +393,7 @@ def main(top_block_cls=${class_name}, options=None):
     tb.start()
     % endif
     % for m in monitors:
-    (tb.${m.get_id()}).start()
+    (tb.${m.name}).start()
     % endfor
     try:
         raw_input('Press Enter to quit: ')
@@ -408,7 +408,7 @@ def main(top_block_cls=${class_name}, options=None):
         % endif
     % endif
     % for m in monitors:
-    (tb.${m.get_id()}).start()
+    (tb.${m.name}).start()
     % endfor
     tb.wait()
     % endif

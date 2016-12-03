@@ -81,7 +81,7 @@ class FlowGraph(CoreFlowgraph, Drawable):
         Returns:
             a unique id
         """
-        block_ids = set(b.get_id() for b in self.blocks)
+        block_ids = set(b.name for b in self.blocks)
         for index in count():
             block_id = '{}_{}'.format(base_id, index)
             if block_id not in block_ids:
@@ -89,7 +89,7 @@ class FlowGraph(CoreFlowgraph, Drawable):
         return block_id
 
     def install_external_editor(self, param):
-        target = (param.parent_block.get_id(), param.key)
+        target = (param.parent_block.name, param.key)
 
         if target in self._external_updaters:
             editor = self._external_updaters[target]
@@ -270,7 +270,7 @@ class FlowGraph(CoreFlowgraph, Drawable):
                 if param_key == 'id':
                     old_id2block[param_value] = block
                     #if the block id is not unique, get a new block id
-                    if param_value in (blk.get_id() for blk in self.blocks):
+                    if param_value in (blk.name for blk in self.blocks):
                         param_value = self._get_unique_id(param_value)
                 #set value to key
                 block.params[param_key].set_value(param_value)
