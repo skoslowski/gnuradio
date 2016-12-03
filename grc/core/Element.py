@@ -146,7 +146,7 @@ class Element(object):
 
     @lazy_property
     def parent_block(self):
-        from .Block import Block
+        from .blocks import Block
         return self.get_parent_by_type(Block)
 
     def reset_parents_by_type(self):

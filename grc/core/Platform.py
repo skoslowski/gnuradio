@@ -27,14 +27,16 @@ import six
 from six.moves import range
 import yaml
 
-from . import ParseXML, Messages, Constants, legacy
+from . import (
+    ParseXML, Messages, Constants, legacy,
+    blocks, utils, schema_checker
+)
 
 from .Config import Config
 from .Element import Element
 from .generator import Generator
 from .FlowGraph import FlowGraph
 from .Connection import Connection
-from . import Block, utils, schema_checker
 from .Port import Port, PortClone
 from .Param import Param
 
@@ -377,9 +379,9 @@ class Platform(Element):
     Connection = Connection
 
     block_classes = {
-        None: Block.Block,  # default
-        'epy_block': Block.EPyBlock,
-        '_dummy': Block.DummyBlock,
+        None: blocks.Block,  # default
+        'epy_block': blocks.EPyBlock,
+        '_dummy': blocks.DummyBlock,
     }
     port_classes = {
         None: Port,  # default

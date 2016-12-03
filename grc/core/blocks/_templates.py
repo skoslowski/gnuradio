@@ -20,7 +20,7 @@ from __future__ import absolute_import, print_function
 from mako.template import Template
 from mako.exceptions import SyntaxException
 
-from .errors import TemplateError
+from ..errors import TemplateError
 
 
 class MakoTemplates(dict):

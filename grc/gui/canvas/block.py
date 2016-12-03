@@ -32,7 +32,7 @@ from ..Constants import (
     PORT_BORDER_SEPARATION, BLOCK_FONT, PARAM_FONT
 )
 from ...core import utils
-from ...core.Block import Block as CoreBlock
+from ...core.blocks import Block as CoreBlock
 
 
 class Block(CoreBlock, Drawable):

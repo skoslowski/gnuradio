@@ -1,6 +1,6 @@
 import pytest
 
-from grc.core.block_templates import MakoTemplates
+from grc.core.blocks._templates import MakoTemplates
 from grc.core.errors import TemplateError
 
 
