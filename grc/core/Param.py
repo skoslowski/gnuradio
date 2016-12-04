@@ -35,7 +35,7 @@ ID_BLACKLIST = ['self', 'options', 'gr', 'math', 'firdes'] + dir(builtins)
 try:
     from gnuradio import gr
     ID_BLACKLIST.extend(attr for attr in dir(gr.top_block()) if not attr.startswith('_'))
-except ImportError:
+except (ImportError, AttributeError):
     pass
 
 

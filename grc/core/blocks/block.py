@@ -399,10 +399,10 @@ class Block(Element):
         return itertools.chain(self.active_sources, self.active_sinks)
 
     def get_children(self):
-        return self.params.values() + self.get_ports()
+        return list(self.params.values()) + self.get_ports()
 
     def get_children_gui(self):
-        return self.get_ports_gui() + self.params.values()
+        return list(self.params.values()) + self.get_ports_gui()
 
     ##############################################
     # Access

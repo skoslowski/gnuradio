@@ -46,10 +46,10 @@ class Validator(object):
         self.passed = True
 
     def _check(self, data, scheme):
-        if not data or not isinstance(data, types.DictType):
+        if not data or not isinstance(data, dict):
             self._error('Empty data or not a dict')
             return
-        if isinstance(scheme, types.DictType):
+        if isinstance(scheme, dict):
             self._check_dict(data, scheme)
         else:
             self._check_var_key_dict(data, *scheme)
@@ -90,9 +90,9 @@ class Validator(object):
             self._error('Value type {!r} for {!r} not in valid types'.format(
                 type(value).__name__, label))
         if item_scheme:
-            if isinstance(value, types.ListType):
+            if isinstance(value, list):
                 self._check_list(value, item_scheme, label)
-            elif isinstance(value, types.DictType):
+            elif isinstance(value, dict):
                 self._check(value, item_scheme)
 
     def _error(self, msg):

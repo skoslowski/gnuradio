@@ -137,7 +137,7 @@ class Port(Element):
     is_port = True
     is_clone = False
 
-    dtype = EvaluatedEnum(Constants.TYPE_TO_SIZEOF.keys(), default='complex', name='dtype')
+    dtype = EvaluatedEnum(list(Constants.TYPE_TO_SIZEOF.keys()), default='complex', name='dtype')
     vlen = EvaluatedPInt(name='vlen')
     multiplicity = EvaluatedPInt(name='multiplicity')
     hidden = Evaluated((bool, int), default=False, name='hidden')
