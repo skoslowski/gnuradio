@@ -20,9 +20,10 @@ Converter for legacy block tree definitions in XML format
 
 from __future__ import absolute_import, division, print_function
 
+from os import path
+
 import yaml
 from lxml import etree
-from os import path
 
 from .yaml_output import GRCDumper
 
@@ -30,7 +31,7 @@ from .yaml_output import GRCDumper
 BLOCK_TREE_DTD = etree.DTD(path.join(path.dirname(__file__), 'block_tree.dtd'))
 
 
-def convert_xml(xml_file):
+def convert(xml_file):
     """Load block tree description from xml file"""
 
     try:

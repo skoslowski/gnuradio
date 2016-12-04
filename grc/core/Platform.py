@@ -1,21 +1,19 @@
-"""
-Copyright 2008-2016 Free Software Foundation, Inc.
-This file is part of GNU Radio
-
-GNU Radio Companion is free software; you can redistribute it and/or
-modify it under the terms of the GNU General Public License
-as published by the Free Software Foundation; either version 2
-of the License, or (at your option) any later version.
-
-GNU Radio Companion is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
-"""
+# Copyright 2008-2016 Free Software Foundation, Inc.
+# This file is part of GNU Radio
+#
+# GNU Radio Companion is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# GNU Radio Companion is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, print_function
 
@@ -28,7 +26,7 @@ from six.moves import range
 import yaml
 
 from . import (
-    ParseXML, Messages, Constants, legacy,
+    ParseXML, Messages, Constants,
     blocks, utils, schema_checker
 )
 
@@ -41,6 +39,7 @@ from .Port import Port, PortClone
 from .Param import Param
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class Platform(Element):
@@ -131,7 +130,9 @@ class Platform(Element):
             return None, None
 
         if flow_graph.get_option('generate_options').startswith('hb'):
-            self.load_block_xml(generator.file_path_xml)
+            # self.load_block_xml(generator.file_path_xml)
+            # TODO: implement yml output for hier blocks
+            pass
         return flow_graph, generator.file_path
 
     def build_block_library(self):
@@ -144,22 +145,11 @@ class Platform(Element):
         self._block_categories.clear()
         self.domains.clear()
         self.connection_templates.clear()
-        ParseXML.xml_failures.clear()
 
-        # Try to parse and load blocks
-        for xml_file in self.iter_files_in_block_path(ext='xml'):
-            try:
-                if xml_file.endswith("block_tree.xml"):
-                    self.load_category_tree_xml(xml_file)
-                elif xml_file.endswith('domain.xml'):
-                    pass
-                else:
-                    self.load_block_xml(xml_file)
-            except ParseXML.XMLSyntaxError as e:
-                # print >> sys.stderr, 'Warning: Block validation failed:\n\t%s\n\tIgnoring: %s' % (e, xml_file)
-                pass
-            except Exception as e:
-                raise
+        # FIXME: remove this as soon as converter is stable
+        from ..converter import Converter
+        Converter(self.config.block_paths, self.config.yml_block_cache).run()
+        logging.info('XML converter done.')
 
         for file_path in self.iter_files_in_block_path():
             with open(file_path) as fp:
@@ -216,37 +206,6 @@ class Platform(Element):
                 yield_from = glob.iglob(pattern)
                 for file_path in yield_from:
                     yield file_path
-
-    def load_block_xml(self, xml_file):
-        """Load block description from xml file"""
-        if 'qtgui_' in xml_file or '.grc_gnuradio/' in xml_file:
-            return
-
-        key_from_xml = os.path.basename(xml_file)[:-4]
-        yml_file = os.path.join(self.config.yml_block_cache,
-                                key_from_xml + '.block.yml')
-
-        if not need_conversion(xml_file, yml_file, legacy.block_xml_converter):
-            return  # yml file up-to-date
-
-        # print('Converting', xml_file)
-        key, data = legacy.convert_xml(xml_file)
-        # if key_from_xml != key:
-        #     print('Warning: key is not filename in', xml_file)
-        with open(yml_file, 'w') as yml_file:
-            yml_file.write(data)
-
-    def load_category_tree_xml(self, xml_file):
-        """Validate and parse category tree file and add it to list"""
-        module_name = os.path.basename(xml_file)[:-len('block_tree.xml')].rstrip('._-')
-        yml_file = os.path.join(self.config.yml_block_cache, module_name + '.tree.yml')
-
-        if not need_conversion(xml_file, yml_file, legacy.block_xml_converter):
-            return  # yml file up-to-date
-
-        data = legacy.convert_block_tree_xml(xml_file)
-        with open(yml_file, 'w') as yml_file:
-            yml_file.write(data)
 
     def _save_docstring_extraction_result(self, key, docstrings):
         docs = {}
@@ -408,16 +367,3 @@ class Platform(Element):
         cls = self.port_classes[kwargs.pop('cls_key', None)]
         return cls(parent, **kwargs)
 
-
-def need_conversion(source, destination, converter=None):
-    """Check if source has already been converted and destination is up-to-date"""
-    if not os.path.exists(destination):
-        return True
-    xml_time = os.path.getmtime(source)
-    yml_time = os.path.getmtime(destination)
-    if converter:
-        converter_time = os.path.getmtime(converter.__file__.rstrip('c'))
-    else:
-        converter_time = yml_time
-
-    return yml_time < xml_time or yml_time < converter_time

@@ -27,22 +27,20 @@ from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
 import itertools
+from os import path
 
 import yaml
 from lxml import etree
-from os import path
 
-from .yaml_output import ListFlowing, scalar_node, GRCDumper
 from . import cheetah_converter
-
-from .. import Constants
+from .yaml_output import ListFlowing, scalar_node, GRCDumper
 
 
 BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
 reserved_block_keys = ('import', )  # todo: add more keys
 
 
-def convert_xml(xml_file):
+def convert(xml_file):
     """Load block description from xml file"""
 
     try:
@@ -191,8 +189,8 @@ def convert_port_xml(node, convert):
     dtype = convert(node.findtext('type'))
     # TODO: detect dyn message ports
     # todo: parse tab tag
-    port['domain'] = domain = Constants.GR_MESSAGE_DOMAIN if dtype == 'message' else Constants.DEFAULT_DOMAIN
-    if domain == Constants.GR_MESSAGE_DOMAIN:
+    port['domain'] = domain = 'message' if dtype == 'message' else 'stream'
+    if domain == 'message':
         port['id'] = port['label']
     else:
         port['dtype'] = dtype

@@ -23,7 +23,7 @@ import string
 
 from . import yaml_output
 
-delims = {'(': ')', '[': ']', '{': '}', '': ', #\\'}
+delims = {'(': ')', '[': ']', '{': '}', '': ', #\\*:'}
 identifier_start = '_' + string.ascii_letters + ''.join(delims.keys())
 string_delims = '"\''
 
@@ -95,12 +95,15 @@ class Converter(object):
     def convert(self, expr, spec=Python):
         if not expr:
             return ''
+
         elif '$' not in expr:
             return expr
+
         try:
             return self.convert_simple(expr, spec)
         except ValueError:
             pass
+
         try:
             if '#if' in expr and '\n' not in expr:
                 expr = self.convert_inline_conditional(expr, spec)

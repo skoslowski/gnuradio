@@ -1,5 +1,4 @@
-"""
-Copyright 2016 Free Software Foundation, Inc.
+"""Copyright 2016 Free Software Foundation, Inc.
 This file is part of GNU Radio
 
 GNU Radio Companion is free software; you can redistribute it and/or
@@ -32,7 +31,7 @@ class Config(object):
 
     hier_block_lib_dir = os.environ.get('GRC_HIER_PATH', Constants.DEFAULT_HIER_BLOCK_LIB_DIR)
 
-    yml_block_cache = os.path.expanduser('~/.cache/grc_gnuradio')
+    yml_block_cache = os.path.expanduser('~/.cache/grc_gnuradio')  # FIXME: remove this as soon as converter is stable
 
     def __init__(self, version, version_parts=None, name=None, prefs=None):
         self._gr_prefs = prefs if prefs else DummyPrefs()

@@ -1,8 +1,7 @@
 """"""
 
 import functools
-from textwrap import dedent
-import grc.core.legacy.cheetah_converter as parser
+import grc.converter.cheetah_converter as parser
 
 
 def test_basic():

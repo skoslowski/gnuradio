@@ -15,29 +15,6 @@
 # this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-import yaml
+from __future__ import absolute_import
 
-
-class Eval(unicode):
-    """String subtype explicitly enable evaluation of the provided expression"""
-    tag = u'!eval'
-
-
-class Mako(unicode):
-    """String subtype explicitly run Mako"""
-    tag = u'!mako'
-
-
-class Cheetah(unicode):
-    """String subtype explicitly run Cheetah"""
-    tag = u'!cheetah'
-
-
-class GRCLoader(yaml.SafeLoader):
-    pass
-
-for type_ in (Eval, Mako, Cheetah):
-    def construct_string(constructor, node):
-        return type_(constructor.construct_scalar(node))
-
-    yaml.SafeLoader.add_constructor(type_.tag, construct_string)
+from .main import Converter

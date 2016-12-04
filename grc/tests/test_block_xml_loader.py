@@ -18,20 +18,20 @@
 from __future__ import print_function
 
 import glob
-
 from os import path
 
-from grc.core.legacy.block_xml_converter import convert_xml
-from grc.core.legacy.yaml_output import yaml
-from grc.core.schema_checker.yaml_checker import SchemaChecker
+import yaml
+
+from grc.converter import block_xml
+
+from grc.core.schema_checker import Validator, BLOCK_SCHEME
 
 
 def test_block_xml():
-    checker = SchemaChecker()
+    checker = Validator(BLOCK_SCHEME)
     test_file_dir = path.join(path.dirname(__file__), 'resources')
     for filename in glob.iglob(path.join(test_file_dir, '*.xml')):
-        with open(filename) as fp:
-            _, out = convert_xml(fp)
+        _, out = block_xml.convert(filename)
         print(out)
         data = yaml.load(out)
         passed = checker.run(data)
@@ -63,11 +63,9 @@ def test_format():
     assert "{a} {a[b]} {a.b} {a:e}".format(a=A()) == "abc 0 0 def"
 
 
-BLOCKS_PATHS = path.normpath(
-    path.join(path.dirname(__file__), '..', '..', 'gr-**', 'grc', '*.xml')
-)
-
-
+# BLOCKS_PATHS = path.normpath(
+#     path.join(path.dirname(__file__), '..', '..', 'gr-**', 'grc', '*.xml')
+# )
 # def test_intree_xml():
 #     print()
 #     for count, filename in enumerate(glob.iglob(BLOCKS_PATHS), 1):

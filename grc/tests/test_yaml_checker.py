@@ -17,8 +17,8 @@
 
 import yaml
 
-from grc.core.schema_checker.yaml_checker import SchemaChecker
-from grc.core.utils.yaml_loader import GRCLoader
+from grc.core.schema_checker import Validator, BLOCK_SCHEME
+
 
 BLOCK1 = """
 id: block_key
@@ -59,20 +59,20 @@ templates:
 
 
 def test_min():
-    checker = SchemaChecker()
+    checker = Validator(BLOCK_SCHEME)
     assert checker.run({'id': 'test'})
     assert not checker.run({'name': 'test'})
 
 
 def test_extra_keys():
-    checker = SchemaChecker()
+    checker = Validator(BLOCK_SCHEME)
     assert checker.run({'id': 'test', 'abcdefg': 'nonsense'})
     assert checker.messages == [('block', 'warn', "Ignoring extra key 'abcdefg'")]
 
 
 def test_checker():
-    checker = SchemaChecker()
-    data = yaml.load(BLOCK1, Loader=GRCLoader)
+    checker = Validator(BLOCK_SCHEME)
+    data = yaml.load(BLOCK1)
     passed = checker.run(data)
     if not passed:
         print()
