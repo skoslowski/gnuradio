@@ -75,7 +75,7 @@ class FlowGraph(Element):
         """
         imports = set()
         for block in self.iter_enabled_blocks():
-            imports = imports.union(block.templates.render('imports'))
+            imports = imports.union(block.templates.render('imports').split('\n'))
         return sorted(imports)
 
     def get_variables(self):

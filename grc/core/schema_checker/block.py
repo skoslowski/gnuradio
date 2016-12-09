@@ -29,7 +29,7 @@ PORT_SCHEME = expand(
     hide=(bool, str_),
 )
 TEMPLATES_SCHEME = expand(
-    imports=(list, str),
+    imports=str_,
     var_make=str_,
     make=str_,
     callbacks=(list, str_),

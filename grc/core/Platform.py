@@ -177,6 +177,7 @@ class Platform(Element):
 
                 loader(data, file_path)
             except Exception as error:
+                logger.exception('Error while loading %s', file_path)
                 logger.exception(error)
                 raise
 
@@ -227,12 +228,12 @@ class Platform(Element):
             logger.warning('Block with id "%s" overwritten by %s', block_id, file_path)
 
         # Store the block
-        self.blocks[block_id] = block = self.get_new_block(self._flow_graph, block_id, **data)
+        self.blocks[block_id] = self.get_new_block(self._flow_graph, block_id, **data)
         self._blocks_n[block_id] = data
+
+        templates = data.get('templates', {})
         self._docstring_extractor.query(
-            block_id,
-            block.templates.get('imports', ''),
-            block.templates.get('make', ''),
+            block_id, templates.get('imports', ''), templates.get('make', ''),
         )
 
     def load_domain_description(self, data, file_path):

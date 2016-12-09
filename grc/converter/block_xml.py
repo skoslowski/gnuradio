@@ -140,16 +140,17 @@ def auto_hide_params_for_item_sizes(data):
 def convert_templates(node, convert, block_id=''):
     templates = OrderedDict()
 
-    imports = [convert(import_node.text) for import_node in node.iterfind('import')]
+    imports = '\n'.join(convert(import_node.text)
+                        for import_node in node.iterfind('import'))
     if imports:
-        templates['imports'] = (imports if len(imports) > 1 else imports[0]) or no_value
+        templates['imports'] = scalar_node(imports, style='|' if '\n' in imports else None)
 
     templates['var_make'] = convert(node.findtext('var_make') or '') or no_value
 
     make = convert(node.findtext('make') or '')
     if make:
         check_mako_template(block_id, make)
-    templates['make'] = scalar_node(make, style='|' if '\n' in make else None) if make else no_value
+        templates['make'] = scalar_node(make, style='|' if '\n' in make else None)
 
     templates['callbacks'] = [
          convert(cb_node.text) for cb_node in node.iterfind('callback')

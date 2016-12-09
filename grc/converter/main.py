@@ -25,6 +25,12 @@ from . import block_tree, block_xml
 path = os.path
 logger = logging.getLogger(__name__)
 
+excludes = [
+    'qtgui_',
+    '.grc_gnuradio/',
+    'blks2',
+]
+
 
 class Converter(object):
 
@@ -51,7 +57,7 @@ class Converter(object):
 
     def load_block_xml(self, xml_file):
         """Load block description from xml file"""
-        if 'qtgui_' in xml_file or '.grc_gnuradio/' in xml_file:
+        if any(part in xml_file for part in excludes):
             return
 
         key_from_xml = path.basename(xml_file)[:-4]

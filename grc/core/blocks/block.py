@@ -45,10 +45,6 @@ def _get_elem(iterable, key):
     return ValueError('Key "{}" not found in {}.'.format(key, items))
 
 
-def ensure_list(value):
-    return [] if not value else [value] if not isinstance(value, list) else value
-
-
 class Block(Element):
 
     is_block = True
@@ -69,18 +65,6 @@ class Block(Element):
         self._var_value = kwargs.get('value', '')
         self._checks = [check.lstrip('${').rstrip('}') for check in kwargs.get('checks', [])]
 
-        templates = templates or {}
-        self.templates = MakoTemplates(
-            block=self,
-            imports=ensure_list(templates.get('imports')),
-            make=templates.get('make'),
-            callbacks=ensure_list(kwargs.get('callbacks')),
-
-            var_make=templates.get('var_make'),
-        )
-
-        self._var_make = templates.get('var_make')
-
         self._doc = kwargs.get('documentation', '').strip('\n').replace('\\\n', '')
         self._grc_source = kwargs.get('grc_source', '')
         self.block_wrapper_path = kwargs.get('block_wrapper_path')
@@ -90,6 +74,7 @@ class Block(Element):
         if self.is_virtual_or_pad or self.is_variable:
             self.flags += BLOCK_FLAG_DISABLE_BYPASS
 
+        self.templates = self._init_templates(**(templates or {}))
         self.params = self._init_params(parameters or [], has_sinks=bool(inputs),
                                         has_sources=bool(outputs))
         self.sinks = self._init_ports(inputs or [], direction='sink')
@@ -103,6 +88,24 @@ class Block(Element):
         self.states = {'_enabled': True}
 
         self._init_bus_ports(kwargs)  # todo: rewrite
+
+    def _init_templates(self, imports='', make='', callbacks=None, var_make=''):
+        def ensure_list(value):
+            if not value:
+                return []
+            elif not isinstance(value, list):
+                return [value]
+            else:
+                return value
+
+        return MakoTemplates(
+            block=self,
+            imports=imports,
+            make=make,
+            callbacks=ensure_list(callbacks),
+
+            var_make=var_make,
+        )
 
     def _init_params(self, params_n, has_sources, has_sinks):
         params = collections.OrderedDict()
