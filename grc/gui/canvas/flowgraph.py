@@ -282,11 +282,9 @@ class FlowGraph(CoreFlowgraph, Drawable):
         for connection_n in connections_n:
             source = old_id2block[connection_n.get('source_block_id')].get_source(connection_n.get('source_key'))
             sink = old_id2block[connection_n.get('sink_block_id')].get_sink(connection_n.get('sink_key'))
-            self.connect(source, sink)
-        #set all pasted elements selected
-        for block in selected:
-            selected = selected.union(set(block.get_connections()))
-        self.selected_elements = set(selected)
+            connection = self.connect(source, sink)
+            selected.add(connection)
+        self.selected_elements = selected
 
     ###########################################################################
     # Modify Selected

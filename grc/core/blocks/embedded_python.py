@@ -123,9 +123,7 @@ class EPyBlock(Block):
         del ports[:]
         ports.extend(ports_new)
         # remove excess port connections
-        for port in ports_to_remove:
-            for connection in port.get_connections():
-                self.parent_flowgraph.remove_element(connection)
+        self.parent_flowgraph.disconnect(*ports_to_remove)
 
     def validate(self):
         super(EPyBlock, self).validate()

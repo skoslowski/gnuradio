@@ -173,7 +173,9 @@ class Block(Element):
         def rekey(ports):
             """Renumber non-message/message ports"""
             domain_specific_port_index = collections.defaultdict(int)
-            for port in [p for p in ports if p.key.isdigit()]:
+            for port in ports:
+                if not port.key.isdigit():
+                    continue
                 domain = port.domain
                 port.key = str(domain_specific_port_index[domain])
                 domain_specific_port_index[domain] += 1
@@ -187,10 +189,7 @@ class Block(Element):
         self._rewrite_bus_ports()
 
         # disconnect hidden ports
-        for port in itertools.chain(self.sources, self.sinks):
-            if port.hidden:
-                for connection in port.get_connections():
-                    self.parent_flowgraph.remove_element(connection)
+        self.parent_flowgraph.disconnect(*[p for p in self.ports() if p.hidden])
 
         self.active_sources = [p for p in self.get_sources_gui() if not p.hidden]
         self.active_sinks = [p for p in self.get_sinks_gui() if not p.hidden]
@@ -202,8 +201,7 @@ class Block(Element):
             nports = port.multiplicity
             for clone in port.clones[nports-1:]:
                 # Remove excess connections
-                for connection in clone.get_connections():
-                    self.parent_flowgraph.remove_element(connection)
+                self.parent_flowgraph.disconnect(clone)
                 port.remove_clone(clone)
                 ports.remove(clone)
             # Add more cloned ports
@@ -392,17 +390,17 @@ class Block(Element):
             return False
         return True
 
-    def get_ports(self):
-        return self.sources + self.sinks
-
     def get_ports_gui(self):
         return self.get_sources_gui() + self.get_sinks_gui()
+
+    def ports(self):
+        return itertools.chain(self.sources, self.sinks)
 
     def active_ports(self):
         return itertools.chain(self.active_sources, self.active_sinks)
 
     def children(self):
-        return itertools.chain(six.itervalues(self.params), self.get_ports())
+        return itertools.chain(six.itervalues(self.params), self.ports())
 
     def get_children_gui(self):
         return list(self.params.values()) + self.get_ports_gui()
@@ -422,9 +420,6 @@ class Block(Element):
 
     def get_sources_gui(self):
         return self.filter_bus_port(self.sources)
-
-    def get_connections(self):
-        return sum((port.get_connections() for port in self.get_ports()), [])
 
     ##############################################
     # Resolve
@@ -560,10 +555,7 @@ class Block(Element):
     def bussify(self, direc):
         ports = self.sources if direc == 'source' else self.sinks
 
-        for elt in ports:
-            for connect in elt.get_connections():
-                self.parent.remove_element(connect)
-
+        self.parent.disconnect(*ports)
         if ports and all('bus' != p.dtype for p in ports):
             struct = self.current_bus_structure[direc] = self.form_bus_structure(direc)
             n = {'type': 'bus'}
@@ -594,38 +586,35 @@ class Block(Element):
 
     def _rewrite_bus_ports(self):
         return  # fixme: probably broken
-
-        def doit(ports, ports_gui, direc):
-            if not self.current_bus_structure[direc]:
-                return
-
-            bus_structure = self.form_bus_structure(direc)
-            for port in ports_gui[len(bus_structure):]:
-                for connect in port.get_connections():
-                    self.parent_flowgraph.remove_element(connect)
-                ports.remove(port)
-
-            port_factory = self.parent_platform.get_new_port
-
-            if len(ports_gui) < len(bus_structure):
-                for i in range(len(ports_gui), len(bus_structure)):
-                    port = port_factory(self, direction=direc, key=str(1 + i),
-                                        name='bus', type='bus')
-                    ports.append(port)
-
-        doit(self.sources, self.get_sources_gui(), 'source')
-        doit(self.sinks, self.get_sinks_gui(), 'sink')
-
-        if 'bus' in [a.dtype for a in self.get_sources_gui()]:
-            for i in range(len(self.get_sources_gui())):
-                if not self.get_sources_gui()[i].get_connections():
-                    continue
-                source = self.get_sources_gui()[i]
-                sink = []
-
-                for j in range(len(source.get_connections())):
-                    sink.append(source.get_connections()[j].sink_port)
-                for elt in source.get_connections():
-                    self.parent_flowgraph.remove_element(elt)
-                for j in sink:
-                    self.parent_flowgraph.connect(source, j)
+        # def doit(ports, ports_gui, direc):
+        #     if not self.current_bus_structure[direc]:
+        #         return
+        #
+        #     bus_structure = self.form_bus_structure(direc)
+        #     for port in ports_gui[len(bus_structure):]:
+        #         self.parent_flowgraph.disconnect(port)
+        #         ports.remove(port)
+        #
+        #     port_factory = self.parent_platform.get_new_port
+        #
+        #     if len(ports_gui) < len(bus_structure):
+        #         for i in range(len(ports_gui), len(bus_structure)):
+        #             port = port_factory(self, direction=direc, key=str(1 + i),
+        #                                 name='bus', type='bus')
+        #             ports.append(port)
+        #
+        # doit(self.sources, self.get_sources_gui(), 'source')
+        # doit(self.sinks, self.get_sinks_gui(), 'sink')
+        #
+        # if 'bus' in [a.dtype for a in self.get_sources_gui()]:
+        #     for i in range(len(self.get_sources_gui())):
+        #         if not self.get_sources_gui()[i].get_connections():
+        #             continue
+        #         source = self.get_sources_gui()[i]
+        #         sink = []
+        #
+        #         for j in range(len(source.get_connections())):
+        #             sink.append(source.get_connections()[j].sink_port)
+        #         self.parent_flowgraph.disconnect(elt)
+        #         for j in sink:
+        #             self.parent_flowgraph.connect(source, j)

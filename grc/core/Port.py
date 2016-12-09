@@ -47,7 +47,7 @@ def _sources_from_virtual_sink_port(sink_port, _traversed=None):
     source_ports_per_virtual_connection = (
         # there can be multiple ports per virtual connection
         _sources_from_virtual_source_port(c.source_port, _traversed)  # type: list
-        for c in sink_port.get_enabled_connections()
+        for c in sink_port.connections(enabled=True)
     )
     return list(chain(*source_ports_per_virtual_connection))  # concatenate generated lists of ports
 
@@ -98,7 +98,7 @@ def _sinks_from_virtual_source_port(source_port, _traversed=None):
     sink_ports_per_virtual_connection = (
         # there can be multiple ports per virtual connection
         _sinks_from_virtual_sink_port(c.sink_port, _traversed)  # type: list
-        for c in source_port.get_enabled_connections()
+        for c in source_port.connections(enabled=True)
     )
     return list(chain(*sink_ports_per_virtual_connection))  # concatenate generated lists of ports
 
@@ -196,7 +196,8 @@ class Port(Element):
         platform = self.parent_platform
         if self.domain not in platform.domains:
             self.add_error_message('Domain key "{}" is not registered.'.format(self.domain))
-        if not self.get_enabled_connections() and not self.optional:
+        need_connection = not self.optional and not self.hidden
+        if need_connection and not next(self.connections(enabled=True), False):
             self.add_error_message('Port is not connected.')
         if self.dtype not in Constants.TYPE_TO_SIZEOF.keys():
             self.add_error_message('Type "{}" is not a possible type.'.format(self.dtype))
@@ -295,24 +296,14 @@ class Port(Element):
             if not self.key.isdigit():
                 self.key = self.name
 
-    def get_connections(self):
-        """
-        Get all connections that use this port.
+    def connections(self, enabled=None):
+        """Iterator over all connections to/from this port
 
-        Returns:
-            a list of connection objects
+        enabled: None for all, True for enabled only, False for disabled only
         """
-        connections = self.parent_flowgraph.connections
-        return [c for c in connections if c.source_port is self or c.sink_port is self]
-
-    def get_enabled_connections(self):
-        """
-        Get all enabled connections that use this port.
-
-        Returns:
-            a list of connection objects
-        """
-        return [c for c in self.get_connections() if c.enabled]
+        for con in self.parent_flowgraph.connections:
+            if self in con and (enabled is None or enabled == con.enabled):
+                yield con
 
     def get_associated_ports(self):
         if not self.dtype == 'bus':

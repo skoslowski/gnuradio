@@ -31,14 +31,14 @@ class Connection(Element):
 
     is_connection = True
 
-    def __init__(self, parent, porta, portb):
+    def __init__(self, parent, source, sink):
         """
         Make a new connection given the parent and 2 ports.
 
         Args:
             flow_graph: the parent of this element
-            porta: a port (any direction)
-            portb: a port (any direction)
+            source: a port (any direction)
+            sink: a port (any direction)
         @throws Error cannot make connection
 
         Returns:
@@ -46,37 +46,34 @@ class Connection(Element):
         """
         Element.__init__(self, parent)
 
-        source, sink = self._get_sink_source(porta, portb)
+        if not source.is_source:
+            source, sink = sink, source
+        if not source.is_source:
+            raise ValueError('Connection could not isolate source')
+        if not sink.is_sink:
+            raise ValueError('Connection could not isolate sink')
 
         self.source_port = source
         self.sink_port = sink
 
-        # Ensure that this connection (source -> sink) is unique
-        if self in self.parent_flowgraph.connections:
-            raise LookupError('This connection between source and sink is not unique.')
-
         if self.is_bus():
             self._make_bus_connect()
+
+    def __str__(self):
+        return 'Connection (\n\t{}\n\t\t{}\n\t{}\n\t\t{}\n)'.format(
+            self.source_block, self.source_port, self.sink_block, self.sink_port,
+        )
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return NotImplemented
         return self.source_port == other.source_port and self.sink_port == other.sink_port
 
-    @staticmethod
-    def _get_sink_source(porta, portb):
-        source = sink = None
-        # Separate the source and sink
-        for port in (porta, portb):
-            if port.is_source:
-                source = port
-            if port.is_sink:
-                sink = port
-        if not source:
-            raise ValueError('Connection could not isolate source')
-        if not sink:
-            raise ValueError('Connection could not isolate sink')
-        return source, sink
+    def __hash__(self):
+        return hash((self.source_port, self.sink_port))
+
+    def __iter__(self):
+        return iter((self.source_port, self.sink_port))
 
     @lazy_property
     def source_block(self):
@@ -96,14 +93,6 @@ class Connection(Element):
         """
         return self.source_block.enabled and self.sink_block.enabled
 
-    def __str__(self):
-        return 'Connection (\n\t{}\n\t\t{}\n\t{}\n\t\t{}\n)'.format(
-            self.source_block, self.source_port, self.sink_block, self.sink_port,
-        )
-
-    def is_bus(self):
-        return self.source_port.dtype == 'bus'
-
     def validate(self):
         """
         Validate the connections.
@@ -116,15 +105,15 @@ class Connection(Element):
         sink_domain = self.sink_port.domain
 
         if (source_domain, sink_domain) not in platform.connection_templates:
-            self.add_error_message('No connection known for domains "{}", "{}"'.format(
+            self.add_error_message('No connection known between domains "{}" and "{}"'.format(
                 source_domain, sink_domain))
         too_many_other_sinks = (
             not platform.domains.get(source_domain, {}).get('multiple_sinks', False) and
-            len(self.source_port.get_enabled_connections()) > 1
+            len(list(self.source_port.connections(enabled=True))) > 1
         )
         too_many_other_sources = (
             not platform.domains.get(sink_domain, {}).get('multiple_sources', False) and
-            len(self.sink_port.get_enabled_connections()) > 1
+            len(list(self.sink_port.connections(enabled=True))) > 1
         )
         if too_many_other_sinks:
             self.add_error_message(
@@ -154,6 +143,9 @@ class Connection(Element):
         n['source_key'] = self.source_port.key
         n['sink_key'] = self.sink_port.key
         return n
+
+    def is_bus(self):
+        return self.source_port.dtype == 'bus'
 
     def _make_bus_connect(self):
         source, sink = self.source_port, self.sink_port

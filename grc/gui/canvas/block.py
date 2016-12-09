@@ -382,7 +382,7 @@ class Block(CoreBlock, Drawable):
         """
         changed = False
         # Concat the nports string from the private nports settings of all ports
-        nports_str = ' '.join(str(port.get_raw('multiplicity')) for port in self.get_ports())
+        nports_str = ' '.join(str(port.get_raw('multiplicity')) for port in self.ports())
         # Modify all params whose keys appear in the nports string
         for key, param in six.iteritems(self.params):
             if param.is_enum() or param.key not in nports_str:

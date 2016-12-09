@@ -127,5 +127,5 @@ class FlowGraphProxy(object):  # TODO: move this in a refactored Generator
             else:
                 # assuming we have either only sources or sinks
                 if not is_message_pad:
-                    key_offset += len(pad.get_ports())
+                    key_offset += len(pad.sinks) + len(pad.sources)
         return -1

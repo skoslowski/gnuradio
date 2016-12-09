@@ -57,7 +57,7 @@ class FlowGraph(Element):
         self._options_block = self.parent_platform.get_new_block(self, 'options')
 
         self.blocks = [self._options_block]
-        self.connections = []
+        self.connections = set()
 
         self._eval_cache = {}
         self.namespace = {}
@@ -313,11 +313,16 @@ class FlowGraph(Element):
         Returns:
             the new connection
         """
-
         connection = self.parent_platform.Connection(
-            parent=self, porta=porta, portb=portb)
-        self.connections.append(connection)
+            parent=self, source=porta, sink=portb)
+        self.connections.add(connection)
         return connection
+
+    def disconnect(self, *ports):
+        to_be_removed = [con for con in self.connections
+                         if any(port in con for port in ports)]
+        for con in to_be_removed:
+            self.remove_element(con)
 
     def remove_element(self, element):
         """
@@ -330,21 +335,16 @@ class FlowGraph(Element):
             return
 
         if element.is_port:
-            # Found a port, set to parent signal block
-            element = element.parent
+            element = element.parent_block  # remove parent block
 
         if element in self.blocks:
             # Remove block, remove all involved connections
-            for port in element.get_ports():
-                for connection in port.get_connections():
-                    self.remove_element(connection)
+            self.disconnect(*element.ports())
             self.blocks.remove(element)
 
         elif element in self.connections:
             if element.is_bus():
-                for port in element.source_port.get_associated_ports():
-                    for connection in port.get_connections():
-                        self.remove_element(connection)
+                self.disconnect(*element.source_port.get_associated_ports())
             self.connections.remove(element)
 
     ##############################################
@@ -385,7 +385,7 @@ class FlowGraph(Element):
         """
         # Remove previous elements
         del self.blocks[:]
-        del self.connections[:]
+        self.connections.clear()
         # set file format
         try:
             instructions = n.get('_instructions', {})
