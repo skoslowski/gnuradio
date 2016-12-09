@@ -18,6 +18,7 @@
 from __future__ import absolute_import, print_function
 
 import imp
+import itertools
 import time
 import re
 from operator import methodcaller, attrgetter
@@ -204,9 +205,12 @@ class FlowGraph(Element):
         raise KeyError('No block with name {!r}'.format(name))
 
     def get_elements(self):
-        return self.blocks + self.connections
+        elements = list(self.blocks)
+        elements.extend(self.connections)
+        return elements
 
-    get_children = get_elements
+    def children(self):
+        return itertools.chain(self.blocks, self.connections)
 
     def rewrite(self):
         """

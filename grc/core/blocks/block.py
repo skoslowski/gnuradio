@@ -401,8 +401,8 @@ class Block(Element):
     def active_ports(self):
         return itertools.chain(self.active_sources, self.active_sinks)
 
-    def get_children(self):
-        return list(self.params.values()) + self.get_ports()
+    def children(self):
+        return itertools.chain(six.itervalues(self.params), self.get_ports())
 
     def get_children_gui(self):
         return list(self.params.values()) + self.get_ports_gui()

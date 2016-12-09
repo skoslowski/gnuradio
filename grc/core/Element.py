@@ -56,7 +56,7 @@ class Element(object):
         """
         del self._error_messages[:]
 
-        for child in self.get_children():
+        for child in self.children():
             child.validate()
 
     def is_valid(self):
@@ -97,7 +97,7 @@ class Element(object):
         """
         for msg in self._error_messages:
             yield self, msg
-        for child in self.get_children():
+        for child in self.children():
             if not child.enabled or child.get_bypassed():
                 continue
             for element_msg in child.iter_error_messages():
@@ -108,7 +108,7 @@ class Element(object):
         Rewrite this element and call rewrite on all children.
         Call this base method before rewriting the element.
         """
-        for child in self.get_children():
+        for child in self.children():
             child.rewrite()
 
     @property
@@ -155,8 +155,9 @@ class Element(object):
             if isinstance(obj, lazy_property):
                 delattr(self, name)
 
-    def get_children(self):
-        return list()
+    def children(self):
+        return
+        yield  # empty generator
 
     ##############################################
     # Type testing
