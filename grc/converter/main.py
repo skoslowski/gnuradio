@@ -17,10 +17,13 @@
 
 from __future__ import absolute_import
 
-import os
+import json
 import logging
+import os
 
-from . import block_tree, block_xml
+import six
+
+from . import block_tree, block
 
 path = os.path
 logger = logging.getLogger(__name__)
@@ -29,6 +32,9 @@ excludes = [
     'qtgui_',
     '.grc_gnuradio/',
     'blks2',
+    'wxgui',
+    'epy_block.xml',
+    'dummy.xml',
 ]
 
 
@@ -44,34 +50,59 @@ class Converter(object):
         self._converter_mtime = max(path.getmtime(path.join(converter_module_path, module))
                                     for module in os.listdir(converter_module_path))
 
+        self.cache_file = os.path.join(self.output_dir, '_all.json')
+        self.cache = {}
+
     def run(self):
+        try:
+            with open(self.cache_file) as cache_file:
+                self.cache = byteify(json.load(cache_file))
+        except (IOError, ValueError):
+            self.cache = {}
+        need_cache_write = False
+
         if not path.isdir(self.output_dir):
             os.makedirs(self.output_dir)
+        if self._force:
+            for name in os.listdir(self.output_dir):
+                os.remove(os.path.join(self.output_dir, name))
+
         for xml_file in self.iter_files_in_block_path():
             if xml_file.endswith("block_tree.xml"):
-                self.load_category_tree_xml(xml_file)
+                changed = self.load_category_tree_xml(xml_file)
             elif xml_file.endswith('domain.xml'):
-                pass
+                continue
             else:
-                self.load_block_xml(xml_file)
+                changed = self.load_block_xml(xml_file)
+
+            if changed:
+                need_cache_write = True
+
+        if need_cache_write:
+            logger.info('Saving %d entries to json cache', len(self.cache))
+            with open(self.cache_file, 'w') as cache_file:
+                json.dump(self.cache, cache_file)
 
     def load_block_xml(self, xml_file):
         """Load block description from xml file"""
         if any(part in xml_file for part in excludes):
             return
 
-        key_from_xml = path.basename(xml_file)[:-4]
-        yml_file = path.join(self.output_dir, key_from_xml + '.block.yml')
+        block_id_from_xml = path.basename(xml_file)[:-4]
+        yml_file = path.join(self.output_dir, block_id_from_xml + '.block.yml')
 
         if not self.needs_conversion(xml_file, yml_file):
             return  # yml file up-to-date
 
-        # print('Converting', xml_file)
-        key, data = block_xml.convert(xml_file)
-        # if key_from_xml != key:
-        #     print('Warning: key is not filename in', xml_file)
+        logger.info('Converting block %s', path.basename(xml_file))
+        data = block.from_xml(xml_file)
+        if block_id_from_xml != data['id']:
+            logger.warning('block_id and filename differ')
+        self.cache[yml_file] = data
+
         with open(yml_file, 'w') as yml_file:
-            yml_file.write(data)
+            block.dump(data, yml_file)
+        return True
 
     def load_category_tree_xml(self, xml_file):
         """Validate and parse category tree file and add it to list"""
@@ -81,9 +112,13 @@ class Converter(object):
         if not self.needs_conversion(xml_file, yml_file):
             return  # yml file up-to-date
 
-        data = block_tree.convert(xml_file)
+        logger.info('Converting module %s', path.basename(xml_file))
+        data = block_tree.from_xml(xml_file)
+        self.cache[yml_file] = data
+
         with open(yml_file, 'w') as yml_file:
-            yml_file.write(data)
+            block_tree.dump(data, yml_file)
+        return True
 
     def needs_conversion(self, source, destination):
         """Check if source has already been converted and destination is up-to-date"""
@@ -106,3 +141,14 @@ class Converter(object):
                             yield path.join(root, name)
             else:
                 logger.warning('Invalid entry in search path: {}'.format(block_path))
+
+
+def byteify(data):
+    if isinstance(data, dict):
+        return {byteify(key): byteify(value) for key, value in six.iteritems(data)}
+    elif isinstance(data, list):
+        return [byteify(element) for element in data]
+    elif isinstance(data, unicode):
+        return data.encode('utf-8')
+    else:
+        return data

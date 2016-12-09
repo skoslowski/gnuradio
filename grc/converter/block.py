@@ -33,14 +33,14 @@ import yaml
 from lxml import etree
 
 from . import cheetah_converter
-from .yaml_output import ListFlowing, scalar_node, GRCDumper
+from .yaml_output import ListFlowing, MultiLineString, GRCDumper
 
 
 BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
 reserved_block_keys = ('import', )  # todo: add more keys
 
 
-def convert(xml_file):
+def from_xml(xml_file):
     """Load block description from xml file"""
 
     try:
@@ -54,6 +54,10 @@ def convert(xml_file):
         print('Broken XML', xml_file)
         raise
 
+    return data
+
+
+def dump(data, fp):
     out = yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper)
 
     replace = [
@@ -66,7 +70,8 @@ def convert(xml_file):
     for r in replace:
         out = out.replace(*r)
 
-    return data['id'], out
+    fp.write(out)
+
 
 no_value = object()
 dummy = cheetah_converter.DummyConverter()
@@ -113,7 +118,7 @@ def convert_block_xml(node):
     docs = node.findtext('doc')
     if docs:
         docs = docs.strip().replace('\\\n', '')
-        data['documentation'] = scalar_node(docs, style='|')
+        data['documentation'] = MultiLineString(docs)
 
     data = OrderedDict((key, value) for key, value in data.items() if value is not no_value)
     auto_hide_params_for_item_sizes(data)
@@ -142,15 +147,18 @@ def convert_templates(node, convert, block_id=''):
 
     imports = '\n'.join(convert(import_node.text)
                         for import_node in node.iterfind('import'))
-    if imports:
-        templates['imports'] = scalar_node(imports, style='|' if '\n' in imports else None)
+    if '\n' in imports:
+        imports = MultiLineString(imports)
+    templates['imports'] = imports or no_value
 
     templates['var_make'] = convert(node.findtext('var_make') or '') or no_value
 
     make = convert(node.findtext('make') or '')
     if make:
         check_mako_template(block_id, make)
-        templates['make'] = scalar_node(make, style='|' if '\n' in make else None)
+    if '\n' in make:
+        make = MultiLineString(make)
+    templates['make'] = make or no_value
 
     templates['callbacks'] = [
          convert(cb_node.text) for cb_node in node.iterfind('callback')
@@ -168,8 +176,11 @@ def convert_param_xml(node, convert):
     param['dtype'] = convert(node.findtext('type') or '')
     param['default'] = node.findtext('value') or no_value
 
-    param['options'] = ListFlowing(on.findtext('key') for on in node.iterfind('option')) or no_value
-    param['option_labels'] = ListFlowing(on.findtext('name') for on in node.iterfind('option')) or no_value
+    options = ListFlowing(on.findtext('key') for on in node.iterfind('option'))
+    option_labels = ListFlowing(on.findtext('name') for on in node.iterfind('option'))
+    param['options'] = options or no_value
+    if not all(str(o).title() == l for o, l in zip(options, option_labels)):
+        param['option_labels'] = option_labels
 
     attributes = defaultdict(ListFlowing)
     for option_n in node.iterfind('option'):
@@ -185,14 +196,15 @@ def convert_param_xml(node, convert):
 
 def convert_port_xml(node, convert):
     port = OrderedDict()
-    port['label'] = node.findtext('name')
+    label = node.findtext('name')
+    # default values:
+    port['label'] = label if label not in ('in', 'out') else no_value
 
     dtype = convert(node.findtext('type'))
     # TODO: detect dyn message ports
-    # todo: parse tab tag
     port['domain'] = domain = 'message' if dtype == 'message' else 'stream'
     if domain == 'message':
-        port['id'] = port['label']
+        port['id'], port['label'] = label, no_value
     else:
         port['dtype'] = dtype
         vlen = node.findtext('vlen')

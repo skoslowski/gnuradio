@@ -31,7 +31,7 @@ from .yaml_output import GRCDumper
 BLOCK_TREE_DTD = etree.DTD(path.join(path.dirname(__file__), 'block_tree.dtd'))
 
 
-def convert(xml_file):
+def from_xml(xml_file):
     """Load block tree description from xml file"""
 
     try:
@@ -45,9 +45,11 @@ def convert(xml_file):
         print('Broken XML', xml_file)
         raise
 
-    out = yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper)
+    return data
 
-    return out
+
+def dump(data, fp):
+    fp.write(yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper))
 
 
 def convert_category_node(node):

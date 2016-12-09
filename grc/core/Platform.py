@@ -148,12 +148,16 @@ class Platform(Element):
 
         # FIXME: remove this as soon as converter is stable
         from ..converter import Converter
-        Converter(self.config.block_paths, self.config.yml_block_cache).run()
+        converter = Converter(self.config.block_paths, self.config.yml_block_cache)
+        converter.run()
         logging.info('XML converter done.')
 
         for file_path in self.iter_files_in_block_path():
-            with open(file_path) as fp:
-                data = yaml.load(fp)
+            try:
+                data = converter.cache[file_path]
+            except KeyError:
+                with open(file_path) as fp:
+                    data = yaml.load(fp)
 
             if file_path.endswith('.block.yml'):
                 loader = self.load_block_description
@@ -367,4 +371,3 @@ class Platform(Element):
     def get_new_port(self, parent, **kwargs):
         cls = self.port_classes[kwargs.pop('cls_key', None)]
         return cls(parent, **kwargs)
-

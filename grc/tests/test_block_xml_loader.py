@@ -22,7 +22,7 @@ from os import path
 
 import yaml
 
-from grc.converter import block_xml
+from grc.converter import block
 
 from grc.core.schema_checker import Validator, BLOCK_SCHEME
 
@@ -31,9 +31,7 @@ def test_block_xml():
     checker = Validator(BLOCK_SCHEME)
     test_file_dir = path.join(path.dirname(__file__), 'resources')
     for filename in glob.iglob(path.join(test_file_dir, '*.xml')):
-        _, out = block_xml.convert(filename)
-        print(out)
-        data = yaml.load(out)
+        data = block.from_xml(filename)
         passed = checker.run(data)
         assert passed, checker.messages
         assert not checker.messages

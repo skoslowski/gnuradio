@@ -87,4 +87,12 @@ def represent_cheetah_string(representer, data):
     return representer.represent_scalar(tag=u'!cheetah', value=data)
 
 
-scalar_node = functools.partial(yaml.ScalarNode, u'tag:yaml.org,2002:str')
+class MultiLineString(str):
+    pass
+
+
+@GRCDumper.add(MultiLineString)
+def represent_ml_string(representer, data):
+    node = representer.represent_str(data)
+    node.style = '|'
+    return node

@@ -82,7 +82,7 @@ class Converter(object):
 
     def to_python_dec(self, expr):
         converted = self.convert(expr=expr, spec=Python)
-        if converted != expr:
+        if converted and converted != expr:
             converted = '${ ' + converted.strip() + ' }'
         return converted
 
