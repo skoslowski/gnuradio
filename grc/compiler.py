@@ -53,6 +53,8 @@ def main(args=None):
         version=gr.version(),
         version_parts=(gr.major_version(), gr.api_version(), gr.minor_version())
     )
+    platform.build_library()
+
     out_dir = args.output if not args.user_lib_dir else platform.config.hier_block_lib_dir
     if os.path.exists(out_dir):
         pass  # all is well

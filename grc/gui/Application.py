@@ -632,7 +632,7 @@ class Application(Gtk.Application):
         elif action == Actions.PAGE_CHANGE:  # pass and run the global actions
             pass
         elif action == Actions.RELOAD_BLOCKS:
-            self.platform.build_block_library()
+            self.platform.build_library()
             main.btwin.repopulate()
             Actions.XML_PARSER_ERRORS_DISPLAY.set_sensitive(bool(
                 ParseXML.xml_failures))

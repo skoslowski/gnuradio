@@ -73,8 +73,7 @@ class Platform(Element):
         self._flow_graph.connections = []
 
         if not yaml.__with_libyaml__:
-            print("Warning: slow block loading")
-        self.build_block_library()
+            logger.warning("Slow YAML loading (libyaml not available)")
 
     def __str__(self):
         return 'Platform - {}'.format(self.config.name)
@@ -135,8 +134,11 @@ class Platform(Element):
             pass
         return flow_graph, generator.file_path
 
-    def build_block_library(self):
-        """load the blocks and block tree from the search paths"""
+    def build_library(self, path=None):
+        """load the blocks and block tree from the search paths
+
+        path: a list of paths/files to search in or load (defaults to config)
+        """
         self._docstring_extractor.start()
 
         # Reset
@@ -152,7 +154,7 @@ class Platform(Element):
         converter.run()
         logging.info('XML converter done.')
 
-        for file_path in self.iter_files_in_block_path():
+        for file_path in self._iter_files_in_block_path(path):
             try:
                 data = converter.cache[file_path]
             except KeyError:
@@ -185,10 +187,8 @@ class Platform(Element):
                 logger.exception(error)
                 raise
 
-        # Add blocks to block tree
         for key, block in six.iteritems(self.blocks):
             category = self._block_categories.get(key, block.category)
-            # Blocks with empty categories are hidden
             if not category:
                 continue
             root = category[0]
@@ -201,16 +201,18 @@ class Platform(Element):
         self._docstring_extractor.finish()
         # self._docstring_extractor.wait()
 
-    def iter_files_in_block_path(self, ext='yml'):
+    def _iter_files_in_block_path(self, path=None, ext='yml'):
         """Iterator for block descriptions and category trees"""
-        for block_path in self.config.block_paths:
-            if os.path.isfile(block_path):
-                yield block_path
-            elif os.path.isdir(block_path):
-                pattern = os.path.join(block_path, '**.' + ext)
+        for entry in (path or self.config.block_paths):
+            if os.path.isfile(entry):
+                yield entry
+            elif os.path.isdir(entry):
+                pattern = os.path.join(entry, '**.' + ext)
                 yield_from = glob.iglob(pattern)
                 for file_path in yield_from:
                     yield file_path
+            else:
+                logger.debug('Ignoring invalid path entry %r', entry)
 
     def _save_docstring_extraction_result(self, key, docstrings):
         docs = {}
@@ -307,7 +309,6 @@ class Platform(Element):
     ##############################################
     # Access
     ##############################################
-
     def parse_flow_graph(self, flow_graph_file):
         """
         Parse a saved flow graph file.

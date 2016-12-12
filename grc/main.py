@@ -81,6 +81,7 @@ def main():
         prefs=gr.prefs(),
         install_prefix=gr.prefix()
     )
+    platform.build_library()
 
     log.debug("Loading application")
     app = Application(args.flow_graphs, platform)

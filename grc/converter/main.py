@@ -40,25 +40,28 @@ excludes = [
 
 class Converter(object):
 
-    def __init__(self, search_path, output_dir='~/.cache/grc_gnuradio', force=False):
+    def __init__(self, search_path, output_dir='~/.cache/grc_gnuradio'):
         self.search_path = search_path
         self.output_dir = output_dir
 
-        self.force = force
+        self._force = False
 
         converter_module_path = path.dirname(__file__)
         self._converter_mtime = max(path.getmtime(path.join(converter_module_path, module))
                                     for module in os.listdir(converter_module_path))
 
-        self.cache_file = os.path.join(self.output_dir, '_all.json')
+        self.cache_file = os.path.join(self.output_dir, '_cache.json')
         self.cache = {}
 
-    def run(self):
+    def run(self, force=False):
+        self._force = force
+
         try:
             with open(self.cache_file) as cache_file:
                 self.cache = byteify(json.load(cache_file))
         except (IOError, ValueError):
             self.cache = {}
+            self._force = True
         need_cache_write = False
 
         if not path.isdir(self.output_dir):
@@ -122,7 +125,7 @@ class Converter(object):
 
     def needs_conversion(self, source, destination):
         """Check if source has already been converted and destination is up-to-date"""
-        if self.force or not path.exists(destination):
+        if self._force or not path.exists(destination):
             return True
         xml_time = path.getmtime(source)
         yml_time = path.getmtime(destination)
