@@ -162,8 +162,6 @@ class Element(object):
     ##############################################
     # Type testing
     ##############################################
-    is_platform = False
-
     is_flow_graph = False
 
     is_block = False

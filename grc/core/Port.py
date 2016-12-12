@@ -275,7 +275,7 @@ class Port(Element):
         key = '99999' if self.key.isdigit() else name
 
         # Clone
-        port_factory = self.parent_platform.get_new_port
+        port_factory = self.parent_platform.make_port
         port = port_factory(self.parent, direction=self._dir,
                             name=name, key=key,
                             master=self, cls_key='clone')

@@ -20,3 +20,28 @@ from __future__ import absolute_import
 from .block import Block
 from .embedded_python import EPyBlock
 from .dummy import DummyBlock
+
+
+def build(id, label='', category='', flags='', documentation='',
+          parameters=None, inputs=None, outputs=None, templates=None, **kwargs):
+    block_cls = type(id, (Block,), {})
+    block_cls.key = id
+
+    block_cls.label = label or id.title()
+    block_cls.category = [cat.strip() for cat in category.split('/') if cat.strip()]
+    block_cls.flags = flags
+    block_cls.documentation = {'': documentation.strip('\n\t ').replace('\\\n', '')}
+
+    templates = templates or {}
+    block_cls.templates = {
+        'imports': templates.get('imports', ''),
+        'make': templates.get('make', ''),
+        'callbacks': templates.get('callbacks', []),
+        'var_make': templates.get('var_make', ''),
+    }
+    block_cls.parameters_data = parameters or []
+    block_cls.inputs_data = inputs or []
+    block_cls.outputs_data = outputs or []
+    block_cls.extra_data = kwargs
+
+    return block_cls

@@ -32,7 +32,7 @@ TEMPLATES_SCHEME = expand(
     imports=str_,
     var_make=str_,
     make=str_,
-    callbacks=(list, str_),
+    callbacks=list,
 )
 BLOCK_SCHEME = expand(
     id=Spec(types=str_, required=True, item_scheme=None),

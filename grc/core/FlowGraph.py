@@ -54,7 +54,7 @@ class FlowGraph(Element):
         """
         Element.__init__(self, parent)
         self._timestamp = time.ctime()
-        self._options_block = self.parent_platform.get_new_block(self, 'options')
+        self._options_block = self.parent_platform.make_block(self, 'options')
 
         self.blocks = [self._options_block]
         self.connections = set()
@@ -295,7 +295,7 @@ class FlowGraph(Element):
         if block_id == 'options':
             return self._options_block
         try:
-            block = self.parent_platform.get_new_block(self, block_id, **kwargs)
+            block = self.parent_platform.make_block(self, block_id, **kwargs)
             self.blocks.append(block)
         except KeyError:
             block = None

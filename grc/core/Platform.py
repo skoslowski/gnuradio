@@ -27,7 +27,7 @@ import yaml
 
 from . import (
     ParseXML, Messages, Constants,
-    blocks, utils, schema_checker
+    blocks, errors, utils, schema_checker
 )
 
 from .Config import Config
@@ -44,8 +44,6 @@ logging.basicConfig(level=logging.INFO)
 
 class Platform(Element):
 
-    is_platform = True
-
     def __init__(self, *args, **kwargs):
         """ Make a platform for GNU Radio """
         Element.__init__(self, parent=None)
@@ -59,18 +57,12 @@ class Platform(Element):
             callback_finished=lambda: self.block_docstrings_loaded_callback()
         )
 
-        self.blocks = {}
-        self._blocks_n = {}
-        self._block_categories = {}
+        self.blocks = self.block_classes
         self.domains = {}
         self.connection_templates = {}
 
+        self._block_categories = {}
         self._auto_hier_block_generate_chain = set()
-
-        # Create a dummy flow graph for the blocks
-        self._flow_graph = Element.__new__(FlowGraph)
-        Element.__init__(self._flow_graph, self)
-        self._flow_graph.connections = []
 
         if not yaml.__with_libyaml__:
             logger.warning("Slow YAML loading (libyaml not available)")
@@ -103,7 +95,7 @@ class Platform(Element):
             return None, None
         self._auto_hier_block_generate_chain.add(file_path)
         try:
-            flow_graph = self.get_new_flow_graph()
+            flow_graph = self.make_flow_graph()
             flow_graph.grc_file_path = file_path
             # Other, nested hier_blocks might be auto-loaded here
             flow_graph.import_data(self.parse_flow_graph(file_path))
@@ -143,10 +135,9 @@ class Platform(Element):
 
         # Reset
         self.blocks.clear()
-        self._blocks_n.clear()
-        self._block_categories.clear()
         self.domains.clear()
         self.connection_templates.clear()
+        self._block_categories.clear()
 
         # FIXME: remove this as soon as converter is stable
         from ..converter import Converter
@@ -214,32 +205,36 @@ class Platform(Element):
             else:
                 logger.debug('Ignoring invalid path entry %r', entry)
 
-    def _save_docstring_extraction_result(self, key, docstrings):
+    def _save_docstring_extraction_result(self, block_id, docstrings):
         docs = {}
         for match, docstring in six.iteritems(docstrings):
             if not docstring or match.endswith('_sptr'):
                 continue
             docstring = docstring.replace('\n\n', '\n').strip()
             docs[match] = docstring
-        self.block_docstrings[key] = docs
+        self.block_classes[block_id].documentation.update(docs)
+        # self.block_docstrings[block_id] = docs
 
     ##############################################
-    # YAML
+    # Description File Loaders
     ##############################################
-
+    # region loaders
     def load_block_description(self, data, file_path):
+        log = logger.getChild('block_loader')
         block_id = data.pop('id').rstrip('_')
 
         if block_id in self.blocks:
-            logger.warning('Block with id "%s" overwritten by %s', block_id, file_path)
+            log.warning('Block with id "%s" overwritten by %s', block_id, file_path)
 
-        # Store the block
-        self.blocks[block_id] = self.get_new_block(self._flow_graph, block_id, **data)
-        self._blocks_n[block_id] = data
+        try:
+            block_cls = self.blocks[block_id] = self.new_block_class(block_id, **data)
+        except errors.BlockLoadError as error:
+            log.error('Unable to load block %s', block_id)
+            log.exception(error)
+            return
 
-        templates = data.get('templates', {})
         self._docstring_extractor.query(
-            block_id, templates.get('imports', ''), templates.get('make', ''),
+            block_id, block_cls.templates['imports'], block_cls.templates['make'],
         )
 
     def load_domain_description(self, data, file_path):
@@ -326,14 +321,15 @@ class Platform(Element):
         ParseXML.validate_dtd(flow_graph_file, Constants.FLOW_GRAPH_DTD)
         return ParseXML.from_file(flow_graph_file)
 
-    def get_blocks(self):
-        return list(self.blocks.values())
-
     def get_generate_options(self):
-        gen_opts = self.blocks['options'].params['generate_options']
-        generate_mode_default = gen_opts.get_value()
+        for param in self.block_classes['options'].parameters_data:
+            if param.get('id') == 'generate_options':
+                break
+        else:
+            return []
+        generate_mode_default = param.get('default')
         return [(value, name, value == generate_mode_default)
-                for value, name in gen_opts.options.items()]
+                for value, name in zip(param['options'], param['option_labels'])]
 
     ##############################################
     # Factories
@@ -343,32 +339,36 @@ class Platform(Element):
     FlowGraph = FlowGraph
     Connection = Connection
 
-    block_classes = {
-        None: blocks.Block,  # default
+    block_classes_buildin = {  # separates build-in from loaded blocks
         'epy_block': blocks.EPyBlock,
         '_dummy': blocks.DummyBlock,
     }
+    block_classes = utils.ChainMap({}, block_classes_buildin)  # separates build-in from loaded blocks)
+
+    # build_new_block = blocks.build(block_id, **data)
+
     port_classes = {
         None: Port,  # default
-        'clone': PortClone,  # default
+        'clone': PortClone,  # clone of ports with multiplicity > 1
     }
     param_classes = {
         None: Param,  # default
     }
 
-    def get_new_flow_graph(self):
+    def make_flow_graph(self):
         return self.FlowGraph(parent=self)
 
-    def get_new_block(self, parent, block_id, **kwargs):
-        cls = self.block_classes.get(block_id, self.block_classes[None])
-        if not kwargs:
-            kwargs = self._blocks_n[block_id]
+    def new_block_class(self, block_id, **data):
+        return blocks.build(block_id, **data)
+
+    def make_block(self, parent, block_id, **kwargs):
+        cls = self.block_classes[block_id]
         return cls(parent, id=block_id, **kwargs)
 
-    def get_new_param(self, parent, **kwargs):
+    def make_param(self, parent, **kwargs):
         cls = self.param_classes[kwargs.pop('cls_key', None)]
         return cls(parent, **kwargs)
 
-    def get_new_port(self, parent, **kwargs):
+    def make_port(self, parent, **kwargs):
         cls = self.port_classes[kwargs.pop('cls_key', None)]
         return cls(parent, **kwargs)

@@ -73,7 +73,7 @@ class EPyBlock(Block):
         super(EPyBlock, self).rewrite()
 
     def _update_params(self, params_in_src):
-        param_factory = self.parent_platform.get_new_param
+        param_factory = self.parent_platform.make_param
         params = {}
         for param in list(self.params):
             if hasattr(param, '__epy_param__'):
@@ -95,7 +95,7 @@ class EPyBlock(Block):
             self.params[id_] = param
 
     def _update_ports(self, label, ports, port_specs, direction):
-        port_factory = self.parent_platform.get_new_port
+        port_factory = self.parent_platform.make_port
         ports_to_remove = list(ports)
         iter_ports = iter(ports)
         ports_new = []

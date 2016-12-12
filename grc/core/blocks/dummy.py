@@ -27,7 +27,7 @@ class DummyBlock(Block):
 
     def __init__(self, parent, id, missing_block_id, params_n):
         super(DummyBlock, self).__init__(parent=parent, id=missing_block_id, label='Missing Block')
-        param_factory = self.parent_platform.get_new_param
+        param_factory = self.parent_platform.make_param
         for param_n in params_n:
             param_id = param_n['id']
             self.params.setdefault(param_id, param_factory(self, key=param_id, label=param_id, dtype='string'))
@@ -40,7 +40,7 @@ class DummyBlock(Block):
         return False
 
     def add_missing_port(self, port_id, direction):
-        port = self.parent_platform.get_new_port(
+        port = self.parent_platform.make_port(
             parent=self, direction=direction, id=port_id, name='?', dtype='',
         )
         if port.is_source:

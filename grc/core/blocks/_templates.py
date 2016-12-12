@@ -14,7 +14,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+"""
+This dict class holds a (shared) cache of compiled mako templates.
+These
 
+"""
 from __future__ import absolute_import, print_function
 
 from mako.template import Template
@@ -31,19 +35,22 @@ class MakoTemplates(dict):
         self.block = block
         dict.__init__(self, *args, **kwargs)
 
-    def _get_template(self, text):
-        try:
-            return self._template_cache[text]
-        except KeyError:
-            pass
-
+    @classmethod
+    def compile(cls, text):
+        text = str(text)
         try:
             template = Template(text)
         except SyntaxException as error:
             raise TemplateError(text, *error.args)
 
-        self._template_cache[text] = template
+        cls._template_cache[text] = template
         return template
+
+    def _get_template(self, text):
+        try:
+            return self._template_cache[str(text)]
+        except KeyError:
+            return self.compile(text)
 
     def render(self, item):
         text = self[item] or ''

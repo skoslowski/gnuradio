@@ -51,21 +51,25 @@ class Block(Element):
 
     STATE_LABELS = ['disabled', 'enabled', 'bypassed']
 
-    #region Init
-    def __init__(self, parent, id, label='', category='', flags='',
-                 parameters=None, inputs=None, outputs=None, templates=None, **kwargs):
+    key = ''
+    label = ''
+    category = ''
+    flags = ''
+    documentation = {'': ''}
+
+    templates = {}
+    parameters_data = []
+    inputs_data = []
+    outputs_data = []
+
+    # region Init
+    def __init__(self, parent, **kwargs):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
-
-        self.key = id
-        self.label = label or id.title()
-        self.category = [cat.strip() for cat in category.split('/') if cat.strip()]
-        self.flags = flags
 
         self._var_value = kwargs.get('value', '')
         self._checks = [check.lstrip('${').rstrip('}') for check in kwargs.get('checks', [])]
 
-        self._doc = kwargs.get('documentation', '').strip('\n').replace('\\\n', '')
         self._grc_source = kwargs.get('grc_source', '')
         self.block_wrapper_path = kwargs.get('block_wrapper_path')
 
@@ -74,11 +78,10 @@ class Block(Element):
         if self.is_virtual_or_pad or self.is_variable:
             self.flags += BLOCK_FLAG_DISABLE_BYPASS
 
-        self.templates = self._init_templates(**(templates or {}))
-        self.params = self._init_params(parameters or [], has_sinks=bool(inputs),
-                                        has_sources=bool(outputs))
-        self.sinks = self._init_ports(inputs or [], direction='sink')
-        self.sources = self._init_ports(outputs or [], direction='source')
+        self.templates = MakoTemplates(self, self.templates)
+        self.params = self._init_params()
+        self.sinks = self._init_ports(self.inputs_data, direction='sink')
+        self.sources = self._init_ports(self.outputs_data, direction='source')
 
         # end of sub args ####################################################
 
@@ -89,27 +92,12 @@ class Block(Element):
 
         self._init_bus_ports(kwargs)  # todo: rewrite
 
-    def _init_templates(self, imports='', make='', callbacks=None, var_make=''):
-        def ensure_list(value):
-            if not value:
-                return []
-            elif not isinstance(value, list):
-                return [value]
-            else:
-                return value
-
-        return MakoTemplates(
-            block=self,
-            imports=imports,
-            make=make,
-            callbacks=ensure_list(callbacks),
-
-            var_make=var_make,
-        )
-
-    def _init_params(self, params_n, has_sources, has_sinks):
+    def _init_params(self):
         params = collections.OrderedDict()
-        param_factory = self.parent_platform.get_new_param
+        param_factory = self.parent_platform.make_param
+
+        has_inputs = bool(self.inputs_data)
+        has_outputs = bool(self.outputs_data)
 
         def add_param(id, **kwargs):
             params[id] = param_factory(self, id=id, **kwargs)
@@ -121,27 +109,27 @@ class Block(Element):
             add_param(id='alias', name='Block Alias', dtype='string',
                       hide='part', category=ADVANCED_PARAM_TAB)
 
-        if not self.is_virtual_or_pad and (has_sources or has_sinks):
+        if not self.is_virtual_or_pad and (has_outputs or has_inputs):
             add_param(id='affinity', name='Core Affinity', dtype='int_vector',
                       hide='part', category=ADVANCED_PARAM_TAB)
 
-        if not self.is_virtual_or_pad and has_sources:
+        if not self.is_virtual_or_pad and has_outputs:
             add_param(id='minoutbuf', name='Min Output Buffer', dtype='int',
                       hide='part', value='0', category=ADVANCED_PARAM_TAB)
             add_param(id='maxoutbuf', name='Max Output Buffer', dtype='int',
                       hide='part', value='0', category=ADVANCED_PARAM_TAB)
 
         base_params_n = {}
-        for param_n in params_n:
-            key = param_n['id']
-            if key in params:
-                raise Exception('Key "{}" already exists in params'.format(key))
+        for param_data in self.parameters_data:
+            param_id = param_data['id']
+            if param_id in params:
+                raise Exception('Param id "{}" is not unique'.format(param_id))
 
-            base_key = param_n.get('base_key', None)
-            param_n_ext = base_params_n.get(base_key, {}).copy()
-            param_n_ext.update(param_n)
-            params[key] = param_factory(self, **param_n_ext)
-            base_params_n[key] = param_n_ext
+            base_key = param_data.get('base_key', None)
+            param_data_ext = base_params_n.get(base_key, {}).copy()
+            param_data_ext.update(param_data)
+            params[param_id] = param_factory(self, **param_data_ext)
+            base_params_n[param_id] = param_data_ext
 
         add_param(id='comment', name='Comment', dtype='_multiline', hide='part',
                   value='', category=ADVANCED_PARAM_TAB)
@@ -149,7 +137,7 @@ class Block(Element):
 
     def _init_ports(self, ports_n, direction):
         ports = []
-        port_factory = self.parent_platform.get_new_port
+        port_factory = self.parent_platform.make_port
         port_keys = set()
         stream_port_keys = itertools.count()
         for i, port_n in enumerate(ports_n):
@@ -161,9 +149,9 @@ class Block(Element):
             port_keys.add(key)
             ports.append(port)
         return ports
-    #endregion
+    # endregion
 
-    #region Rewrite_and_Validation
+    # region Rewrite_and_Validation
     def rewrite(self):
         """
         Add and remove ports to adjust for the nports.
@@ -252,9 +240,9 @@ class Block(Element):
                 self.parent.evaluate(value)
             except Exception as err:
                 self.add_error_message('Value "{}" cannot be evaluated:\n{}'.format(value, err))
-    #endregion
+    # endregion
 
-    #region Properties
+    # region Properties
 
     def __str__(self):
         return 'Block - {} - {}({})'.format(self.name, self.label, self.key)
@@ -291,14 +279,6 @@ class Block(Element):
         return BLOCK_FLAG_DEPRECATED in self.flags
 
     @property
-    def documentation(self):
-        documentation = self.parent_platform.block_docstrings.get(self.key, {})
-        from_xml = self._doc.strip()
-        if from_xml:
-            documentation[''] = from_xml
-        return documentation
-
-    @property
     def comment(self):
         return self.params['comment'].get_value()
 
@@ -325,12 +305,11 @@ class Block(Element):
         """Get the enabled state of the block"""
         return self.state != 'disabled'
 
-    #endregion
+    # endregion
 
     ##############################################
     # Getters (old)
     ##############################################
-
     def get_make(self, raw=False):
         raise PendingDeprecationWarning()
 
@@ -564,7 +543,7 @@ class Block(Element):
 
             for i, structlet in enumerate(struct):
                 name = 'bus{}#{}'.format(i, len(structlet))
-                port = self.parent_platform.get_new_port(
+                port = self.parent_platform.make_port(
                     self, direction=direc, key=str(len(ports)), name=name, **n)
                 ports.append(port)
         elif any('bus' == p.dtype for p in ports):
@@ -595,7 +574,7 @@ class Block(Element):
         #         self.parent_flowgraph.disconnect(port)
         #         ports.remove(port)
         #
-        #     port_factory = self.parent_platform.get_new_port
+        #     port_factory = self.parent_platform.make_port
         #
         #     if len(ports_gui) < len(bus_structure):
         #         for i in range(len(ports_gui), len(bus_structure)):
