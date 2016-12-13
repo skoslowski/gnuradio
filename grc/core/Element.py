@@ -163,19 +163,12 @@ class Element(object):
     # Type testing
     ##############################################
     is_flow_graph = False
-
     is_block = False
-
     is_dummy_block = False
-
     is_connection = False
-
     is_port = False
-
     is_param = False
-
     is_variable = False
-
     is_import = False
 
     def get_raw(self, name):
@@ -183,3 +176,9 @@ class Element(object):
         if not descriptor:
             raise ValueError("No evaluated property '{}' found".format(name))
         return getattr(self, descriptor.name_raw, None) or getattr(self, descriptor.name, None)
+
+    def set_evaluated(self, name, value):
+        descriptor = getattr(self.__class__, name, None)
+        if not descriptor:
+            raise ValueError("No evaluated property '{}' found".format(name))
+        self.__dict__[descriptor.name] = value

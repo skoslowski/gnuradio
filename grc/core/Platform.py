@@ -27,7 +27,7 @@ import yaml
 
 from . import (
     ParseXML, Messages, Constants,
-    blocks, errors, utils, schema_checker
+    blocks, ports, errors, utils, schema_checker
 )
 
 from .Config import Config
@@ -35,7 +35,6 @@ from .Element import Element
 from .generator import Generator
 from .FlowGraph import FlowGraph
 from .Connection import Connection
-from .Port import Port, PortClone
 from .Param import Param
 
 logger = logging.getLogger(__name__)
@@ -348,8 +347,8 @@ class Platform(Element):
     # build_new_block = blocks.build(block_id, **data)
 
     port_classes = {
-        None: Port,  # default
-        'clone': PortClone,  # clone of ports with multiplicity > 1
+        None: ports.Port,  # default
+        'clone': ports.PortClone,  # clone of ports with multiplicity > 1
     }
     param_classes = {
         None: Param,  # default

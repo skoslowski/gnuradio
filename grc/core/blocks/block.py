@@ -184,7 +184,7 @@ class Block(Element):
 
     def _rewrite_nports(self, ports):
         for port in ports:
-            if port.is_clone:  # Not a master port and no left-over clones
+            if hasattr(port, 'master_port'):  # Not a master port and no left-over clones
                 continue
             nports = port.multiplicity
             for clone in port.clones[nports-1:]:

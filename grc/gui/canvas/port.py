@@ -27,7 +27,7 @@ from . import colors
 from .drawable import Drawable
 from .. import Actions, Utils, Constants
 from ...core.Element import nop_write
-from ...core.Port import Port as CorePort
+from ...core.ports import Port as CorePort
 
 
 class Port(CorePort, Drawable):
