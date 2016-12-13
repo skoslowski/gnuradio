@@ -17,23 +17,87 @@
 
 from __future__ import absolute_import
 
+from ast import literal_eval
+
 from .block import Block
 
 from .. import utils
 from ..Element import Element
 
 
+DEFAULT_CODE = '''\
+"""
+Embedded Python Blocks:
+
+Each time this file is saved, GRC will instantiate the first class it finds
+to get ports and parameters of your block. The arguments to __init__  will
+be the parameters. All of them are required to have default values!
+"""
+
+import numpy as np
+from gnuradio import gr
+
+
+class blk(gr.sync_block):  # other base classes are basic_block, decim_block, interp_block
+    """Embedded Python Block example - a simple multiply const"""
+
+    def __init__(self, example_param=1.0):  # only default arguments here
+        """arguments to this function show up as parameters in GRC"""
+        gr.sync_block.__init__(
+            self,
+            name='Embedded Python Block',   # will show up in GRC
+            in_sig=[np.complex64],
+            out_sig=[np.complex64]
+        )
+        # if an attribute with the same name as a parameter is found,
+        # a callback is registered (properties work, too).
+        self.example_param = example_param
+
+    def work(self, input_items, output_items):
+        """example: multiply with constant"""
+        output_items[0][:] = input_items[0] * self.example_param
+        return len(output_items[0])
+'''
+
+DOC = """
+This block represents an arbitrary GNU Radio Python Block.
+
+Its source code can be accessed through the parameter 'Code' which opens your editor. \
+Each time you save changes in the editor, GRC will update the block. \
+This includes the number, names and defaults of the parameters, \
+the ports (stream and message) and the block name and documentation.
+
+Block Documentation:
+(will be replaced the docstring of your block class)
+"""
+
+
 class EPyBlock(Block):
+
+    key = 'epy_block'
+    label = 'Python Block'
+    documentation = {'': DOC}
+
+    parameters_data = [{
+        'label': 'Code',
+        'id': '_source_code',
+        'dtype': '_multiline_python_external',
+        'value': DEFAULT_CODE,
+        'hide': 'part',
+    }]
+    inputs_data = []
+    outputs_data = []
 
     def __init__(self, flow_graph, **kwargs):
         super(EPyBlock, self).__init__(flow_graph, **kwargs)
-        self._epy_source_hash = -1  # for epy blocks
+        self.states['_io_cache'] = ''
+
+        self._epy_source_hash = -1
         self._epy_reload_error = None
 
     def rewrite(self):
         Element.rewrite(self)
 
-        param_blk = self.params['_io_cache']
         param_src = self.params['_source_code']
 
         src = param_src.get_value()
@@ -47,7 +111,7 @@ class EPyBlock(Block):
         except Exception as e:
             self._epy_reload_error = ValueError(str(e))
             try:  # Load last working block io
-                blk_io_args = eval(param_blk.get_value())
+                blk_io_args = literal_eval(self.states['_io_cache'])
                 if len(blk_io_args) == 6:
                     blk_io_args += ([],)  # add empty callbacks
                 blk_io = utils.epy_block_io.BlockIO(*blk_io_args)
@@ -55,17 +119,23 @@ class EPyBlock(Block):
                 return
         else:
             self._epy_reload_error = None  # Clear previous errors
-            param_blk.set_value(repr(tuple(blk_io)))
+            self.states['_io_cache'] = repr(tuple(blk_io))
 
         # print "Rewriting embedded python block {!r}".format(self.name)
-
         self._epy_source_hash = src_hash
-        self.name = blk_io.name or blk_io.cls
-        self._doc = blk_io.doc
-        self._imports = ['import ' + self.name]
-        self._make = '{0}.{1}({2})'.format(self.name, blk_io.cls, ', '.join(
-            '{0}=${{ {0} }}'.format(key) for key, _ in blk_io.params))
-        self._callbacks = ['{0} = ${{ {0} }}'.format(attr) for attr in blk_io.callbacks]
+
+        self.label = blk_io.name or blk_io.cls
+        self.documentation = {'': blk_io.doc}
+
+        self.templates['imports'] = 'import ' + self.name
+        self.templates['make'] = '{mod}.{cls}({args})'.format(
+            mod=self.name,
+            cls=blk_io.cls,
+            args=', '.join('{0}=${{ {0} }}'.format(key) for key, _ in blk_io.params))
+        self.templates['callbacks'] = [
+            '{0} = ${{ {0} }}'.format(attr) for attr in blk_io.callbacks
+            ]
+
         self._update_params(blk_io.params)
         self._update_ports('in', self.sinks, blk_io.sinks, 'sink')
         self._update_ports('out', self.sources, blk_io.sources, 'source')
