@@ -21,9 +21,6 @@ from __future__ import absolute_import
 
 import collections
 
-from six.moves import range
-
-from . import Constants
 from .Element import Element, lazy_property
 
 
@@ -101,26 +98,10 @@ class Connection(Element):
         Element.validate(self)
         platform = self.parent_platform
 
-        source_domain = self.source_port.domain
-        sink_domain = self.sink_port.domain
-
-        if (source_domain, sink_domain) not in platform.connection_templates:
-            self.add_error_message('No connection known between domains "{}" and "{}"'.format(
-                source_domain, sink_domain))
-        too_many_other_sinks = (
-            not platform.domains.get(source_domain, {}).get('multiple_sinks', False) and
-            len(list(self.source_port.connections(enabled=True))) > 1
-        )
-        too_many_other_sources = (
-            not platform.domains.get(sink_domain, {}).get('multiple_sources', False) and
-            len(list(self.sink_port.connections(enabled=True))) > 1
-        )
-        if too_many_other_sinks:
-            self.add_error_message(
-                'Domain "{}" can have only one downstream block'.format(source_domain))
-        if too_many_other_sources:
-            self.add_error_message(
-                'Domain "{}" can have only one upstream block'.format(sink_domain))
+        connection_type = self.source_port.domain, self.sink_port.domain
+        if connection_type not in platform.connection_templates:
+            self.add_error_message('No connection known between domains "{}" and "{}"'
+                                   ''.format(*connection_type))
 
         source_size = self.source_port.item_size
         sink_size = self.sink_port.item_size

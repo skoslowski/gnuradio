@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import, print_function
 
+from collections import namedtuple
 import glob
 import os
 import logging
@@ -251,19 +252,20 @@ class Platform(Element):
                 log.warning('Cannot parse color code "%s" in %s', color, file_path)
                 return
 
-        self.domains[domain_id] = dict(
+        self.domains[domain_id] = self.Domain(
             name=data.get('label', domain_id),
-            multiple_sinks=data.get('multiple_connections_per_input', True),
-            multiple_sources=data.get('multiple_connections_per_output', False),
+            multi_in=data.get('multiple_connections_per_input', True),
+            multi_out=data.get('multiple_connections_per_output', False),
             color=color
         )
         for connection in data.get('templates', []):
             try:
                 source_id, sink_id = connection.get('type', [])
             except ValueError:
+                log.warn('Invalid connection template.')
                 continue
             connection_id = str(source_id), str(sink_id)
-            self.connection_templates[connection_id] = connection.get('make', '')
+            self.connection_templates[connection_id] = connection.get('connect', '')
 
     def load_category_tree_description(self, data, file_path):
         """Parse category tree file and add it to list"""
@@ -334,6 +336,7 @@ class Platform(Element):
     # Factories
     ##############################################
     Config = Config
+    Domain = namedtuple('Domain', 'name multi_in multi_out color')
     Generator = Generator
     FlowGraph = FlowGraph
     Connection = Connection
