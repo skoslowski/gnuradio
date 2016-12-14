@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 
+from ._flags import Flags
 from .block import Block
 from .embedded_python import EPyBlock
 from .dummy import DummyBlock
@@ -29,7 +30,7 @@ def build(id, label='', category='', flags='', documentation='',
 
     block_cls.label = label or id.title()
     block_cls.category = [cat.strip() for cat in category.split('/') if cat.strip()]
-    block_cls.flags = flags
+    block_cls.flags = Flags(flags)
     block_cls.documentation = {'': documentation.strip('\n\t ').replace('\\\n', '')}
 
     templates = templates or {}

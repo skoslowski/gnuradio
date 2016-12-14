@@ -32,8 +32,9 @@ import six
 from .FlowGraphProxy import FlowGraphProxy
 from .. import ParseXML, Messages
 from ..Constants import (
-    TOP_BLOCK_FILE_MODE, BLOCK_FLAG_NEED_QT_GUI,
-    HIER_BLOCK_FILE_MODE, BLOCK_DTD
+    TOP_BLOCK_FILE_MODE,
+    HIER_BLOCK_FILE_MODE,
+    BLOCK_DTD
 )
 from ..utils import expr_utils
 
@@ -93,7 +94,7 @@ class TopBlockGenerator(object):
 
     def _warnings(self):
         throttling_blocks = [b for b in self._flow_graph.get_enabled_blocks()
-                             if b.is_throtteling]
+                             if b.flags.throttle]
         if not throttling_blocks and not self._generate_options.startswith('hb'):
             Messages.send_warning("This flow graph may not have flow control: "
                                   "no audio or RF hardware blocks found. "
@@ -108,7 +109,7 @@ class TopBlockGenerator(object):
                                       "This is usually undesired. Consider "
                                       "removing the throttle block.")
 
-        deprecated_block_keys = {b.name for b in self._flow_graph.get_enabled_blocks() if b.is_deprecated}
+        deprecated_block_keys = {b.name for b in self._flow_graph.get_enabled_blocks() if b.flags.deprecated}
         for key in deprecated_block_keys:
             Messages.send_warning("The block {!r} is deprecated.".format(key))
 
@@ -464,7 +465,7 @@ class QtHierBlockGenerator(HierBlockGenerator):
         for key, value in six.iteritems(n['block']):
             block_n[key] = value
             if key == 'category':
-                block_n['flags'] = BLOCK_FLAG_NEED_QT_GUI
+                block_n['flags'] = 'need_qt_gui'
 
         if not block_n['name'].upper().startswith('QT GUI'):
             block_n['name'] = 'QT GUI ' + block_n['name']

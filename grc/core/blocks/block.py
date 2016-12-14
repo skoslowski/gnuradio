@@ -27,13 +27,9 @@ import six
 from six.moves import range
 
 from ._templates import MakoTemplates
+from ._flags import Flags
 
-from .. Constants import (
-    BLOCK_FLAG_NEED_QT_GUI,
-    ADVANCED_PARAM_TAB,
-    BLOCK_FLAG_THROTTLE, BLOCK_FLAG_DISABLE_BYPASS,
-    BLOCK_FLAG_DEPRECATED,
-)
+from .. Constants import ADVANCED_PARAM_TAB
 from .. Element import Element, lazy_property
 
 
@@ -54,7 +50,7 @@ class Block(Element):
     key = ''
     label = ''
     category = ''
-    flags = ''
+    flags = Flags('')
     documentation = {'': ''}
 
     templates = {}
@@ -76,7 +72,7 @@ class Block(Element):
         # end of args ########################################################
 
         if self.is_virtual_or_pad or self.is_variable:
-            self.flags += BLOCK_FLAG_DISABLE_BYPASS
+            self.flags += Flags.DISABLE_BYPASS
 
         self.templates = MakoTemplates(self, self.templates)
         self.params = self._init_params()
@@ -138,15 +134,15 @@ class Block(Element):
     def _init_ports(self, ports_n, direction):
         ports = []
         port_factory = self.parent_platform.make_port
-        port_keys = set()
-        stream_port_keys = itertools.count()
-        for i, port_n in enumerate(ports_n):
-            port_n.setdefault('id', str(next(stream_port_keys)))
-            port = port_factory(parent=self, direction=direction, **port_n)
-            key = port.key
-            if key in port_keys:
-                raise Exception('Port id "{}" already exists in {}s'.format(key, direction))
-            port_keys.add(key)
+        port_ids = set()
+        stream_port_ids = itertools.count()
+        for i, port_data in enumerate(ports_n):
+            port_id = port_data.setdefault('id', str(next(stream_port_ids)))
+            if port_id in port_ids:
+                raise Exception('Port id "{}" already exists in {}s'.format(port_id, direction))
+            port_ids.add(port_id)
+
+            port = port_factory(parent=self, direction=direction, **port_data)
             ports.append(port)
         return ports
     # endregion
@@ -229,7 +225,7 @@ class Block(Element):
                 self.add_error_message("Can't generate this block in mode: {} ".format(
                                        repr(current_generate_option)))
 
-        check_generate_mode('QT GUI', BLOCK_FLAG_NEED_QT_GUI, ('qt_gui', 'hb_qt_gui'))
+        check_generate_mode('QT GUI', Flags.NEED_QT_GUI, ('qt_gui', 'hb_qt_gui'))
 
     def _validate_var_value(self):
         """or variables check the value (only if var_value is used)"""
@@ -269,14 +265,6 @@ class Block(Element):
     @lazy_property
     def is_import(self):
         return self.key == 'import'
-
-    @lazy_property
-    def is_throtteling(self):
-        return BLOCK_FLAG_THROTTLE in self.flags
-
-    @lazy_property
-    def is_deprecated(self):
-        return BLOCK_FLAG_DEPRECATED in self.flags
 
     @property
     def comment(self):
@@ -365,7 +353,7 @@ class Block(Element):
             return False
         if not (self.sources[0].dtype == self.sinks[0].dtype):
             return False
-        if BLOCK_FLAG_DISABLE_BYPASS in self.flags:
+        if self.flags.disable_bypass:
             return False
         return True
 
@@ -477,7 +465,6 @@ class Block(Element):
     ##############################################
     # Bus ports stuff
     ##############################################
-
     def get_bus_structure(self, direction):
         bus_structure = self._bus_structure[direction]  # todo: render template
         if not bus_structure:

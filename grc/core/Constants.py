@@ -48,11 +48,6 @@ GR_STREAM_DOMAIN = "stream"
 GR_MESSAGE_DOMAIN = "message"
 DEFAULT_DOMAIN = GR_STREAM_DOMAIN
 
-BLOCK_FLAG_THROTTLE = 'throttle'
-BLOCK_FLAG_DISABLE_BYPASS = 'disable_bypass'
-BLOCK_FLAG_NEED_QT_GUI = 'need_qt_gui'
-BLOCK_FLAG_DEPRECATED = 'deprecated'
-
 # File creation modes
 TOP_BLOCK_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP | \
                       stat.S_IWGRP | stat.S_IXGRP | stat.S_IROTH
