@@ -14,33 +14,27 @@
 ##@param generate_options the type of flow graph
 ##@param callbacks variable id map to callback strings
 ########################################################
-<%def name="indent(code)">
-<% code = '\n        '.join(str(code).splitlines()) %>
-${code}\
-</%def>
-#import time
-########################################################
-# GNU Radio Python Flow Graph
-# Title: ${title}
+<%def name="indent(code)">${ '\n        '.join(str(code).splitlines()) }</%def>
+"""
+GNU Radio Python Flow Graph
+
+Title: ${title}
 % if flow_graph.get_option('author'):
-# Author: ${flow_graph.get_option('author')}
+Author: ${flow_graph.get_option('author')}
 % endif
 % if flow_graph.get_option('description'):
-# Description: ${flow_graph.get_option('description')}
+Description: ${flow_graph.get_option('description')}
 % endif
-# Generated: ${ generated_time }
-########################################################
-% if flow_graph.get_option('thread_safe_setters'):
-import threading
-% endif
+Generated: ${ generated_time }
+"""
 
 % if generate_options == 'qt_gui':
 from distutils.version import StrictVersion
 % endif
-
 ## Call XInitThreads as the _very_ first thing.
 ## After some Qt import, it's too late
 % if generate_options == 'qt_gui':
+
 if __name__ == '__main__':
     import ctypes
     import sys
@@ -52,20 +46,9 @@ if __name__ == '__main__':
             print "Warning: failed to XInitThreads()"
 
 % endif
-#
 ########################################################
 ##Create Imports
 ########################################################
-% if flow_graph.get_option('qt_qss_theme'):
-<% imports = sorted(set(imports + ["import os", "import sys"])) %>
-% endif
-% if any(imp.endswith("# grc-generated hier_block") for imp in imports):
-import os
-import sys
-<% imports = filter(lambda i: i not in ("import os", "import sys"), imports) %>
-sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
-
-% endif
 % for imp in imports:
 ##${imp.replace("  # grc-generated hier_block", "")}
 ${imp}
@@ -76,17 +59,19 @@ ${imp}
 ##  The parameter names are the arguments to __init__.
 ##  Setup the IO signature (hier block only).
 ########################################################
-<% class_name = flow_graph.get_option('id') %>
-<% param_str = ', '.join(['self'] + ['%s=%s'%(param.name, param.get_make()) for param in parameters]) %>
+<%
+    class_name = flow_graph.get_option('id')
+    param_str = ', '.join(['self'] + ['%s=%s'%(param.name, param.get_make()) for param in parameters])
+%>\
 % if generate_options == 'qt_gui':
 from gnuradio import qtgui
 
 class ${class_name}(gr.top_block, Qt.QWidget):
 
     def __init__(${param_str}):
-        gr.top_block.__init__(self, "$title")
+        gr.top_block.__init__(self, "${title}")
         Qt.QWidget.__init__(self)
-        self.setWindowTitle("$title")
+        self.setWindowTitle("${title}")
         qtgui.util.check_set_qss()
         try:
             self.setWindowIcon(Qt.QIcon.fromTheme('gnuradio-grc'))
@@ -104,7 +89,7 @@ class ${class_name}(gr.top_block, Qt.QWidget):
         self.top_grid_layout = Qt.QGridLayout()
         self.top_layout.addLayout(self.top_grid_layout)
 
-        self.settings = Qt.QSettings("GNU Radio", "$class_name")
+        self.settings = Qt.QSettings("GNU Radio", "${class_name}")
 
         try:
             if StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
@@ -113,14 +98,13 @@ class ${class_name}(gr.top_block, Qt.QWidget):
                 self.restoreGeometry(self.settings.value("geometry"))
         except:
             pass
-#elif ${generate_options} == 'no_gui'
-
+% elif generate_options == 'no_gui':
 
 class ${class_name}(gr.top_block):
 
     def __init__(${param_str}):
-        gr.top_block.__init__(self, "$title")
-#elif ${generate_options.startswith('hb')}
+        gr.top_block.__init__(self, "${title}")
+% elif generate_options.startswith('hb'):
     <% in_sigs = flow_graph.get_hier_block_stream_io('in') %>
     <% out_sigs = flow_graph.get_hier_block_stream_io('out') %>
 
@@ -143,15 +127,15 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
 
     def __init__(${param_str}):
         gr.hier_block2.__init__(
-            self, "$title",
+            self, "${ title }",
             ${make_io_sig(n_sigs)},
             ${make_io_sig(ut_sigs)},
         )
     % for pad in flow_graph.get_hier_block_message_io('in'):
-        self.message_port_register_hier_in("$pad['label']")
+        self.message_port_register_hier_in("${ pad['label'] }")
     % endfor
     % for pad in flow_graph.get_hier_block_message_io('out'):
-        self.message_port_register_hier_out("$pad['label']")
+        self.message_port_register_hier_out("${ pad['label'] }")
     % endfor
     % if generate_options == 'hb_qt_gui':
 
@@ -191,62 +175,34 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
 % for var in variables:
         ${indent(ar.get_var_make())}
 % endfor
-########################################################
-##Create Blocks
-########################################################
-% if blocks:
+        % if blocks:
 
         ########################################################
         # Blocks
         ########################################################
-% for blk in filter(lambda b: b.get_make(), blocks):
-    % if blk in variables:
-        ${indent(lk.get_make())}
-    % else:
-        self.${blk.name} = ${indent(lk.get_make())}
-        % if 'alias' in blk.params and blk.params['alias'].get_evaluated():
-        (self.${blk.name}).set_block_alias("$blk.params['alias'].get_evaluated()")
+        % for blk, blk_make in blocks:
+        ${ indent(blk_make) }
+##         % if 'alias' in blk.params and blk.params['alias'].get_evaluated():
+##         (self.${blk.name}).set_block_alias("${blk.params['alias'].get_evaluated()}")
+##         % endif
+##         % if 'affinity' in blk.params and blk.params['affinity'].get_evaluated():
+##         (self.${blk.name}).set_processor_affinity(${blk.params['affinity'].get_evaluated()})
+##         % endif
+##         % if len(blk.sources) > 0 and 'minoutbuf' in blk.params and int(blk.params['minoutbuf'].get_evaluated()) > 0:
+##         (self.${blk.name}).set_min_output_buffer(${blk.params['minoutbuf'].get_evaluated()})
+##         % endif
+##         % if len(blk.sources) > 0 and 'maxoutbuf' in blk.params and int(blk.params['maxoutbuf'].get_evaluated()) > 0:
+##         (self.${blk.name}).set_max_output_buffer(${blk.params['maxoutbuf'].get_evaluated()})
+##         % endif
+        % endfor
         % endif
-        % if 'affinity' in blk.params and blk.params['affinity'].get_evaluated():
-        (self.${blk.name}).set_processor_affinity(${blk.params['affinity'].get_evaluated()})
-        % endif
-        % if len(blk.sources) > 0 and 'minoutbuf' in blk.params and int(blk.params['minoutbuf'].get_evaluated()) > 0:
-        (self.${blk.name}).set_min_output_buffer(${blk.params['minoutbuf'].get_evaluated()})
-        % endif
-        % if len(blk.sources) > 0 and 'maxoutbuf' in blk.params and int(blk.params['maxoutbuf'].get_evaluated()) > 0:
-        (self.${blk.name}).set_max_output_buffer(${blk.params['maxoutbuf'].get_evaluated()})
-        % endif
-    % endif
-% endfor
-% endif
-########################################################
-##Create Connections
-##  The port name should be the id of the parent block.
-##  However, port names for IO pads should be self.
-########################################################
-<%def name="make_port_sig(port)">
-    % if port.parent.key in ('pad_source', 'pad_sink'):
-        <% block = 'self' %>
-        <% key = flow_graph.get_pad_port_global_key(port) %>
-    % else:
-        <% block = 'self.' + port.parent.name %>
-        <% key = port.key %>
-    % endif
-    % if not key.isdigit():
-        <% key = repr(key) %>
-    % endif
-(${block}, ${key})\
-</%def>
         % if connections:
 
         ########################################################
         # Connections
         ########################################################
-        % for con in connections:
-        <% source = con.source_port %>
-        <% sink = con.sink_port %>
-        #include source=${connection_templates[(ource.domain, ink.domain)]}
-
+        % for connection in connections:
+        ${ connection.rstrip() }
         % endfor
         % endif
 ########################################################
@@ -255,7 +211,7 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
 % if generate_options == 'qt_gui':
 
     def closeEvent(self, event):
-        self.settings = Qt.QSettings("GNU Radio", "$class_name")
+        self.settings = Qt.QSettings("GNU Radio", "${class_name}")
         self.settings.setValue("geometry", self.saveGeometry())
         event.accept()
     % if flow_graph.get_option('qt_qss_theme'):
@@ -358,16 +314,12 @@ def main(top_block_cls=${class_name}, options=None):
         Qt.QApplication.setGraphicsSystem(style)
     qapp = Qt.QApplication(sys.argv)
 
-    tb = top_block_cls(${', '.join(arams_eq_list)})
+    tb = top_block_cls(${ ', '.join(params_eq_list) })
     % if flow_graph.get_option('run'):
-    % if flow_graph.get_option('max_nouts'):
-    tb.start(${flow_graph.get_option('max_nouts')})
-    % else:
-    tb.start()
-    % endif
+    tb.start(${flow_graph.get_option('max_nouts') or ''})
     % endif
     % if flow_graph.get_option('qt_qss_theme'):
-    tb.setStyleSheetFromFile(${repr(flow_graph.get_option('qt_qss_theme'))})
+    tb.setStyleSheetFromFile(${ flow_graph.get_option('qt_qss_theme') })
     % endif
     tb.show()
 
@@ -380,18 +332,13 @@ def main(top_block_cls=${class_name}, options=None):
         if m.params['en'].get_value():
             (tb.${m.name}).start()
     else:
-        sys.stderr.write("Monitor '{0}' does not have an enable ('en') parameter.".format("tb.$m.name"))
+        sys.stderr.write("Monitor '{0}' does not have an enable ('en') parameter.".format("tb.${m.name}"))
     % endfor
     qapp.exec_()
-    #elif generate_options == 'no_gui'
-    tb = top_block_cls(${', '.join(arams_eq_list)})
-    <% run_options = flow_graph.get_option('run_options') %>
-    % if run_options == 'prompt':
-    % if flow_graph.get_option('max_nouts'):
-    tb.start(${flow_graph.get_option('max_nouts')})
-    % else:
-    tb.start()
-    % endif
+    % elif generate_options == 'no_gui':
+    tb = top_block_cls(${ ', '.join(params_eq_list) })
+    % if flow_graph.get_option('run_options') == 'prompt':
+    tb.start(${ flow_graph.get_option('max_nouts') or '' })
     % for m in monitors:
     (tb.${m.name}).start()
     % endfor
@@ -400,12 +347,8 @@ def main(top_block_cls=${class_name}, options=None):
     except EOFError:
         pass
     tb.stop()
-    %elif run_options == 'run':
-        % if flow_graph.get_option('max_nouts'):
-    tb.start(${flow_graph.get_option('max_nouts')})
-        % else:
-    tb.start()
-        % endif
+    % elif flow_graph.get_option('run_options') == 'run':
+    tb.start(${flow_graph.get_option('max_nouts') or ''})
     % endif
     % for m in monitors:
     (tb.${m.name}).start()

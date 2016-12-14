@@ -210,10 +210,11 @@ class Platform(Element):
         for match, docstring in six.iteritems(docstrings):
             if not docstring or match.endswith('_sptr'):
                 continue
-            docstring = docstring.replace('\n\n', '\n').strip()
-            docs[match] = docstring
-        self.block_classes[block_id].documentation.update(docs)
-        # self.block_docstrings[block_id] = docs
+            docs[match] = docstring.replace('\n\n', '\n').strip()
+        try:
+            self.blocks[block_id].documentation.update(docs)
+        except KeyError:
+            pass  # in tests platform might be gone...
 
     ##############################################
     # Description File Loaders
@@ -223,6 +224,9 @@ class Platform(Element):
         log = logger.getChild('block_loader')
         block_id = data.pop('id').rstrip('_')
 
+        if block_id in self.block_classes_buildin:
+            log.warning('Not overwriting build-in block %s with %s', block_id, file_path)
+            return
         if block_id in self.blocks:
             log.warning('Block with id "%s" overwritten by %s', block_id, file_path)
 

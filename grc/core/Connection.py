@@ -80,6 +80,10 @@ class Connection(Element):
     def sink_block(self):
         return self.sink_port.parent_block
 
+    @lazy_property
+    def type(self):
+        return self.source_port.domain, self.sink_port.domain
+
     @property
     def enabled(self):
         """
@@ -98,10 +102,9 @@ class Connection(Element):
         Element.validate(self)
         platform = self.parent_platform
 
-        connection_type = self.source_port.domain, self.sink_port.domain
-        if connection_type not in platform.connection_templates:
+        if self.type not in platform.connection_templates:
             self.add_error_message('No connection known between domains "{}" and "{}"'
-                                   ''.format(*connection_type))
+                                   ''.format(*self.type))
 
         source_size = self.source_port.item_size
         sink_size = self.sink_port.item_size

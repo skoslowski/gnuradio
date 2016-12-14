@@ -24,6 +24,7 @@ import operator
 import os
 import tempfile
 import time
+import textwrap
 
 from mako.template import Template
 import six
@@ -38,6 +39,7 @@ from ..utils import expr_utils
 
 DATA_DIR = os.path.dirname(__file__)
 FLOW_GRAPH_TEMPLATE = os.path.join(DATA_DIR, 'flow_graph.py.mako')
+flow_graph_template = Template(filename=FLOW_GRAPH_TEMPLATE)
 
 
 class Generator(object):
@@ -89,9 +91,7 @@ class TopBlockGenerator(object):
         self.file_path = os.path.join(dirname, filename)
         self._dirname = dirname
 
-    def write(self):
-        """generate output and write it to files"""
-        # Do throttle warning
+    def _warnings(self):
         throttling_blocks = [b for b in self._flow_graph.get_enabled_blocks()
                              if b.is_throtteling]
         if not throttling_blocks and not self._generate_options.startswith('hb'):
@@ -107,7 +107,15 @@ class TopBlockGenerator(object):
                                       "e.g. a hardware source or sink. "
                                       "This is usually undesired. Consider "
                                       "removing the throttle block.")
-        # Generate
+
+        deprecated_block_keys = {b.name for b in self._flow_graph.get_enabled_blocks() if b.is_deprecated}
+        for key in deprecated_block_keys:
+            Messages.send_warning("The block {!r} is deprecated.".format(key))
+
+    def write(self):
+        """generate output and write it to files"""
+        self._warnings()
+
         for filename, data in self._build_python_code_from_template():
             with codecs.open(filename, 'w', encoding='utf-8') as fp:
                 fp.write(data)
@@ -124,14 +132,86 @@ class TopBlockGenerator(object):
         Returns:
             a string of python code
         """
-        output = list()
+        output = []
 
         fg = self._flow_graph
         title = fg.get_option('title') or fg.get_option('id').replace('_', ' ').title()
-        imports = fg.get_imports()
         variables = fg.get_variables()
         parameters = fg.get_parameters()
         monitors = fg.get_monitors()
+
+        for block in fg.iter_enabled_blocks():
+            key = block.key
+            file_path = os.path.join(self._dirname, block.name + '.py')
+            if key == 'epy_block':
+                src = block.params['_source_code'].get_value()
+                output.append((file_path, src))
+            elif key == 'epy_module':
+                src = block.params['source_code'].get_value()
+                output.append((file_path, src))
+
+        namespace = {
+            'flow_graph': fg,
+            'variables': variables,
+            'parameters': parameters,
+            'monitors': monitors,
+            'generate_options': self._generate_options,
+            'generated_time': time.ctime(),
+        }
+        flow_graph_code = flow_graph_template.render(
+            title=title,
+            imports=self._imports(),
+            blocks=self._blocks(),
+            callbacks=self._callbacks(),
+            connections=self._connections(),
+            **namespace
+        )
+        # strip trailing white-space
+        flow_graph_code = "\n".join(line.rstrip() for line in flow_graph_code.split("\n"))
+
+        output.append((self.file_path, flow_graph_code))
+        return output
+
+    def _imports(self):
+        fg = self._flow_graph
+        imports = fg.imports()
+        seen = set()
+        deduplicate = []
+
+        need_path_hack = any(imp.endswith("# grc-generated hier_block") for imp in imports)
+        if need_path_hack:
+            deduplicate.insert(0, textwrap.dedent("""\
+                import os
+                import sys
+                sys.path.append(os.environ.get('GRC_HIER_PATH', os.path.expanduser('~/.grc_gnuradio')))
+            """))
+            seen.add('import os')
+            seen.add('import sys')
+
+        if fg.get_option('qt_qss_theme'):
+            imports.append('import os')
+            imports.append('import sys')
+
+        if fg.get_option('thread_safe_setters'):
+            imports.append('import threading')
+
+        def is_duplicate(l):
+            if l.startswith('import') or l.startswith('from') and l in seen:
+                return True
+            seen.add(line)
+            return False
+
+        for imp in sorted(imports):
+            for line in imp.split('\n'):
+                line = line.rstrip()
+                if not is_duplicate(line):
+                    deduplicate.append(line)
+
+        return deduplicate
+
+    def _blocks(self):
+        fg = self._flow_graph
+        parameters = fg.get_parameters()
 
         # List of blocks not including variables and imports and parameters and disabled
         def _get_block_sort_text(block):
@@ -142,26 +222,60 @@ class TopBlockGenerator(object):
                 pass
             return code
 
-        blocks_all = expr_utils.sort_objects(
-            [b for b in fg.blocks if b.enabled and not b.get_bypassed()],
-            operator.attrgetter('name'), _get_block_sort_text
-        )
-        deprecated_block_keys = set(b.name for b in blocks_all if b.is_deprecated)
-        for key in deprecated_block_keys:
-            Messages.send_warning("The block {!r} is deprecated.".format(key))
+        blocks = [
+            b for b in fg.blocks
+            if b.enabled and not (b.get_bypassed() or b.is_import or b in parameters or b.key == 'options')
+        ]
 
-        # List of regular blocks (all blocks minus the special ones)
-        blocks = [b for b in blocks_all if b not in imports and b not in parameters]
-
+        blocks = expr_utils.sort_objects(blocks, operator.attrgetter('name'), _get_block_sort_text)
+        blocks_make = []
         for block in blocks:
-            key = block.key
-            file_path = os.path.join(self._dirname, block.name + '.py')
-            if key == 'epy_block':
-                src = block.params['_source_code'].get_value()
-                output.append((file_path, src))
-            elif key == 'epy_module':
-                src = block.params['source_code'].get_value()
-                output.append((file_path, src))
+            make = block.templates.render('make')
+            if not block.is_variable:
+                make = 'self.' + block.name + ' = ' + make
+            blocks_make.append((block, make))
+        return blocks_make
+
+    def _callbacks(self):
+        fg = self._flow_graph
+        variables = fg.get_variables()
+        parameters = fg.get_parameters()
+
+        # List of variable names
+        var_ids = [var.name for var in parameters + variables]
+        replace_dict = dict((var_id, 'self.' + var_id) for var_id in var_ids)
+        callbacks_all = []
+        for block in fg.iter_enabled_blocks():
+            callbacks_all.extend(expr_utils.expr_replace(cb, replace_dict) for cb in block.get_callbacks())
+
+        # Map var id to callbacks
+        def uses_var_id():
+            used = expr_utils.get_variable_dependencies(callback, [var_id])
+            return used and 'self.' + var_id in callback  # callback might contain var_id itself
+
+        callbacks = {}
+        for var_id in var_ids:
+            callbacks[var_id] = [callback for callback in callbacks_all if uses_var_id()]
+
+        return callbacks
+
+    def _connections(self):
+        fg = self._flow_graph
+        templates = {key: Template(text)
+                     for key, text in fg.parent_platform.connection_templates.items()}
+
+        def make_port_sig(port):
+            if port.parent.key in ('pad_source', 'pad_sink'):
+                block = 'self'
+                key = fg.get_pad_port_global_key(port)
+            else:
+                block = 'self.' + port.parent_block.name
+                key = port.key
+
+            if not key.isdigit():
+                key = repr(key)
+
+            return '({block}, {key})'.format(block=block, key=key)
 
         # Filter out bus and virtual sink connections
         connections = [con for con in fg.get_enabled_connections()
@@ -207,51 +321,16 @@ class TopBlockGenerator(object):
             connections.remove(source_connection[0])
 
         # List of connections where each endpoint is enabled (sorted by domains, block names)
-        connections.sort(key=lambda c: (
-            c.source_port.domain, c.sink_port.domain,
-            c.source_block.name, c.sink_block.name
-        ))
+        def by_domain_and_blocks(c):
+            return c.type, c.source_block.name, c.sink_block.name
 
-        connection_templates = fg.parent.connection_templates
+        rendered = []
+        for con in sorted(connections, key=by_domain_and_blocks):
+            template = templates[con.type]
+            code = template.render(make_port_sig=make_port_sig, source=con.source_port, sink=con.sink_port)
+            rendered.append(code)
 
-        # List of variable names
-        var_ids = [var.name for var in parameters + variables]
-        replace_dict = dict((var_id, 'self.' + var_id) for var_id in var_ids)
-        callbacks_all = []
-        for block in blocks_all:
-            callbacks_all.extend(expr_utils.expr_replace(cb, replace_dict) for cb in block.get_callbacks())
-
-        # Map var id to callbacks
-        def uses_var_id():
-            used = expr_utils.get_variable_dependencies(callback, [var_id])
-            return used and 'self.' + var_id in callback  # callback might contain var_id itself
-
-        callbacks = {}
-        for var_id in var_ids:
-            callbacks[var_id] = [callback for callback in callbacks_all if uses_var_id()]
-
-        # Load the namespace
-        namespace = {
-            'title': title,
-            'imports': imports,
-            'flow_graph': fg,
-            'variables': variables,
-            'parameters': parameters,
-            'monitors': monitors,
-            'blocks': blocks,
-            'connections': connections,
-            'connection_templates': connection_templates,
-            'generate_options': self._generate_options,
-            'callbacks': callbacks,
-            'generated_time': time.ctime(),
-        }
-        # Build the template
-        template = Template(filename=FLOW_GRAPH_TEMPLATE)
-        rendered = template.render(**namespace)
-        # strip trailing white-space
-        rendered = "\n".join(line.rstrip() for line in rendered.split("\n"))
-        output.append((self.file_path, rendered))
-        return output
+        return rendered
 
 
 class HierBlockGenerator(TopBlockGenerator):

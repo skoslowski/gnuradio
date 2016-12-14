@@ -67,17 +67,14 @@ class FlowGraph(Element):
     def __str__(self):
         return 'FlowGraph - {}({})'.format(self.get_option('title'), self.get_option('id'))
 
-    def get_imports(self):
+    def imports(self):
         """
         Get a set of all import statements in this flow graph namespace.
 
         Returns:
-            a set of import statements
+            a list of import statements
         """
-        imports = set()
-        for block in self.iter_enabled_blocks():
-            imports = imports.union(block.templates.render('imports').split('\n'))
-        return sorted(imports)
+        return [block.templates.render('imports') for block in self.iter_enabled_blocks()]
 
     def get_variables(self):
         """
@@ -222,7 +219,7 @@ class FlowGraph(Element):
     def renew_namespace(self):
         namespace = {}
         # Load imports
-        for expr in self.get_imports():
+        for expr in self.imports():
             try:
                 exec(expr, namespace)
             except:
