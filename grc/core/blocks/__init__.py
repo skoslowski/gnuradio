@@ -24,25 +24,33 @@ from .dummy import DummyBlock
 
 
 def build(id, label='', category='', flags='', documentation='',
+          checks=None,
           parameters=None, inputs=None, outputs=None, templates=None, **kwargs):
-    block_cls = type(id, (Block,), {})
-    block_cls.key = id
+    block_id = id
 
-    block_cls.label = label or id.title()
-    block_cls.category = [cat.strip() for cat in category.split('/') if cat.strip()]
-    block_cls.flags = Flags(flags)
-    block_cls.documentation = {'': documentation.strip('\n\t ').replace('\\\n', '')}
+    cls = type(block_id, (Block,), {})
+    cls.key = block_id
+
+    cls.label = label or block_id.title()
+    cls.category = [cat.strip() for cat in category.split('/') if cat.strip()]
+    cls.flags = Flags(flags)
+    if block_id.startswith('variable') or block_id.startswith('virtual') or block_id == 'options':
+        cls.flags += Flags.NOT_DSP
+    cls.documentation = {'': documentation.strip('\n\t ').replace('\\\n', '')}
+
+    cls.checks = [check.lstrip('${').rstrip('}') for check in (checks or [])]
+
+    cls.parameters_data = parameters or []
+    cls.inputs_data = inputs or []
+    cls.outputs_data = outputs or []
+    cls.extra_data = kwargs
 
     templates = templates or {}
-    block_cls.templates = {
+    cls.templates = {
         'imports': templates.get('imports', ''),
         'make': templates.get('make', ''),
         'callbacks': templates.get('callbacks', []),
         'var_make': templates.get('var_make', ''),
     }
-    block_cls.parameters_data = parameters or []
-    block_cls.inputs_data = inputs or []
-    block_cls.outputs_data = outputs or []
-    block_cls.extra_data = kwargs
 
-    return block_cls
+    return cls

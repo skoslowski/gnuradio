@@ -20,6 +20,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 from __future__ import absolute_import
 
 import ast
+import numbers
 import re
 import collections
 
@@ -70,6 +71,7 @@ class Param(Element):
     dtype = EvaluatedEnum(Constants.PARAM_TYPE_NAMES, default='raw', name='dtype')
     hide = EvaluatedEnum('none all part', name='hide')
 
+    # region init
     def __init__(self, parent, id, label='', dtype='raw', default='',
                  options=None, option_labels=None, option_attributes=None,
                  category='', hide='none', **kwargs):
@@ -91,7 +93,6 @@ class Param(Element):
         self._stringify_flag = False
         self._lisitify_flag = False
         self._init = False
-        self._hostage_cells = list()
 
     @property
     def template_arg(self):
@@ -127,12 +128,32 @@ class Param(Element):
             # raise ValueError('The value {!r} is not in the possible values of {}.'
             #                  ''.format(self.get_value(), ', '.join(self.options)))
         return options
+    # endregion
 
     def __str__(self):
         return 'Param - {}({})'.format(self.name, self.key)
 
     def __repr__(self):
         return '{!r}.param[{}]'.format(self.parent, self.key)
+
+    def is_enum(self):
+        return self.get_raw('dtype') == 'enum'
+
+    def get_value(self):
+        value = self.value
+        if self.is_enum() and value not in self.options:
+            value = self.default
+            self.set_value(value)
+        return value
+
+    def set_value(self, value):
+        # Must be a string
+        self.value = str(value)
+
+    def set_default(self, value):
+        if self.default == self.value:
+            self.set_value(value)
+        self.default = str(value)
 
     def rewrite(self):
         Element.rewrite(self)
@@ -168,150 +189,112 @@ class Param(Element):
         self._init = True
         self._lisitify_flag = False
         self._stringify_flag = False
-        self._hostage_cells = list()
-        t = self.dtype
-        v = self.get_value()
+        dtype = self.dtype
+        expr = self.get_value()
 
         #########################
         # Enum Type
         #########################
         if self.is_enum():
-            return v
+            return expr
 
         #########################
         # Numeric Types
         #########################
-        elif t in ('raw', 'complex', 'real', 'float', 'int', 'hex', 'bool'):
+        elif dtype in ('raw', 'complex', 'real', 'float', 'int', 'hex', 'bool'):
             # Raise exception if python cannot evaluate this value
             try:
-                e = self.parent_flowgraph.evaluate(v)
-            except Exception as e:
-                raise Exception('Value "{}" cannot be evaluated:\n{}'.format(v, e))
+                value = self.parent_flowgraph.evaluate(expr)
+            except Exception as value:
+                raise Exception('Value "{}" cannot be evaluated:\n{}'.format(expr, value))
             # Raise an exception if the data is invalid
-            if t == 'raw':
-                return e
-            elif t == 'complex':
-                if not isinstance(e, Constants.COMPLEX_TYPES):
-                    raise Exception('Expression "{}" is invalid for type complex.'.format(str(e)))
-                return e
-            elif t == 'real' or t == 'float':
-                if not isinstance(e, Constants.REAL_TYPES):
-                    raise Exception('Expression "{}" is invalid for type float.'.format(str(e)))
-                return e
-            elif t == 'int':
-                if not isinstance(e, Constants.INT_TYPES):
-                    raise Exception('Expression "{}" is invalid for type integer.'.format(str(e)))
-                return e
-            elif t == 'hex':
-                return hex(e)
-            elif t == 'bool':
-                if not isinstance(e, bool):
-                    raise Exception('Expression "{}" is invalid for type bool.'.format(str(e)))
-                return e
+            if dtype == 'raw':
+                return value
+            elif dtype == 'complex':
+                if not isinstance(value, Constants.COMPLEX_TYPES):
+                    raise Exception('Expression "{}" is invalid for type complex.'.format(str(value)))
+                return value
+            elif dtype in ('real', 'float'):
+                if not isinstance(value, Constants.REAL_TYPES):
+                    raise Exception('Expression "{}" is invalid for type float.'.format(str(value)))
+                return value
+            elif dtype == 'int':
+                if not isinstance(value, Constants.INT_TYPES):
+                    raise Exception('Expression "{}" is invalid for type integer.'.format(str(value)))
+                return value
+            elif dtype == 'hex':
+                return hex(value)
+            elif dtype == 'bool':
+                if not isinstance(value, bool):
+                    raise Exception('Expression "{}" is invalid for type bool.'.format(str(value)))
+                return value
             else:
-                raise TypeError('Type "{}" not handled'.format(t))
+                raise TypeError('Type "{}" not handled'.format(dtype))
         #########################
         # Numeric Vector Types
         #########################
-        elif t in ('complex_vector', 'real_vector', 'float_vector', 'int_vector'):
-            if not v:
-                # Turn a blank string into an empty list, so it will eval
-                v = '()'
-            # Raise exception if python cannot evaluate this value
+        elif dtype in ('complex_vector', 'real_vector', 'float_vector', 'int_vector'):
+            default = []
+
+            if not expr:
+                return default   # Turn a blank string into an empty list, so it will eval
+
             try:
-                e = self.parent.parent.evaluate(v)
-            except Exception as e:
-                raise Exception('Value "{}" cannot be evaluated:\n{}'.format(v, e))
+                value = self.parent.parent.evaluate(expr)
+            except Exception as value:
+                raise Exception('Value "{}" cannot be evaluated:\n{}'.format(expr, value))
+
+            if not isinstance(value, Constants.VECTOR_TYPES):
+                self._lisitify_flag = True
+                value = [value]
+
             # Raise an exception if the data is invalid
-            if t == 'complex_vector':
-                if not isinstance(e, Constants.VECTOR_TYPES):
-                    self._lisitify_flag = True
-                    e = [e]
-                if not all([isinstance(ei, Constants.COMPLEX_TYPES) for ei in e]):
-                    raise Exception('Expression "{}" is invalid for type complex vector.'.format(str(e)))
-                return e
-            elif t == 'real_vector' or t == 'float_vector':
-                if not isinstance(e, Constants.VECTOR_TYPES):
-                    self._lisitify_flag = True
-                    e = [e]
-                if not all([isinstance(ei, Constants.REAL_TYPES) for ei in e]):
-                    raise Exception('Expression "{}" is invalid for type float vector.'.format(str(e)))
-                return e
-            elif t == 'int_vector':
-                if not isinstance(e, Constants.VECTOR_TYPES):
-                    self._lisitify_flag = True
-                    e = [e]
-                if not all([isinstance(ei, Constants.INT_TYPES) for ei in e]):
-                    raise Exception('Expression "{}" is invalid for type integer vector.'.format(str(e)))
-                return e
+            if dtype == 'complex_vector' and not all(isinstance(item, numbers.Complex) for item in value):
+                raise Exception('Expression "{}" is invalid for type complex vector.'.format(value))
+            elif dtype in ('real_vector', 'float_vector') and not all(isinstance(item, numbers.Real) for item in value):
+                raise Exception('Expression "{}" is invalid for type float vector.'.format(value))
+            elif dtype == 'int_vector' and not all(isinstance(item, Constants.INT_TYPES) for item in value):
+                raise Exception('Expression "{}" is invalid for type integer vector.'.format(str(value)))
+            return value
         #########################
         # String Types
         #########################
-        elif t in ('string', 'file_open', 'file_save', '_multiline', '_multiline_python_external'):
+        elif dtype in ('string', 'file_open', 'file_save', '_multiline', '_multiline_python_external'):
             # Do not check if file/directory exists, that is a runtime issue
             try:
-                e = self.parent.parent.evaluate(v)
-                if not isinstance(e, str):
+                value = self.parent.parent.evaluate(expr)
+                if not isinstance(value, str):
                     raise Exception()
             except:
                 self._stringify_flag = True
-                e = str(v)
-            if t == '_multiline_python_external':
-                ast.parse(e)  # Raises SyntaxError
-            return e
+                value = str(expr)
+            if dtype == '_multiline_python_external':
+                ast.parse(value)  # Raises SyntaxError
+            return value
         #########################
         # Unique ID Type
         #########################
-        elif t == 'id':
-            # Can python use this as a variable?
-            if not re.match(r'^[a-z|A-Z]\w*$', v):
-                raise Exception('ID "{}" must begin with a letter and may contain letters, numbers, and underscores.'.format(v))
-            ids = [param.get_value() for param in self.get_all_params(t, 'id')]
-
-            if v in ID_BLACKLIST:
-                raise Exception('ID "{}" is blacklisted.'.format(v))
-
-            if self.key == 'id':
-                # Id should only appear once, or zero times if block is disabled
-                if ids.count(v) > 1:
-                    raise Exception('ID "{}" is not unique.'.format(v))
-            else:
-                # Id should exist to be a reference
-                if ids.count(v) < 1:
-                    raise Exception('ID "{}" does not exist.'.format(v))
-
-            return v
+        elif dtype == 'id':
+            self.validate_block_id()
+            return expr
 
         #########################
         # Stream ID Type
         #########################
-        elif t == 'stream_id':
-            # Get a list of all stream ids used in the virtual sinks
-            ids = [param.get_value() for param in filter(
-                lambda p: p.parent.is_virtual_sink(),
-                self.get_all_params(t),
-            )]
-            # Check that the virtual sink's stream id is unique
-            if self.parent.is_virtual_sink():
-                # Id should only appear once, or zero times if block is disabled
-                if ids.count(v) > 1:
-                    raise Exception('Stream ID "{}" is not unique.'.format(v))
-            # Check that the virtual source's steam id is found
-            if self.parent.is_virtual_source():
-                if v not in ids:
-                    raise Exception('Stream ID "{}" is not found.'.format(v))
-            return v
+        elif dtype == 'stream_id':
+            self.validate_stream_id()
+            return expr
 
         #########################
         # GUI Position/Hint
         #########################
-        elif t == 'gui_hint':
-            if ':' in v:
-                tab, pos = v.split(':')
-            elif '@' in v:
-                tab, pos = v, ''
+        elif dtype == 'gui_hint':
+            if ':' in expr:
+                tab, pos = expr.split(':')
+            elif '@' in expr:
+                tab, pos = expr, ''
             else:
-                tab, pos = '', v
+                tab, pos = '', expr
 
             if '@' in tab:
                 tab, index = tab.split('@')
@@ -341,20 +324,51 @@ class Param(Element):
         #########################
         # Import Type
         #########################
-        elif t == 'import':
+        elif dtype == 'import':
             # New namespace
             n = dict()
             try:
-                exec(v, n)
+                exec(expr, n)
             except ImportError:
-                raise Exception('Import "{}" failed.'.format(v))
+                raise Exception('Import "{}" failed.'.format(expr))
             except Exception:
-                raise Exception('Bad import syntax: "{}".'.format(v))
+                raise Exception('Bad import syntax: "{}".'.format(expr))
             return [k for k in list(n.keys()) if str(k) != '__builtins__']
 
         #########################
         else:
-            raise TypeError('Type "{}" not handled'.format(t))
+            raise TypeError('Type "{}" not handled'.format(dtype))
+
+    def validate_block_id(self):
+        value = self.value
+        # Can python use this as a variable?
+        if not re.match(r'^[a-z|A-Z]\w*$', value):
+            raise Exception('ID "{}" must begin with a letter and may contain letters, numbers, '
+                            'and underscores.'.format(value))
+        if value in ID_BLACKLIST:
+            raise Exception('ID "{}" is blacklisted.'.format(value))
+        block_names = [block.name for block in self.parent_flowgraph.iter_enabled_blocks()]
+        # Id should only appear once, or zero times if block is disabled
+        if self.key == 'id' and block_names.count(value) > 1:
+            raise Exception('ID "{}" is not unique.'.format(value))
+        elif value not in block_names:
+            raise Exception('ID "{}" does not exist.'.format(value))
+        return value
+
+    def validate_stream_id(self):
+        value = self.value
+        stream_ids = [
+            block.params['stream_id'].value
+            for block in self.parent_flowgraph.iter_enabled_blocks()
+            if block.is_virtual_sink()
+            ]
+        # Check that the virtual sink's stream id is unique
+        if self.parent_block.is_virtual_sink() and stream_ids.count(value) >= 2:
+            # Id should only appear once, or zero times if block is disabled
+            raise Exception('Stream ID "{}" is not unique.'.format(value))
+        # Check that the virtual source's steam id is found
+        elif self.parent_block.is_virtual_source() and value not in stream_ids:
+            raise Exception('Stream ID "{}" is not found.'.format(value))
 
     def to_code(self):
         """
@@ -384,42 +398,6 @@ class Param(Element):
                 return '(%s)' % v
         else:
             return v
-
-    def get_all_params(self, type, key=None):
-        """
-        Get all the params from the flowgraph that have the given type and
-        optionally a given key
-
-        Args:
-            type: the specified type
-            key: the key to match against
-
-        Returns:
-            a list of params
-        """
-        params = []
-        for block in self.parent_flowgraph.get_enabled_blocks():
-            params.extend(p for k, p in block.params.items() if p.dtype == type and (key is None or key == k))
-        return params
-
-    def is_enum(self):
-        return self.get_raw('dtype') == 'enum'
-
-    def get_value(self):
-        value = self.value
-        if self.is_enum() and value not in self.options:
-            value = self.default
-            self.set_value(value)
-        return value
-
-    def set_value(self, value):
-        # Must be a string
-        self.value = str(value)
-
-    def set_default(self, value):
-        if self.default == self.value:
-            self.set_value(value)
-        self.default = str(value)
 
     ##############################################
     # Import/Export Methods

@@ -53,6 +53,8 @@ class Block(Element):
     flags = Flags('')
     documentation = {'': ''}
 
+    checks = []
+
     templates = {}
     parameters_data = []
     inputs_data = []
@@ -64,7 +66,6 @@ class Block(Element):
         super(Block, self).__init__(parent)
 
         self._var_value = kwargs.get('value', '')
-        self._checks = [check.lstrip('${').rstrip('}') for check in kwargs.get('checks', [])]
 
         self._grc_source = kwargs.get('grc_source', '')
         self.block_wrapper_path = kwargs.get('block_wrapper_path')
@@ -89,11 +90,12 @@ class Block(Element):
         self._init_bus_ports(kwargs)  # todo: rewrite
 
     def _init_params(self):
-        params = collections.OrderedDict()
-        param_factory = self.parent_platform.make_param
-
+        is_dsp_block = not self.flags.not_dsp
         has_inputs = bool(self.inputs_data)
         has_outputs = bool(self.outputs_data)
+
+        params = collections.OrderedDict()
+        param_factory = self.parent_platform.make_param
 
         def add_param(id, **kwargs):
             params[id] = param_factory(self, id=id, **kwargs)
@@ -101,19 +103,19 @@ class Block(Element):
         add_param(id='id', name='ID', dtype='id',
                   hide='none' if (self.key == 'options' or self.is_variable) else 'part')
 
-        if not (self.is_virtual_or_pad or self.is_variable or self.key == 'options'):
+        if is_dsp_block:
             add_param(id='alias', name='Block Alias', dtype='string',
                       hide='part', category=ADVANCED_PARAM_TAB)
 
-        if not self.is_virtual_or_pad and (has_outputs or has_inputs):
-            add_param(id='affinity', name='Core Affinity', dtype='int_vector',
-                      hide='part', category=ADVANCED_PARAM_TAB)
+            if has_outputs or has_inputs:
+                add_param(id='affinity', name='Core Affinity', dtype='int_vector',
+                          hide='part', category=ADVANCED_PARAM_TAB)
 
-        if not self.is_virtual_or_pad and has_outputs:
-            add_param(id='minoutbuf', name='Min Output Buffer', dtype='int',
-                      hide='part', value='0', category=ADVANCED_PARAM_TAB)
-            add_param(id='maxoutbuf', name='Max Output Buffer', dtype='int',
-                      hide='part', value='0', category=ADVANCED_PARAM_TAB)
+            if has_outputs:
+                add_param(id='minoutbuf', name='Min Output Buffer', dtype='int',
+                          hide='part', value='0', category=ADVANCED_PARAM_TAB)
+                add_param(id='maxoutbuf', name='Max Output Buffer', dtype='int',
+                          hide='part', value='0', category=ADVANCED_PARAM_TAB)
 
         base_params_n = {}
         for param_data in self.parameters_data:
@@ -206,7 +208,7 @@ class Block(Element):
 
     def _run_checks(self):
         """Evaluate the checks"""
-        for check in self._checks:
+        for check in self.checks:
             try:
                 if not self.evaluate(check):
                     self.add_error_message('Check "{}" failed.'.format(check))
@@ -584,3 +586,4 @@ class Block(Element):
         #         self.parent_flowgraph.disconnect(elt)
         #         for j in sink:
         #             self.parent_flowgraph.connect(source, j)
+    #endregion

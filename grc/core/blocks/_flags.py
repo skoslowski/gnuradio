@@ -26,12 +26,14 @@ class Flags(six.text_type):
     DISABLE_BYPASS = 'disable_bypass'
     NEED_QT_GUI = 'need_qt_gui'
     DEPRECATED = 'deprecated'
-    DSP_BLOCK = 'dsp_block'
+    NOT_DSP = 'not_dsp'
 
     def __getattr__(self, item):
         return item in self
 
-    def __iadd__(self, other):
+    def __add__(self, other):
         if not isinstance(other, six.string_types):
             return NotImplemented
         return self.__class__(str(self) + other)
+
+    __iadd__ = __add__
