@@ -23,17 +23,143 @@ import string
 
 import six
 
+
+def expr_replace(expr, replace_dict):
+    """
+    Search for vars in the expression and add the prepend.
+
+    Args:
+        expr: an expression string
+        replace_dict: a dict of find:replace
+
+    Returns:
+        a new expression with the prepend
+    """
+    expr_splits = _expr_split(expr, var_chars=VAR_CHARS + '.')
+    for i, es in enumerate(expr_splits):
+        if es in list(replace_dict.keys()):
+            expr_splits[i] = replace_dict[es]
+    return ''.join(expr_splits)
+
+
+def get_variable_dependencies(expr, vars):
+    """
+    Return a set of variables used in this expression.
+
+    Args:
+        expr: an expression string
+        vars: a list of variable names
+
+    Returns:
+        a subset of vars used in the expression
+    """
+    expr_toks = _expr_split(expr)
+    return set(v for v in vars if v in expr_toks)
+
+
+def sort_objects(objects, get_id, get_expr):
+    """
+    Sort a list of objects according to their expressions.
+
+    Args:
+        objects: the list of objects to sort
+        get_id: the function to extract an id from the object
+        get_expr: the function to extract an expression from the object
+
+    Returns:
+        a list of sorted objects
+    """
+    id2obj = {get_id(obj): obj for obj in objects}
+    # Map obj id to expression code
+    id2expr = {get_id(obj): get_expr(obj) for obj in objects}
+    # Sort according to dependency
+    sorted_ids = _sort_variables(id2expr)
+    # Return list of sorted objects
+    return [id2obj[id] for id in sorted_ids]
+
+
+import ast
+
+
+def dependencies(expr, names=None):
+    node = ast.parse(expr, mode='eval')
+    used_ids = frozenset([n.id for n in ast.walk(node) if isinstance(n, ast.Name)])
+    return used_ids & names if names else used_ids
+
+
+def sort_objects2(objects, id_getter, expr_getter, check_circular=True):
+    known_ids = {id_getter(obj) for obj in objects}
+
+    def dependent_ids(obj):
+        return dependencies(expr_getter(obj), known_ids)
+
+    objects = sorted(objects, key=dependent_ids)
+
+    if check_circular:  # walk var defines step by step
+        defined_ids = set()  # variables defined so far
+        for obj in objects:
+            deps = dependent_ids(obj)
+            if not defined_ids.issuperset(deps):  # can't have an undefined dep
+                raise RuntimeError(obj, deps, defined_ids)
+            defined_ids.add(id_getter(obj))  # define this one
+
+    return objects
+
+
+test = [
+    ['c', '2 * a + b'],
+    ['a', '1'],
+    ['b', '2 * a + unknown'],
+]
+
+for l, r in sort_objects2(test, lambda i: i[0], lambda i: i[1]):
+    print(l, '=', r)
+
+test = [
+    ['c', '2 * a + b'],
+    ['a', '1'],
+    ['b', '2 * c + unknown'],
+]
+
+try:
+    sort_objects2(test, lambda i: i[0], lambda i: i[1])
+except RuntimeError:
+    print('circ dep detected')
+else:
+    raise ValueError('did not raise')
+
+test = [
+    ['c', 'a'],
+    ['a', 'b'],
+    ['b', 'c'],
+]
+
+try:
+    sort_objects2(test, lambda i: i[0], lambda i: i[1])
+except RuntimeError:
+    print('circ dep detected')
+else:
+    raise ValueError('did not raise')
+
+
+
+
+
+
+
 VAR_CHARS = string.ascii_letters + string.digits + '_'
 
 
-class graph(object):
+class _graph(object):
     """
     Simple graph structure held in a dictionary.
     """
 
-    def __init__(self): self._graph = dict()
+    def __init__(self):
+        self._graph = dict()
 
-    def __str__(self): return str(self._graph)
+    def __str__(self):
+        return str(self._graph)
 
     def add_node(self, node_key):
         if node_key in self._graph:
@@ -61,7 +187,7 @@ class graph(object):
         return self._graph[node_key]
 
 
-def expr_split(expr, var_chars=VAR_CHARS):
+def _expr_split(expr, var_chars=VAR_CHARS):
     """
     Split up an expression by non alphanumeric characters, including underscore.
     Leave strings in-tact.
@@ -93,40 +219,7 @@ def expr_split(expr, var_chars=VAR_CHARS):
     return [t for t in toks if t]
 
 
-def expr_replace(expr, replace_dict):
-    """
-    Search for vars in the expression and add the prepend.
-
-    Args:
-        expr: an expression string
-        replace_dict: a dict of find:replace
-
-    Returns:
-        a new expression with the prepend
-    """
-    expr_splits = expr_split(expr, var_chars=VAR_CHARS + '.')
-    for i, es in enumerate(expr_splits):
-        if es in list(replace_dict.keys()):
-            expr_splits[i] = replace_dict[es]
-    return ''.join(expr_splits)
-
-
-def get_variable_dependencies(expr, vars):
-    """
-    Return a set of variables used in this expression.
-
-    Args:
-        expr: an expression string
-        vars: a list of variable names
-
-    Returns:
-        a subset of vars used in the expression
-    """
-    expr_toks = expr_split(expr)
-    return set(v for v in vars if v in expr_toks)
-
-
-def get_graph(exprs):
+def _get_graph(exprs):
     """
     Get a graph representing the variable dependencies
 
@@ -138,7 +231,7 @@ def get_graph(exprs):
     """
     vars = list(exprs.keys())
     # Get dependencies for each expression, load into graph
-    var_graph = graph()
+    var_graph = _graph()
     for var in vars:
         var_graph.add_node(var)
     for var, expr in six.iteritems(exprs):
@@ -148,7 +241,7 @@ def get_graph(exprs):
     return var_graph
 
 
-def sort_variables(exprs):
+def _sort_variables(exprs):
     """
     Get a list of variables in order of dependencies.
 
@@ -159,7 +252,7 @@ def sort_variables(exprs):
         a list of variable names
     @throws Exception circular dependencies
     """
-    var_graph = get_graph(exprs)
+    var_graph = _get_graph(exprs)
     sorted_vars = list()
     # Determine dependency order
     while var_graph.get_nodes():
@@ -174,24 +267,4 @@ def sort_variables(exprs):
             var_graph.remove_node(var)
     return reversed(sorted_vars)
 
-
-def sort_objects(objects, get_id, get_expr):
-    """
-    Sort a list of objects according to their expressions.
-
-    Args:
-        objects: the list of objects to sort
-        get_id: the function to extract an id from the object
-        get_expr: the function to extract an expression from the object
-
-    Returns:
-        a list of sorted objects
-    """
-    id2obj = dict([(get_id(obj), obj) for obj in objects])
-    # Map obj id to expression code
-    id2expr = dict([(get_id(obj), get_expr(obj)) for obj in objects])
-    # Sort according to dependency
-    sorted_ids = sort_variables(id2expr)
-    # Return list of sorted objects
-    return [id2obj[id] for id in sorted_ids]
 
