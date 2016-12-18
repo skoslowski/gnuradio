@@ -128,7 +128,8 @@ class Block(CoreBlock, Drawable):
             self._area = (0, 0, self.height, self.width)
         self.bounds_from_area(self._area)
 
-        bussified = self.current_bus_structure['source'], self.current_bus_structure['sink']
+        # bussified = self.current_bus_structure['source'], self.current_bus_structure['sink']
+        bussified = False, False
         for ports, has_busses in zip((self.active_sources, self.active_sinks), bussified):
             if not ports:
                 continue
@@ -200,15 +201,15 @@ class Block(CoreBlock, Drawable):
                      get_min_height_for_ports(self.active_sinks),
                      get_min_height_for_ports(self.active_sources))
 
-        def get_min_height_for_bus_ports(ports):
-            return 2 * PORT_BORDER_SEPARATION + sum(
-                port.height + PORT_SPACING for port in ports if port.dtype == 'bus'
-            ) - PORT_SPACING
-
-        if self.current_bus_structure['sink']:
-            height = max(height, get_min_height_for_bus_ports(self.active_sinks))
-        if self.current_bus_structure['source']:
-            height = max(height, get_min_height_for_bus_ports(self.active_sources))
+        # def get_min_height_for_bus_ports(ports):
+        #     return 2 * PORT_BORDER_SEPARATION + sum(
+        #         port.height + PORT_SPACING for port in ports if port.dtype == 'bus'
+        #     ) - PORT_SPACING
+        #
+        # if self.current_bus_structure['sink']:
+        #     height = max(height, get_min_height_for_bus_ports(self.active_sinks))
+        # if self.current_bus_structure['source']:
+        #     height = max(height, get_min_height_for_bus_ports(self.active_sources))
 
         self.width, self.height = width, height = Utils.align_to_grid((width, height))
 

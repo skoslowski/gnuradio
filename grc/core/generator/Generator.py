@@ -278,9 +278,7 @@ class TopBlockGenerator(object):
 
             return '({block}, {key})'.format(block=block, key=key)
 
-        # Filter out bus and virtual sink connections
-        connections = [con for con in fg.get_enabled_connections()
-                       if not (con.is_bus() or con.sink_block.is_virtual_sink())]
+        connections = fg.get_enabled_connections()
 
         # Get the virtual blocks and resolve their connections
         connection_factory = fg.parent_platform.Connection
@@ -416,12 +414,6 @@ class HierBlockGenerator(TopBlockGenerator):
             param_n['hide'] = param.get_param('hide').get_value()
             block_n['param'].append(param_n)
 
-        # Bus stuff
-        if self._flow_graph.get_bussink():
-            block_n['bus_sink'] = '1'
-        if self._flow_graph.get_bussrc():
-            block_n['bus_source'] = '1'
-
         # Sink/source ports
         for direction in ('sink', 'source'):
             block_n[direction] = list()
@@ -434,14 +426,6 @@ class HierBlockGenerator(TopBlockGenerator):
                 if port['optional']:
                     port_n['optional'] = '1'
                 block_n[direction].append(port_n)
-
-        # More bus stuff
-        bus_struct_sink = self._flow_graph.get_bus_structure_sink()
-        if bus_struct_sink:
-            block_n['bus_structure_sink'] = bus_struct_sink[0].params['struct'].get_value()
-        bus_struct_src = self._flow_graph.get_bus_structure_src()
-        if bus_struct_src:
-            block_n['bus_structure_source'] = bus_struct_src[0].params['struct'].get_value()
 
         # Documentation
         block_n['doc'] = "\n".join(field for field in (

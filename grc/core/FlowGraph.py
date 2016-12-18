@@ -32,10 +32,6 @@ from .utils import expr_utils, shlex
 
 _parameter_matcher = re.compile('^(parameter)$')
 _monitors_searcher = re.compile('(ctrlport_monitor)')
-_bussink_searcher = re.compile('^(bus_sink)$')
-_bussrc_searcher = re.compile('^(bus_source)$')
-_bus_struct_sink_searcher = re.compile('^(bus_structure_sink)$')
-_bus_struct_src_searcher = re.compile('^(bus_structure_source)$')
 
 
 class FlowGraph(Element):
@@ -109,32 +105,6 @@ class FlowGraph(Element):
         for block in self.iter_enabled_blocks():
             if block.key == 'epy_module':
                 yield block.name, block.params[1].get_value()
-
-    def get_bussink(self):
-        bussink = [b for b in self.get_enabled_blocks() if _bussink_searcher.search(b.key)]
-
-        for i in bussink:
-            for j in i.params.values():
-                if j.name == 'On/Off' and j.get_value() == 'on':
-                    return True
-        return False
-
-    def get_bussrc(self):
-        bussrc = [b for b in self.get_enabled_blocks() if _bussrc_searcher.search(b.key)]
-
-        for i in bussrc:
-            for j in i.params.values():
-                if j.name == 'On/Off' and j.get_value() == 'on':
-                    return True
-        return False
-
-    def get_bus_structure_sink(self):
-        bussink = [b for b in self.get_enabled_blocks() if _bus_struct_sink_searcher.search(b.key)]
-        return bussink
-
-    def get_bus_structure_src(self):
-        bussrc = [b for b in self.get_enabled_blocks() if _bus_struct_src_searcher.search(b.key)]
-        return bussrc
 
     def iter_enabled_blocks(self):
         """
@@ -340,8 +310,6 @@ class FlowGraph(Element):
             self.blocks.remove(element)
 
         elif element in self.connections:
-            if element.is_bus():
-                self.disconnect(*element.source_port.get_associated_ports())
             self.connections.remove(element)
 
     ##############################################

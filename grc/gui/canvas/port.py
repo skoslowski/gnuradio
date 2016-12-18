@@ -125,9 +125,9 @@ class Port(CorePort, Drawable):
         self.width = 2 * Constants.PORT_LABEL_PADDING + label_width / Pango.SCALE
         self.height = 2 * Constants.PORT_LABEL_PADDING + label_height / Pango.SCALE
         self._label_layout_offsets = [0, Constants.PORT_LABEL_PADDING]
-        if self.dtype == 'bus':
-            self.height += Constants.PORT_EXTRA_BUS_HEIGHT
-            self._label_layout_offsets[1] += Constants.PORT_EXTRA_BUS_HEIGHT / 2
+        # if self.dtype == 'bus':
+        #     self.height += Constants.PORT_EXTRA_BUS_HEIGHT
+        #     self._label_layout_offsets[1] += Constants.PORT_EXTRA_BUS_HEIGHT / 2
         self.height += self.height % 2  # uneven height
 
     def draw(self, cr):

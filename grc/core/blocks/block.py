@@ -87,8 +87,6 @@ class Block(Element):
 
         self.states = {'_enabled': True}
 
-        self._init_bus_ports(kwargs)  # todo: rewrite
-
     def _init_params(self):
         is_dsp_block = not self.flags.not_dsp
         has_inputs = bool(self.inputs_data)
@@ -169,16 +167,13 @@ class Block(Element):
         # Adjust nports
         for ports in (self.sources, self.sinks):
             self._rewrite_nports(ports)
-            self.back_ofthe_bus(ports)
             rekey(ports)
-
-        self._rewrite_bus_ports()
 
         # disconnect hidden ports
         self.parent_flowgraph.disconnect(*[p for p in self.ports() if p.hidden])
 
-        self.active_sources = [p for p in self.get_sources_gui() if not p.hidden]
-        self.active_sinks = [p for p in self.get_sinks_gui() if not p.hidden]
+        self.active_sources = [p for p in self.sources if not p.hidden]
+        self.active_sinks = [p for p in self.sinks if not p.hidden]
 
     def _rewrite_nports(self, ports):
         for port in ports:
@@ -359,9 +354,6 @@ class Block(Element):
             return False
         return True
 
-    def get_ports_gui(self):
-        return self.get_sources_gui() + self.get_sinks_gui()
-
     def ports(self):
         return itertools.chain(self.sources, self.sinks)
 
@@ -371,9 +363,6 @@ class Block(Element):
     def children(self):
         return itertools.chain(six.itervalues(self.params), self.ports())
 
-    def get_children_gui(self):
-        return list(self.params.values()) + self.get_ports_gui()
-
     ##############################################
     # Access
     ##############################################
@@ -381,14 +370,8 @@ class Block(Element):
     def get_sink(self, key):
         return _get_elem(self.sinks, key)
 
-    def get_sinks_gui(self):
-        return self.filter_bus_port(self.sinks)
-
     def get_source(self, key):
         return _get_elem(self.sources, key)
-
-    def get_sources_gui(self):
-        return self.filter_bus_port(self.sources)
 
     ##############################################
     # Resolve
@@ -421,11 +404,6 @@ class Block(Element):
         states = (collections.OrderedDict([('key', key), ('value', repr(value))])
                   for key, value in six.iteritems(self.states))
         n['param'] = sorted(itertools.chain(states, params), key=lambda p: p['key'])
-
-        if any('bus' in a.dtype for a in self.sinks):
-            n['bus_sink'] = '1'
-        if any('bus' in a.dtype for a in self.sources):
-            n['bus_source'] = '1'
         return n
 
     def import_data(self, n):
@@ -461,129 +439,3 @@ class Block(Element):
             # Store hash and call rewrite
             pre_rewrite_hash = get_hash()
             self.rewrite()
-
-        self._import_bus_stuff(n)
-
-    ##############################################
-    # Bus ports stuff
-    ##############################################
-    def get_bus_structure(self, direction):
-        bus_structure = self._bus_structure[direction]  # todo: render template
-        if not bus_structure:
-            return
-        try:
-            return self.parent_flowgraph.evaluate(bus_structure)
-        except:
-            return
-
-    @staticmethod
-    def back_ofthe_bus(portlist):
-        portlist.sort(key=lambda p: p.get_raw('dtype') == 'bus')
-
-    @staticmethod
-    def filter_bus_port(ports):
-        buslist = [p for p in ports if p.get_raw('dtype') == 'bus']
-        return buslist or ports
-
-    def _import_bus_stuff(self, n):
-        bus_sinks = n.get('bus_sink', [])
-        if len(bus_sinks) > 0 and not self._bussify_sink:
-            self.bussify('sink')
-        elif len(bus_sinks) > 0:
-            self.bussify('sink')
-            self.bussify('sink')
-        bus_sources = n.get('bus_source', [])
-        if len(bus_sources) > 0 and not self._bussify_source:
-            self.bussify('source')
-        elif len(bus_sources) > 0:
-            self.bussify('source')
-            self.bussify('source')
-
-    def form_bus_structure(self, direc):
-        ports = self.sources if direc == 'source' else self.sinks
-        struct = self.get_bus_structure(direc)
-
-        if not struct:
-            struct = [list(range(len(ports)))]
-
-        else:
-            last = 0
-            structlet = []
-            for port in ports:
-                nports = port.multiplicity
-                if not isinstance(nports, int):
-                    continue
-                structlet.extend(a + last for a in range(nports))
-                last += nports
-            struct = [structlet]
-
-        self.current_bus_structure[direc] = struct
-        return struct
-
-    def bussify(self, direc):
-        ports = self.sources if direc == 'source' else self.sinks
-
-        self.parent.disconnect(*ports)
-        if ports and all('bus' != p.dtype for p in ports):
-            struct = self.current_bus_structure[direc] = self.form_bus_structure(direc)
-            n = {'type': 'bus'}
-            if ports[0].multiplicity:
-                n['nports'] = '1'
-
-            for i, structlet in enumerate(struct):
-                name = 'bus{}#{}'.format(i, len(structlet))
-                port = self.parent_platform.make_port(
-                    self, direction=direc, key=str(len(ports)), name=name, **n)
-                ports.append(port)
-        elif any('bus' == p.dtype for p in ports):
-            get_p_gui = self.get_sources_gui if direc == 'source' else self.get_sinks_gui
-            for elt in get_p_gui():
-                ports.remove(elt)
-            self.current_bus_structure[direc] = ''
-
-    def _init_bus_ports(self, n):
-        self.current_bus_structure = {'source': '', 'sink': ''}
-        self._bus_structure = {'source': n.get('bus_structure_source', ''),
-                               'sink': n.get('bus_structure_sink', '')}
-        self._bussify_sink = n.get('bus_sink')
-        self._bussify_source = n.get('bus_source')
-        if self._bussify_sink:
-            self.bussify('sink')
-        if self._bussify_source:
-            self.bussify('source')
-
-    def _rewrite_bus_ports(self):
-        return  # fixme: probably broken
-        # def doit(ports, ports_gui, direc):
-        #     if not self.current_bus_structure[direc]:
-        #         return
-        #
-        #     bus_structure = self.form_bus_structure(direc)
-        #     for port in ports_gui[len(bus_structure):]:
-        #         self.parent_flowgraph.disconnect(port)
-        #         ports.remove(port)
-        #
-        #     port_factory = self.parent_platform.make_port
-        #
-        #     if len(ports_gui) < len(bus_structure):
-        #         for i in range(len(ports_gui), len(bus_structure)):
-        #             port = port_factory(self, direction=direc, key=str(1 + i),
-        #                                 name='bus', type='bus')
-        #             ports.append(port)
-        #
-        # doit(self.sources, self.get_sources_gui(), 'source')
-        # doit(self.sinks, self.get_sinks_gui(), 'sink')
-        #
-        # if 'bus' in [a.dtype for a in self.get_sources_gui()]:
-        #     for i in range(len(self.get_sources_gui())):
-        #         if not self.get_sources_gui()[i].get_connections():
-        #             continue
-        #         source = self.get_sources_gui()[i]
-        #         sink = []
-        #
-        #         for j in range(len(source.get_connections())):
-        #             sink.append(source.get_connections()[j].sink_port)
-        #         self.parent_flowgraph.disconnect(elt)
-        #         for j in sink:
-        #             self.parent_flowgraph.connect(source, j)
-    #endregion

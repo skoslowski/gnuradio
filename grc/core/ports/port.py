@@ -201,21 +201,3 @@ class Port(Element):
         for con in self.parent_flowgraph.connections:
             if self in con and (enabled is None or enabled == con.enabled):
                 yield con
-
-    def get_associated_ports(self):
-        if not self.dtype == 'bus':
-            return [self]
-
-        block = self.parent_block
-        if self.is_source:
-            block_ports = block.sources
-            bus_structure = block.current_bus_structure['source']
-        else:
-            block_ports = block.sinks
-            bus_structure = block.current_bus_structure['sink']
-
-        ports = [i for i in block_ports if not i.dtype == 'bus']
-        if bus_structure:
-            bus_index = [i for i in block_ports if i.dtype == 'bus'].index(self)
-            ports = [p for i, p in enumerate(ports) if i in bus_structure[bus_index]]
-        return ports

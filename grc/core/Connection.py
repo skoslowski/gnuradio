@@ -53,9 +53,6 @@ class Connection(Element):
         self.source_port = source
         self.sink_port = sink
 
-        if self.is_bus():
-            self._make_bus_connect()
-
     def __str__(self):
         return 'Connection (\n\t{}\n\t\t{}\n\t{}\n\t\t{}\n)'.format(
             self.source_block, self.source_port, self.sink_block, self.sink_port,
@@ -127,20 +124,3 @@ class Connection(Element):
         n['source_key'] = self.source_port.key
         n['sink_key'] = self.sink_port.key
         return n
-
-    def is_bus(self):
-        return self.source_port.dtype == 'bus'
-
-    def _make_bus_connect(self):
-        source, sink = self.source_port, self.sink_port
-
-        if source.dtype == sink.dtype == 'bus':
-            raise ValueError('busses must get with busses')
-
-        sources = source.get_associated_ports()
-        sinks = sink.get_associated_ports()
-        if len(sources) != len(sinks):
-            raise ValueError('port connections must have same cardinality')
-
-        for ports in zip(sources, sinks):
-            self.parent_flowgraph.connect(*ports)

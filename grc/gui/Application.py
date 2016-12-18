@@ -706,8 +706,8 @@ class Application(Gtk.Application):
 
         Actions.BLOCK_CREATE_HIER.set_sensitive(bool(selected_blocks))
         Actions.OPEN_HIER.set_sensitive(bool(selected_blocks))
-        Actions.BUSSIFY_SOURCES.set_sensitive(bool(selected_blocks))
-        Actions.BUSSIFY_SINKS.set_sensitive(bool(selected_blocks))
+        # Actions.BUSSIFY_SOURCES.set_sensitive(bool(selected_blocks))
+        # Actions.BUSSIFY_SINKS.set_sensitive(bool(selected_blocks))
         Actions.RELOAD_BLOCKS.set_sensitive(True)
         Actions.FIND_BLOCKS.set_sensitive(True)
 
