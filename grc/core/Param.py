@@ -165,6 +165,7 @@ class Param(Element):
         try:
             self._evaluated = self.evaluate()
         except Exception as e:
+            print(e)
             self.add_error_message(str(e))
 
     def validate(self):

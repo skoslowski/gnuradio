@@ -109,8 +109,7 @@ def convert_block_xml(node):
                       for check_node in node.iterfind('checks')] or no_value
     data['value'] = (
         node.findtext('var_value') or
-        '$value' if block_id.startswith('variable') else None or
-        no_value
+        ('${ value }' if block_id.startswith('variable') else no_value)
     )
 
     data['templates'] = convert_templates(node, converter.to_mako, block_id) or no_value

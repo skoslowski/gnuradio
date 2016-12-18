@@ -60,15 +60,24 @@ class Block(Element):
     inputs_data = []
     outputs_data = []
 
+    extra_data = {}
+
     # region Init
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
 
-        self._var_value = kwargs.get('value', '')
+        value = self.extra_data.get('value', '').strip()
+        if not value:
+            pass
+        elif value.startswith('${') and value.endswith('}'):
+            value = value[2:-1].strip()
+        else:
+            value = repr(value)
+        self.value = value
 
-        self._grc_source = kwargs.get('grc_source', '')
-        self.block_wrapper_path = kwargs.get('block_wrapper_path')
+        self._grc_source = self.extra_data.get('grc_source', '')
+        self.block_wrapper_path = self.extra_data.get('block_wrapper_path')
 
         # end of args ########################################################
 
@@ -226,13 +235,11 @@ class Block(Element):
 
     def _validate_var_value(self):
         """or variables check the value (only if var_value is used)"""
-        if self.is_variable and self._var_value != '$value':
-            value = self._var_value
+        if self.is_variable and self.value != 'value':
             try:
-                value = self.get_var_value()
-                self.parent.evaluate(value)
+                self.parent_flowgraph.evaluate(self.value, local_namespace=self.namespace)
             except Exception as err:
-                self.add_error_message('Value "{}" cannot be evaluated:\n{}'.format(value, err))
+                self.add_error_message('Value "{}" cannot be evaluated:\n{}'.format(self.value, err))
     # endregion
 
     # region Properties
@@ -257,7 +264,7 @@ class Block(Element):
 
     @lazy_property
     def is_variable(self):
-        return bool(self._var_value)
+        return bool(self.value)
 
     @lazy_property
     def is_import(self):
@@ -295,9 +302,6 @@ class Block(Element):
     ##############################################
     # Getters (old)
     ##############################################
-    def get_make(self, raw=False):
-        raise PendingDeprecationWarning()
-
     def get_var_make(self):
         return self.templates.render('var_make')
 

@@ -28,7 +28,7 @@ import sys
 from . import Messages
 from .Constants import FLOW_GRAPH_FILE_FORMAT_VERSION
 from .Element import Element
-from .utils import expr_utils, shlex
+from .utils import expr_utils, shlex, ChainMap
 
 _parameter_matcher = re.compile('^(parameter)$')
 _monitors_searcher = re.compile('(ctrlport_monitor)')
@@ -216,7 +216,7 @@ class FlowGraph(Element):
         # Load variables
         for variable_block in self.get_variables():
             try:
-                value = eval(variable_block.get_var_value(), namespace)
+                value = eval(variable_block.value, namespace, variable_block.namespace)
                 namespace[variable_block.name] = value
             except:
                 pass
@@ -225,22 +225,15 @@ class FlowGraph(Element):
         self._eval_cache.clear()
         self.namespace.update(namespace)
 
-    def evaluate(self, expr, namespace=None):
+    def evaluate(self, expr, namespace=None, local_namespace=None):
         """
         Evaluate the expression.
-
-        Args:
-            expr: the string expression
-        @throw Exception bad expression
-
-        Returns:
-            the evaluated data
         """
         # Evaluate
         if not expr:
             raise Exception('Cannot evaluate empty statement.')
         if namespace is not None:
-            return eval(expr, namespace)
+            return eval(expr, namespace, local_namespace)
         else:
             return self._eval_cache.setdefault(expr, eval(expr, self.namespace))
 

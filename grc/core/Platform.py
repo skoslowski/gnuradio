@@ -367,9 +367,9 @@ class Platform(Element):
     def new_block_class(self, block_id, **data):
         return blocks.build(block_id, **data)
 
-    def make_block(self, parent, block_id, **kwargs):
+    def make_block(self, parent, block_id):
         cls = self.block_classes[block_id]
-        return cls(parent, id=block_id, **kwargs)
+        return cls(parent)
 
     def make_param(self, parent, **kwargs):
         cls = self.param_classes[kwargs.pop('cls_key', None)]
