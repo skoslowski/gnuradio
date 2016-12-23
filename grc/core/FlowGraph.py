@@ -17,21 +17,18 @@
 
 from __future__ import absolute_import, print_function
 
+import collections
 import imp
 import itertools
-import time
-import re
-from operator import methodcaller, attrgetter
-import collections
 import sys
+import time
+from operator import methodcaller, attrgetter
 
 from . import Messages
 from .Constants import FLOW_GRAPH_FILE_FORMAT_VERSION
-from .Element import Element
-from .utils import expr_utils, shlex, ChainMap
-
-_parameter_matcher = re.compile('^(parameter)$')
-_monitors_searcher = re.compile('(ctrlport_monitor)')
+from .base import Element
+from .utils import expr_utils
+from .utils.backports import shlex
 
 
 class FlowGraph(Element):
@@ -90,14 +87,14 @@ class FlowGraph(Element):
         Returns:
             a list of parameterized variables
         """
-        parameters = [b for b in self.iter_enabled_blocks() if _parameter_matcher.match(b.key)]
+        parameters = [b for b in self.iter_enabled_blocks() if b.key == 'parameter']
         return parameters
 
     def get_monitors(self):
         """
         Get a list of all ControlPort monitors
         """
-        monitors = [b for b in self.iter_enabled_blocks() if _monitors_searcher.search(b.key)]
+        monitors = [b for b in self.iter_enabled_blocks() if 'ctrlport_monitor' in b.key]
         return monitors
 
     def get_python_modules(self):
@@ -375,8 +372,11 @@ class FlowGraph(Element):
 
             if not block:  # looks like this block key cannot be found
                 # create a dummy block instead
-                block = self.new_block('_dummy', missing_block_id=block_id,
-                                       params_n=block_n.get('param', []))
+                block = self.new_block(
+                    block_id='_dummy',
+                    missing_block_id=block_id,
+                    param_ids=[data['id'] for data in block_n.get('param', [])]
+                )
                 print('Block id "%s" not found' % block_id)
 
             block.import_data(block_n)

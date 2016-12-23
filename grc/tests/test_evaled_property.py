@@ -1,7 +1,7 @@
 import collections
 import numbers
 
-from grc.core.eval import Evaluated, EvaluatedEnum, EvaluatedPInt
+from grc.core.utils.descriptors import Evaluated, EvaluatedEnum, EvaluatedPInt
 
 
 class A(object):

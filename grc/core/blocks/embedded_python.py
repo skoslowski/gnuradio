@@ -18,11 +18,13 @@
 from __future__ import absolute_import
 
 from ast import literal_eval
+from textwrap import dedent
 
-from .block import Block
+from . import Block, register_build_in
+from ._templates import MakoTemplates
 
 from .. import utils
-from ..Element import Element
+from ..base import Element
 
 
 DEFAULT_CODE = '''\
@@ -72,19 +74,20 @@ Block Documentation:
 """
 
 
+@register_build_in
 class EPyBlock(Block):
 
     key = 'epy_block'
     label = 'Python Block'
     documentation = {'': DOC}
 
-    parameters_data = [{
-        'label': 'Code',
-        'id': '_source_code',
-        'dtype': '_multiline_python_external',
-        'value': DEFAULT_CODE,
-        'hide': 'part',
-    }]
+    parameters_data = [dict(
+        label='Code',
+        id='_source_code',
+        dtype='_multiline_python_external',
+        value=DEFAULT_CODE,
+        hide='part',
+    )]
     inputs_data = []
     outputs_data = []
 
@@ -199,3 +202,41 @@ class EPyBlock(Block):
         super(EPyBlock, self).validate()
         if self._epy_reload_error:
             self.params['_source_code'].add_error_message(str(self._epy_reload_error))
+
+
+@register_build_in
+class EPyModule(Block):
+    key = 'epy_module'
+    label = 'Python Module'
+    documentation = {'': dedent("""
+        This block lets you embed a python module in your flowgraph.
+
+        Code you put in this module is accessible in other blocks using the ID of this
+        block. Example:
+
+        If you put
+
+            a = 2
+
+            def double(arg):
+                return 2 * arg
+
+        in a Python Module Block with the ID 'stuff' you can use code like
+
+            stuff.a  # evals to 2
+            stuff.double(3)  # evals to 6
+
+        to set parameters of other blocks in your flowgraph.
+    """)}
+
+    parameters_data = [dict(
+        label='Code',
+        id='source_code',
+        dtype='_multiline_python_external',
+        value='# this module will be imported in the into your flowgraph',
+        hide='part',
+    )]
+
+    templates = MakoTemplates(
+        imports='import ${ id }  # embedded python module',
+    )

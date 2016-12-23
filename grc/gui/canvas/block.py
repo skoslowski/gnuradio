@@ -238,7 +238,7 @@ class Block(CoreBlock, Drawable):
 
         # Show the flow graph complexity on the top block if enabled
         if Actions.TOGGLE_SHOW_FLOWGRAPH_COMPLEXITY.get_active() and self.key == "options":
-            complexity = utils.calculate_flowgraph_complexity(self.parent)
+            complexity = utils.flow_graph_complexity.calculate(self.parent)
             markups.append(
                 '<span foreground="#444" size="medium" font_desc="{font}">'
                 '<b>Complexity: {num}bal</b></span>'.format(num=Utils.num_to_str(complexity), font=BLOCK_FONT)

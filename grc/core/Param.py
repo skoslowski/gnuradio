@@ -28,8 +28,8 @@ import six
 from six.moves import builtins, filter, map, range, zip
 
 from . import Constants
-from .Element import Element
-from .eval import Evaluated, EvaluatedEnum
+from .base import Element
+from .utils.descriptors import Evaluated, EvaluatedEnum, setup_names
 
 # Blacklist certain ids, its not complete, but should help
 ID_BLACKLIST = ['self', 'options', 'gr', 'math', 'firdes'] + dir(builtins)
@@ -63,18 +63,19 @@ class TemplateArg(str):
         return self._param.get_evaluated()
 
 
+@setup_names
 class Param(Element):
 
     is_param = True
 
-    name = Evaluated(str, default='no name', name='name')
-    dtype = EvaluatedEnum(Constants.PARAM_TYPE_NAMES, default='raw', name='dtype')
-    hide = EvaluatedEnum('none all part', name='hide')
+    name = Evaluated(str, default='no name')
+    dtype = EvaluatedEnum(Constants.PARAM_TYPE_NAMES, default='raw')
+    hide = EvaluatedEnum('none all part')
 
     # region init
     def __init__(self, parent, id, label='', dtype='raw', default='',
                  options=None, option_labels=None, option_attributes=None,
-                 category='', hide='none', **kwargs):
+                 category='', hide='none', **_):
         """Make a new param from nested data"""
         super(Param, self).__init__(parent)
         self.key = id

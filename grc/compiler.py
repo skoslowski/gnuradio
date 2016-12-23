@@ -26,7 +26,7 @@ import subprocess
 from gnuradio import gr
 
 from .core import Messages
-from .core.Platform import Platform
+from .core.platform import Platform
 
 
 def argument_parser():

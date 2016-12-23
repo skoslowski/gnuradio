@@ -91,58 +91,20 @@ def sort_objects2(objects, id_getter, expr_getter, check_circular=True):
     known_ids = {id_getter(obj) for obj in objects}
 
     def dependent_ids(obj):
-        return dependencies(expr_getter(obj), known_ids)
+        deps = dependencies(expr_getter(obj))
+        return [id_ if id_ in deps else None for id_ in known_ids]
 
     objects = sorted(objects, key=dependent_ids)
 
     if check_circular:  # walk var defines step by step
         defined_ids = set()  # variables defined so far
         for obj in objects:
-            deps = dependent_ids(obj)
+            deps = dependencies(expr_getter(obj), known_ids)
             if not defined_ids.issuperset(deps):  # can't have an undefined dep
                 raise RuntimeError(obj, deps, defined_ids)
             defined_ids.add(id_getter(obj))  # define this one
 
     return objects
-
-
-test = [
-    ['c', '2 * a + b'],
-    ['a', '1'],
-    ['b', '2 * a + unknown'],
-]
-
-for l, r in sort_objects2(test, lambda i: i[0], lambda i: i[1]):
-    print(l, '=', r)
-
-test = [
-    ['c', '2 * a + b'],
-    ['a', '1'],
-    ['b', '2 * c + unknown'],
-]
-
-try:
-    sort_objects2(test, lambda i: i[0], lambda i: i[1])
-except RuntimeError:
-    print('circ dep detected')
-else:
-    raise ValueError('did not raise')
-
-test = [
-    ['c', 'a'],
-    ['a', 'b'],
-    ['b', 'c'],
-]
-
-try:
-    sort_objects2(test, lambda i: i[0], lambda i: i[1])
-except RuntimeError:
-    print('circ dep detected')
-else:
-    raise ValueError('did not raise')
-
-
-
 
 
 

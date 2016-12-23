@@ -32,7 +32,7 @@ from . import (
 )
 
 from .Config import Config
-from .Element import Element
+from .base import Element
 from .generator import Generator
 from .FlowGraph import FlowGraph
 from .Connection import Connection
@@ -224,7 +224,7 @@ class Platform(Element):
         log = logger.getChild('block_loader')
         block_id = data.pop('id').rstrip('_')
 
-        if block_id in self.block_classes_buildin:
+        if block_id in self.block_classes_build_in:
             log.warning('Not overwriting build-in block %s with %s', block_id, file_path)
             return
         if block_id in self.blocks:
@@ -345,13 +345,8 @@ class Platform(Element):
     FlowGraph = FlowGraph
     Connection = Connection
 
-    block_classes_buildin = {  # separates build-in from loaded blocks
-        'epy_block': blocks.EPyBlock,
-        '_dummy': blocks.DummyBlock,
-    }
-    block_classes = utils.ChainMap({}, block_classes_buildin)  # separates build-in from loaded blocks)
-
-    # build_new_block = blocks.build(block_id, **data)
+    block_classes_build_in = blocks.build_ins
+    block_classes = utils.backports.ChainMap({}, block_classes_build_in)  # separates build-in from loaded blocks)
 
     port_classes = {
         None: ports.Port,  # default

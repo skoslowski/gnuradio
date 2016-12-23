@@ -15,6 +15,25 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
-from __future__ import absolute_import
+import functools
 
-from . import epy_block_io, expr_utils, extract_docs, flow_graph_complexity
+
+class lazy_property(object):
+
+    def __init__(self, func):
+        self.func = func
+        functools.update_wrapper(self, func)
+
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        value = self.func(instance)
+        setattr(instance, self.func.__name__, value)
+        return value
+
+
+def nop_write(prop):
+    """Make this a property with a nop setter"""
+    def nop(self, value):
+        pass
+    return prop.setter(nop)

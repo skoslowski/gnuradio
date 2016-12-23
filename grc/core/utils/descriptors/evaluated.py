@@ -65,7 +65,7 @@ class Evaluated(object):
         if isinstance(value, str) and value.startswith('${') and value.endswith('}'):
             attribs[self.name_raw] = value[2:-1].strip()
         else:
-            attribs[self.name] = value
+            attribs[self.name] = type(self.default)(value)
 
     def __delete__(self, instance):
         attribs = instance.__dict__
@@ -98,3 +98,15 @@ class EvaluatedPInt(Evaluated):
             # todo: log
             return self.default
         return value
+
+
+class EvaluatedFlag(Evaluated):
+    def __init__(self, name=None):
+        super(EvaluatedFlag, self).__init__((bool, int), False, name)
+
+
+def setup_names(cls):
+    for name, attrib in cls.__dict__.items():
+        if isinstance(attrib, Evaluated):
+            attrib.name = name
+    return cls

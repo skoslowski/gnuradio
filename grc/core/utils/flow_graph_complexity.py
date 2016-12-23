@@ -1,5 +1,5 @@
 
-def calculate_flowgraph_complexity(flowgraph):
+def calculate(flowgraph):
     """ Determines the complexity of a flowgraph """
     dbal = 0
     for block in flowgraph.blocks:

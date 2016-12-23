@@ -32,7 +32,7 @@ from ..Constants import (
     LINE_SELECT_SENSITIVITY,
 )
 from ...core.Connection import Connection as CoreConnection
-from ...core.Element import nop_write
+from ...core.utils.descriptors import nop_write
 
 
 class Connection(CoreConnection, Drawable):

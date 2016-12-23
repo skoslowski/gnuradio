@@ -26,7 +26,8 @@ from gi.repository import Gtk, PangoCairo, Pango
 from . import colors
 from .drawable import Drawable
 from .. import Actions, Utils, Constants
-from ...core.Element import nop_write
+
+from ...core.utils.descriptors import nop_write
 from ...core.ports import Port as CorePort
 
 

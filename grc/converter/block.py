@@ -105,10 +105,10 @@ def convert_block_xml(node):
     data['outputs'] = [convert_port_xml(port_node, converter.to_python_dec)
                        for port_node in node.iterfind('source')] or no_value
 
-    data['checks'] = [dummy.to_mako(check_node.text)
+    data['checks'] = [converter.to_python_dec(check_node.text)
                       for check_node in node.iterfind('checks')] or no_value
     data['value'] = (
-        node.findtext('var_value') or
+        converter.to_python_dec(node.findtext('var_value')) or
         ('${ value }' if block_id.startswith('variable') else no_value)
     )
 

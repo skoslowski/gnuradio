@@ -20,7 +20,7 @@
 from os import path
 import tempfile
 
-from grc.core.Platform import Platform
+from grc.core.platform import Platform
 
 
 from gnuradio import gr

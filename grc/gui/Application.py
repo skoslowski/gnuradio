@@ -646,8 +646,9 @@ class Application(Gtk.Application):
             main.btwin.search_entry.grab_focus()
         elif action == Actions.OPEN_HIER:
             for b in flow_graph.selected_blocks():
-                if b._grc_source:
-                    main.new_page(b._grc_source, show=True)
+                grc_source = b.extra_data.get('grc_source', '')
+                if grc_source:
+                    main.new_page(b.grc_source, show=True)
         elif action == Actions.BUSSIFY_SOURCES:
             for b in flow_graph.selected_blocks():
                 b.bussify('source')

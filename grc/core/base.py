@@ -16,28 +16,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 import weakref
-import functools
 
-
-class lazy_property(object):
-
-    def __init__(self, func):
-        self.func = func
-        functools.update_wrapper(self, func)
-
-    def __get__(self, instance, owner):
-        if instance is None:
-            return self
-        value = self.func(instance)
-        setattr(instance, self.func.__name__, value)
-        return value
-
-
-def nop_write(prop):
-    """Make this a property with a nop setter"""
-    def nop(self, value):
-        pass
-    return prop.setter(nop)
+from .utils.descriptors import lazy_property
 
 
 class Element(object):
@@ -136,7 +116,7 @@ class Element(object):
 
     @lazy_property
     def parent_platform(self):
-        from .Platform import Platform
+        from .platform import Platform
         return self.get_parent_by_type(Platform)
 
     @lazy_property

@@ -21,7 +21,8 @@ from __future__ import absolute_import
 
 import collections
 
-from .Element import Element, lazy_property
+from .base import Element
+from .utils.descriptors import lazy_property
 
 
 class Connection(Element):

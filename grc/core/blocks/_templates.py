@@ -31,9 +31,17 @@ class MakoTemplates(dict):
 
     _template_cache = {}
 
-    def __init__(self, block, *args, **kwargs):
-        self.block = block
+    def __init__(self, _bind_to=None, *args, **kwargs):
+        self.instance = _bind_to
         dict.__init__(self, *args, **kwargs)
+
+    def __get__(self, instance, owner):
+        if instance is None or self.instance is not None:
+            return self
+        copy = self.__class__(_bind_to=instance, **self)
+        if getattr(instance.__class__, 'templates', None) is self:
+            setattr(instance, 'templates', copy)
+        return copy
 
     @classmethod
     def compile(cls, text):
@@ -54,14 +62,14 @@ class MakoTemplates(dict):
 
     def render(self, item):
         text = self[item] or ''
+        namespace = self.instance.namespace_templates
 
         try:
             if isinstance(text, list):
                 templates = (self._get_template(t) for t in text)
-                return [template.render(**self.block.namespace_templates)
-                        for template in templates]
+                return [template.render(**namespace) for template in templates]
             else:
                 template = self._get_template(text)
-                return template.render(**self.block.namespace_templates)
+                return template.render(**namespace)
         except Exception as error:
             raise TemplateError(error, text)

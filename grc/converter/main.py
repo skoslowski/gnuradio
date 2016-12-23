@@ -35,6 +35,8 @@ excludes = [
     'wxgui',
     'epy_block.xml',
     'dummy.xml',
+    'variable_struct.xml',  # todo: re-implement as class
+    'digital_constellation',  # todo: fix template
 ]
 
 

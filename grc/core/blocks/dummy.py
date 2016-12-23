@@ -17,20 +17,24 @@
 
 from __future__ import absolute_import
 
-from .block import Block
+from . import Block, register_build_in
 
 
+@register_build_in
 class DummyBlock(Block):
 
     is_dummy_block = True
-    build_in_param_keys = 'id alias affinity minoutbuf maxoutbuf comment'
 
-    def __init__(self, parent, id, missing_block_id, params_n):
-        super(DummyBlock, self).__init__(parent=parent, id=missing_block_id, label='Missing Block')
+    label = 'Missing Block'
+    key = '_dummy'
+
+    def __init__(self, parent, missing_block_id, param_ids):
+        self.key = missing_block_id
+        super(DummyBlock, self).__init__(parent=parent)
+
         param_factory = self.parent_platform.make_param
-        for param_n in params_n:
-            param_id = param_n['id']
-            self.params.setdefault(param_id, param_factory(self, key=param_id, label=param_id, dtype='string'))
+        for param_id in param_ids:
+            self.params.setdefault(param_id, param_factory(parent=self, id=param_id, dtype='string'))
 
     def is_valid(self):
         return False

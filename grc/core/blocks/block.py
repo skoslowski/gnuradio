@@ -29,8 +29,9 @@ from six.moves import range
 from ._templates import MakoTemplates
 from ._flags import Flags
 
-from .. Constants import ADVANCED_PARAM_TAB
-from .. Element import Element, lazy_property
+from ..Constants import ADVANCED_PARAM_TAB
+from ..base import Element
+from ..utils.descriptors import lazy_property
 
 
 def _get_elem(iterable, key):
@@ -53,9 +54,10 @@ class Block(Element):
     flags = Flags('')
     documentation = {'': ''}
 
+    value = None
     checks = []
 
-    templates = {}
+    templates = MakoTemplates()
     parameters_data = []
     inputs_data = []
     outputs_data = []
@@ -66,30 +68,9 @@ class Block(Element):
     def __init__(self, parent):
         """Make a new block from nested data."""
         super(Block, self).__init__(parent)
-
-        value = self.extra_data.get('value', '').strip()
-        if not value:
-            pass
-        elif value.startswith('${') and value.endswith('}'):
-            value = value[2:-1].strip()
-        else:
-            value = repr(value)
-        self.value = value
-
-        self._grc_source = self.extra_data.get('grc_source', '')
-        self.block_wrapper_path = self.extra_data.get('block_wrapper_path')
-
-        # end of args ########################################################
-
-        if self.is_virtual_or_pad or self.is_variable:
-            self.flags += Flags.DISABLE_BYPASS
-
-        self.templates = MakoTemplates(self, self.templates)
         self.params = self._init_params()
         self.sinks = self._init_ports(self.inputs_data, direction='sink')
         self.sources = self._init_ports(self.outputs_data, direction='source')
-
-        # end of sub args ####################################################
 
         self.active_sources = []  # on rewrite
         self.active_sinks = []  # on rewrite
@@ -133,7 +114,8 @@ class Block(Element):
             base_key = param_data.get('base_key', None)
             param_data_ext = base_params_n.get(base_key, {}).copy()
             param_data_ext.update(param_data)
-            params[param_id] = param_factory(self, **param_data_ext)
+
+            add_param(**param_data_ext)
             base_params_n[param_id] = param_data_ext
 
         add_param(id='comment', name='Comment', dtype='_multiline', hide='part',
@@ -256,7 +238,7 @@ class Block(Element):
 
     @property
     def name(self):
-        return self.params['id'].get_value()
+        return self.params['id'].value
 
     @lazy_property
     def is_virtual_or_pad(self):
@@ -272,7 +254,7 @@ class Block(Element):
 
     @property
     def comment(self):
-        return self.params['comment'].get_value()
+        return self.params['comment'].value
 
     @property
     def state(self):

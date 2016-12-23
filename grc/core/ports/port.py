@@ -20,19 +20,23 @@ from __future__ import absolute_import
 from . import _virtual_connections
 
 from .. import Constants
-from ..Element import Element, lazy_property
-from ..eval import Evaluated, EvaluatedEnum, EvaluatedPInt
+from ..base import Element
+from ..utils.descriptors import (
+    EvaluatedFlag, EvaluatedEnum, EvaluatedPInt,
+    setup_names, lazy_property
+)
 
 
+@setup_names
 class Port(Element):
 
     is_port = True
 
-    dtype = EvaluatedEnum(list(Constants.TYPE_TO_SIZEOF.keys()), default='', name='dtype')
-    vlen = EvaluatedPInt(name='vlen')
-    multiplicity = EvaluatedPInt(name='multiplicity')
-    hidden = Evaluated((bool, int), default=False, name='hidden')
-    optional = Evaluated((bool, int), default=False, name='optional')
+    dtype = EvaluatedEnum(list(Constants.TYPE_TO_SIZEOF.keys()), default='')
+    vlen = EvaluatedPInt()
+    multiplicity = EvaluatedPInt()
+    hidden = EvaluatedFlag()
+    optional = EvaluatedFlag()
 
     def __init__(self, parent, direction, id, label='', domain=Constants.DEFAULT_DOMAIN, dtype='',
                  vlen='', multiplicity=1, optional=False, hide='', **_):
