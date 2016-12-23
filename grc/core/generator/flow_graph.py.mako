@@ -121,15 +121,15 @@ gr.io_signature(0, 0, 0)\
     #elif len(${io_sigs}) == 1
 gr.io_signature(1, 1, ${size_strs[0]})
     % else:
-gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
+gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(ize_strs)}])
     % endif
 </%def>
 
     def __init__(${param_str}):
         gr.hier_block2.__init__(
             self, "${ title }",
-            ${make_io_sig(n_sigs)},
-            ${make_io_sig(ut_sigs)},
+            ${make_io_sig(in_sigs)},
+            ${make_io_sig(out_sigs)},
         )
     % for pad in flow_graph.get_hier_block_message_io('in'):
         self.message_port_register_hier_in("${ pad['label'] }")
@@ -173,7 +173,7 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
         ########################################################
 % endif
 % for var in variables:
-        ${indent(ar.get_var_make())}
+        ${indent(var.templates.render('var_make'))}
 % endfor
         % if blocks:
 
@@ -241,13 +241,13 @@ gr.io_signaturev(${len(o_sigs)}, ${len(o_sigs)}, [${', '.join(ize_strs)}])
     % if flow_graph.get_option('thread_safe_setters'):
         with self._lock:
             self.${id_} = ${id_}
-        % for callback in callbacks[d]:
-            ${indent(allback)}
+        % for callback in callbacks[id_]:
+            ${indent(callback)}
         % endfor
     % else:
         self.${id_} = ${id_}
-        % for callback in callbacks[d]:
-        ${indent(allback)}
+        % for callback in callbacks[id_]:
+        ${indent(callback)}
         % endfor
     % endif
 % endfor
