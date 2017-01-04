@@ -129,3 +129,34 @@ class FlowGraphProxy(object):  # TODO: move this in a refactored Generator
                 if not is_message_pad:
                     key_offset += len(pad.sinks) + len(pad.sources)
         return -1
+
+
+def get_hier_block_io(flow_graph, direction, domain=None):
+    """
+    Get a list of io ports for this flow graph.
+
+    Returns a list of dicts with: type, label, vlen, size, optional
+    """
+    pads = flow_graph.get_pad_sources() if direction in ('sink', 'in') else \
+        flow_graph.get_pad_sinks() if direction in ('source', 'out') else []
+    ports = []
+    for pad in pads:
+        type_param = pad.params['type']
+        master = {
+            'label': str(pad.params['label'].get_evaluated()),
+            'type': str(pad.params['type'].get_evaluated()),
+            'vlen': str(pad.params['vlen'].get_value()),
+            'size':  type_param.options.attributes[type_param.get_value()]['size'],
+            'optional': bool(pad.params['optional'].get_evaluated()),
+        }
+        num_ports = pad.params['num_streams'].get_evaluated()
+        if num_ports > 1:
+            for i in range(num_ports):
+                clone = master.copy()
+                clone['label'] += str(i)
+                ports.append(clone)
+        else:
+            ports.append(master)
+    if domain is not None:
+        ports = [p for p in ports if p.domain == domain]
+    return ports

@@ -47,5 +47,5 @@ def test_generator():
 
     assert flow_graph.is_valid()
 
-    generator = platform.Generator(flow_graph, out_dir)
+    generator = platform.Generator(flow_graph, path.join(path.dirname(__file__), 'resources'))
     generator.write()

@@ -2,18 +2,6 @@
 #!/usr/bin/env python2
 % endif
 # -*- coding: utf-8 -*-
-########################################################
-##Cheetah template - gnuradio_python
-##
-##@param imports the import statements
-##@param flow_graph the flow_graph
-##@param variables the variable blocks
-##@param parameters the parameter blocks
-##@param blocks the signal blocks
-##@param connections the connections
-##@param generate_options the type of flow graph
-##@param callbacks variable id map to callback strings
-########################################################
 <%def name="indent(code)">${ '\n        '.join(str(code).splitlines()) }</%def>
 """
 GNU Radio Python Flow Graph
@@ -30,10 +18,6 @@ Generated: ${ generated_time }
 
 % if generate_options == 'qt_gui':
 from distutils.version import StrictVersion
-% endif
-## Call XInitThreads as the _very_ first thing.
-## After some Qt import, it's too late
-% if generate_options == 'qt_gui':
 
 if __name__ == '__main__':
     import ctypes
@@ -61,7 +45,7 @@ ${imp}
 ########################################################
 <%
     class_name = flow_graph.get_option('id')
-    param_str = ', '.join(['self'] + ['%s=%s'%(param.name, param.get_make()) for param in parameters])
+    param_str = ', '.join(['self'] + ['%s=%s'%(param.name, param.templates.render('make')) for param in parameters])
 %>\
 % if generate_options == 'qt_gui':
 from gnuradio import qtgui
@@ -156,9 +140,9 @@ gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(ize_strs)}])
 ########################################################
 % if parameters:
 
-        ########################################################
+        ${'##################################################'}
         # Parameters
-        ########################################################
+        ${'##################################################'}
 % endif
 % for param in parameters:
         ${indent(param.get_var_make())}
@@ -168,20 +152,21 @@ gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(ize_strs)}])
 ########################################################
 % if variables:
 
-        ########################################################
+        ${'##################################################'}
         # Variables
-        ########################################################
+        ${'##################################################'}
 % endif
 % for var in variables:
         ${indent(var.templates.render('var_make'))}
 % endfor
         % if blocks:
 
-        ########################################################
+        ${'##################################################'}
         # Blocks
-        ########################################################
+        ${'##################################################'}
+        % endif
         % for blk, blk_make in blocks:
-        ${ indent(blk_make) }
+        ${ indent(blk_make.strip('\n')) }
 ##         % if 'alias' in blk.params and blk.params['alias'].get_evaluated():
 ##         (self.${blk.name}).set_block_alias("${blk.params['alias'].get_evaluated()}")
 ##         % endif
@@ -195,12 +180,11 @@ gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(ize_strs)}])
 ##         (self.${blk.name}).set_max_output_buffer(${blk.params['maxoutbuf'].get_evaluated()})
 ##         % endif
         % endfor
-        % endif
         % if connections:
 
-        ########################################################
+        ${'##################################################'}
         # Connections
-        ########################################################
+        ${'##################################################'}
         % for connection in connections:
         ${ connection.rstrip() }
         % endfor
@@ -227,30 +211,31 @@ gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(ize_strs)}])
             print >> sys.stderr, e
     % endif
 % endif
+##
+##
+##
+## Create Callbacks
+## Write a set method for this variable that calls the callbacks
 ########################################################
-##Create Callbacks
-##  Write a set method for this variable that calls the callbacks
-########################################################
-% for var in parameters + variables:
+    % for var in parameters + variables:
 
-    <% id_ = var.name %>
-    def get_${id_}(self):
-        return self.${id_}
+    def get_${ var.name }(self):
+        return self.${ var.name }
 
-    def set_${id_}(self, ${id_}):
-    % if flow_graph.get_option('thread_safe_setters'):
+    def set_${ var.name }(self, ${ var.name }):
+        % if flow_graph.get_option('thread_safe_setters'):
         with self._lock:
-            self.${id_} = ${id_}
-        % for callback in callbacks[id_]:
-            ${indent(callback)}
+            self.${ var.name } = ${ var.name }
+            % for callback in callbacks[var.name]:
+            ${ indent(callback) }
+            % endfor
+        % else:
+        self.${ var.name } = ${ var.name }
+        % for callback in callbacks[var.name]:
+        ${ indent(callback) }
         % endfor
-    % else:
-        self.${id_} = ${id_}
-        % for callback in callbacks[id_]:
-        ${indent(callback)}
-        % endfor
-    % endif
-% endfor
+        % endif
+    % endfor
 ########################################################
 ##Create Main
 ##  For top block code, generate a main routine.
@@ -258,41 +243,46 @@ gr.io_signaturev(${len(io_sigs)}, ${len(io_sigs)}, [${', '.join(ize_strs)}])
 ########################################################
 <%def name="make_default(type_, param)">
     % if type_ == 'eng_float':
-eng_notation.num_to_str(${param.get_make()})
+eng_notation.num_to_str(${param.templates.render('make')})
     % else:
-${param.get_make()}
+${param.templates.render('make')}
     % endif
-</%def>
-<%def name="make_short_id(param)">
-    <% short_id = param.params['short_id'].get_evaluated() %>
-    % if short_id:
-        <% short_id = '-' + short_id %>
-    % endif
-${short_id}\
-</%def>
+</%def>\
 % if not generate_options.startswith('hb'):
 <% params_eq_list = list() %>
 % if parameters:
 
-
+<% arg_parser_args = '' %>\
 def argument_parser():
-    <% arg_parser_args = '' %>
     % if flow_graph.get_option('description'):
-    <% arg_parser_args = 'description=description' %>
-    description = ${repr(flow_graph.get_option('description'))}
+    <%
+        arg_parser_args = 'description=description'
+    %>description = ${repr(flow_graph.get_option('description'))}
     % endif
     parser = ArgumentParser(${arg_parser_args})
     % for param in parameters:
-        <% type_ = param.params['type'].get_value() %>
-        % if type_:
-            ${params_eq_list.append('%s=options.%s' % (param.name, param.name))}
+<%
+        switches = ['"--{}"'.format(param.name.replace('_', '-'))]
+        short_id = param.params['short_id'].get_value()
+        if short_id:
+            switches.insert(0, '"-{}"'.format(short_id))
+
+        type_ = param.params['type'].get_value()
+        if type_:
+            params_eq_list.append('%s=options.%s' % (param.name, param.name))
+
+        default = param.templates.render('make')
+        if type_ == 'eng_float':
+            default = eng_notation.num_to_str(default)
+        # FIXME:
+        if type_ == 'string':
+            type_ = 'str'
+    %>\
+    % if type_:
     parser.add_argument(
-        % if make_short_id(param):
-        "${make_short_id(param)}",
-        % endif
-        "--${param.name.replace('_', '-')}", dest="${param.name}", type=${type_}, default=${make_default(type_, param)},
+        ${ ', '.join(switches) }, dest="${param.name}", type=${type_}, default=${ default },
         help="Set ${param.params['label'].get_evaluated() or param.name} [default=%(default)r]")
-        % endif
+    % endif
     % endfor
     return parser
 % endif
@@ -307,8 +297,8 @@ def main(top_block_cls=${class_name}, options=None):
     if gr.enable_realtime_scheduling() != gr.RT_OK:
         print "Error: failed to enable real-time scheduling."
     % endif
-
     % if generate_options == 'qt_gui':
+
     if StrictVersion("4.5.0") <= StrictVersion(Qt.qVersion()) < StrictVersion("5.0.0"):
         style = gr.prefs().get_string('qtgui', 'style', 'raster')
         Qt.QApplication.setGraphicsSystem(style)

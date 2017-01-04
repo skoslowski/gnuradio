@@ -100,12 +100,12 @@ class Param(Element):
         return TemplateArg(self)
 
     def _init_options(self, values, labels, attributes):
-        """Create the Option objects from the n data"""
+        """parse option and option attributes"""
         options = collections.OrderedDict()
         options.attributes = collections.defaultdict(dict)
 
         padding = [''] * max(len(values), len(labels))
-        attributes = {key: values + padding for key, value in six.iteritems(attributes)}
+        attributes = {key: value + padding for key, value in six.iteritems(attributes)}
 
         for i, option in enumerate(values):
             # Test against repeated keys
@@ -166,7 +166,6 @@ class Param(Element):
         try:
             self._evaluated = self.evaluate()
         except Exception as e:
-            print(e)
             self.add_error_message(str(e))
 
     def validate(self):
