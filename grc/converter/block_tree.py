@@ -18,38 +18,24 @@
 Converter for legacy block tree definitions in XML format
 """
 
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, print_function
 
-from os import path
-
-import yaml
-from lxml import etree
-
-from .yaml_output import GRCDumper
+from . import xml, yaml
 
 
-BLOCK_TREE_DTD = etree.DTD(path.join(path.dirname(__file__), 'block_tree.dtd'))
-
-
-def from_xml(xml_file):
+def from_xml(filename):
     """Load block tree description from xml file"""
+    element, version_info = xml.load(filename, 'block_tree.dtd')
 
     try:
-        xml = etree.parse(xml_file).getroot()
-        BLOCK_TREE_DTD.validate(xml)
-    except etree.LxmlError:
-        return
-    try:
-        data = convert_category_node(xml)
+        data = convert_category_node(element)
     except NameError:
-        print('Broken XML', xml_file)
-        raise
+        raise ValueError('Conversion failed', filename)
 
     return data
 
 
-def dump(data, fp):
-    fp.write(yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper))
+dump = yaml.dump
 
 
 def convert_category_node(node):

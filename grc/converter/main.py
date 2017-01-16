@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import
 
+from codecs import open
 import json
 import logging
 import os
@@ -59,7 +60,7 @@ class Converter(object):
         self._force = force
 
         try:
-            with open(self.cache_file) as cache_file:
+            with open(self.cache_file, encoding='utf-8') as cache_file:
                 self.cache = byteify(json.load(cache_file))
         except (IOError, ValueError):
             self.cache = {}
@@ -85,7 +86,7 @@ class Converter(object):
 
         if need_cache_write:
             logger.info('Saving %d entries to json cache', len(self.cache))
-            with open(self.cache_file, 'w') as cache_file:
+            with open(self.cache_file, 'w', encoding='utf-8') as cache_file:
                 json.dump(self.cache, cache_file)
 
     def load_block_xml(self, xml_file):
@@ -105,7 +106,7 @@ class Converter(object):
             logger.warning('block_id and filename differ')
         self.cache[yml_file] = data
 
-        with open(yml_file, 'w') as yml_file:
+        with open(yml_file, 'w', encoding='utf-8') as yml_file:
             block.dump(data, yml_file)
         return True
 
@@ -121,7 +122,7 @@ class Converter(object):
         data = block_tree.from_xml(xml_file)
         self.cache[yml_file] = data
 
-        with open(yml_file, 'w') as yml_file:
+        with open(yml_file, 'w', encoding='utf-8') as yml_file:
             block_tree.dump(data, yml_file)
         return True
 

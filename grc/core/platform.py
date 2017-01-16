@@ -17,6 +17,7 @@
 
 from __future__ import absolute_import, print_function
 
+from codecs import open
 from collections import namedtuple
 import glob
 import os
@@ -149,8 +150,8 @@ class Platform(Element):
             try:
                 data = converter.cache[file_path]
             except KeyError:
-                with open(file_path) as fp:
-                    data = yaml.load(fp)
+                with open(file_path, encoding='utf-8') as fp:
+                    data = yaml.safe_load(fp)
 
             if file_path.endswith('.block.yml'):
                 loader = self.load_block_description

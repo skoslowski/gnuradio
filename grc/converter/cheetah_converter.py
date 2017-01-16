@@ -21,8 +21,6 @@ import collections
 import re
 import string
 
-from . import yaml_output
-
 delims = {'(': ')', '[': ']', '{': '}', '': ', #\\*:'}
 identifier_start = '_' + string.ascii_letters + ''.join(delims.keys())
 string_delims = '"\''
@@ -109,7 +107,7 @@ class Converter(object):
                 expr = self.convert_inline_conditional(expr, spec)
             return self.convert_hard(expr, spec)
         except ValueError:
-            return yaml_output.Cheetah(expr)
+            return 'Cheetah! ' + expr
 
     def convert_simple(self, expr, spec=Python):
         match = cheetah_substitution.match(expr)

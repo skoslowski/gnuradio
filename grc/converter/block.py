@@ -26,39 +26,28 @@ Converter for legacy block definitions in XML format
 from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
-import itertools
-from os import path
+from itertools import chain
 
-import yaml
-from lxml import etree
-
-from . import cheetah_converter
-from .yaml_output import ListFlowing, MultiLineString, GRCDumper
+from . import cheetah_converter, xml, yaml
 
 
-BLOCK_DTD = etree.DTD(path.join(path.dirname(__file__), 'block.dtd'))
 reserved_block_keys = ('import', )  # todo: add more keys
 
 
-def from_xml(xml_file):
+def from_xml(filename):
     """Load block description from xml file"""
+    element, version_info = xml.load(filename, 'block.dtd')
 
     try:
-        xml = etree.parse(xml_file).getroot()
-        BLOCK_DTD.validate(xml)
-    except etree.LxmlError:
-        return
-    try:
-        data = convert_block_xml(xml)
+        data = convert_block_xml(element)
     except NameError:
-        print('Broken XML', xml_file)
-        raise
+        raise ValueError('Conversion failed', filename)
 
     return data
 
 
-def dump(data, fp):
-    out = yaml.dump(data, default_flow_style=False, indent=4, Dumper=GRCDumper)
+def dump(data, stream):
+    out = yaml.dump(data)
 
     replace = [
         ('parameters:', '\nparameters:'),
@@ -70,7 +59,7 @@ def dump(data, fp):
     for r in replace:
         out = out.replace(*r)
 
-    fp.write(out)
+    stream.write(out)
 
 
 no_value = object()
@@ -117,7 +106,7 @@ def convert_block_xml(node):
     docs = node.findtext('doc')
     if docs:
         docs = docs.strip().replace('\\\n', '')
-        data['documentation'] = MultiLineString(docs)
+        data['documentation'] = yaml.MultiLineString(docs)
 
     data = OrderedDict((key, value) for key, value in data.items() if value is not no_value)
     auto_hide_params_for_item_sizes(data)
@@ -127,7 +116,7 @@ def convert_block_xml(node):
 def auto_hide_params_for_item_sizes(data):
     item_size_templates = []
     vlen_templates = []
-    for port in itertools.chain(*[data.get(direction, []) for direction in ['inputs', 'outputs']]):
+    for port in chain(*[data.get(direction, []) for direction in ['inputs', 'outputs']]):
         for key in ['dtype', 'multiplicity']:
             item_size_templates.append(str(port.get(key, '')))
         vlen_templates.append(str(port.get('vlen', '')))
@@ -147,7 +136,7 @@ def convert_templates(node, convert, block_id=''):
     imports = '\n'.join(convert(import_node.text)
                         for import_node in node.iterfind('import'))
     if '\n' in imports:
-        imports = MultiLineString(imports)
+        imports = yaml.MultiLineString(imports)
     templates['imports'] = imports or no_value
 
     templates['var_make'] = convert(node.findtext('var_make') or '') or no_value
@@ -156,7 +145,7 @@ def convert_templates(node, convert, block_id=''):
     if make:
         check_mako_template(block_id, make)
     if '\n' in make:
-        make = MultiLineString(make)
+        make = yaml.MultiLineString(make)
     templates['make'] = make or no_value
 
     templates['callbacks'] = [
@@ -175,13 +164,13 @@ def convert_param_xml(node, convert):
     param['dtype'] = convert(node.findtext('type') or '')
     param['default'] = node.findtext('value') or no_value
 
-    options = ListFlowing(on.findtext('key') for on in node.iterfind('option'))
-    option_labels = ListFlowing(on.findtext('name') for on in node.iterfind('option'))
+    options = yaml.ListFlowing(on.findtext('key') for on in node.iterfind('option'))
+    option_labels = yaml.ListFlowing(on.findtext('name') for on in node.iterfind('option'))
     param['options'] = options or no_value
     if not all(str(o).title() == l for o, l in zip(options, option_labels)):
         param['option_labels'] = option_labels
 
-    attributes = defaultdict(ListFlowing)
+    attributes = defaultdict(yaml.ListFlowing)
     for option_n in node.iterfind('option'):
         for opt_n in option_n.iterfind('opt'):
             key, value = opt_n.text.split(':', 2)
