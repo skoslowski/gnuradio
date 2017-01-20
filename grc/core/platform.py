@@ -22,18 +22,19 @@ from collections import namedtuple
 import glob
 import os
 import logging
+from itertools import chain
 
 import six
 from six.moves import range
-import yaml
 
 from . import (
-    ParseXML, Messages, Constants,
+    Messages, Constants,
     blocks, ports, errors, utils, schema_checker
 )
 
 from .Config import Config
 from .base import Element
+from .io import yaml
 from .generator import Generator
 from .FlowGraph import FlowGraph
 from .Connection import Connection
@@ -317,22 +318,63 @@ class Platform(Element):
     ##############################################
     # Access
     ##############################################
-    def parse_flow_graph(self, flow_graph_file):
+    def parse_flow_graph(self, filename):
         """
         Parse a saved flow graph file.
         Ensure that the file exists, and passes the dtd check.
 
         Args:
-            flow_graph_file: the flow graph file
+            filename: the flow graph file
 
         Returns:
             nested data
         @throws exception if the validation fails
         """
-        flow_graph_file = flow_graph_file or self.config.default_flow_graph
-        open(flow_graph_file, 'r').close()  # Test open
-        ParseXML.validate_dtd(flow_graph_file, Constants.FLOW_GRAPH_DTD)
-        return ParseXML.from_file(flow_graph_file)
+        filename = filename or self.config.default_flow_graph
+        with open(filename, encoding='utf-8') as fp:
+            is_xml = '<flow_graph>' in fp.read(100)
+            fp.seek(0)
+            # todo: try
+            if not is_xml:
+                data = yaml.safe_load(fp)
+                validator = schema_checker.Validator(schema_checker.FLOW_GRAPH_SCHEME)
+                validator.run(data)
+            else:
+                Messages.send('>>> Converting from XML\n')
+                from ..converter.flow_graph import from_xml
+                data = from_xml(fp)
+
+        return data
+
+    def save_flow_graph(self, filename, flow_graph):
+        data = flow_graph.export_data()
+
+        try:
+            data['connections'] = [yaml.ListFlowing(i) for i in data['connections']]
+        except KeyError:
+            pass
+
+        try:
+            for d in chain([data['options']], data['blocks']):
+                d['states']['coordinate'] = yaml.ListFlowing(d['states']['coordinate'])
+                for param_id, value in list(d['parameters'].items()):
+                    if value == '':
+                        d['parameters'].pop(param_id)
+        except KeyError:
+            pass
+
+        out = yaml.dump(data, indent=2)
+
+        replace = [
+            ('blocks:', '\nblocks:'),
+            ('connections:', '\nconnections:'),
+            ('metadata:', '\nmetadata:'),
+        ]
+        for r in replace:
+            out = out.replace(*r)
+
+        with open(filename, 'w', encoding='utf-8') as fp:
+            fp.write(out)
 
     def get_generate_options(self):
         for param in self.block_classes['options'].parameters_data:
@@ -364,8 +406,12 @@ class Platform(Element):
         None: Param,  # default
     }
 
-    def make_flow_graph(self):
-        return self.FlowGraph(parent=self)
+    def make_flow_graph(self, from_filename=None):
+        fg = self.FlowGraph(parent=self)
+        if from_filename:
+            data = self.parse_flow_graph(from_filename)
+            fg.import_data(data)
+        return fg
 
     def new_block_class(self, block_id, **data):
         return blocks.build(block_id, **data)

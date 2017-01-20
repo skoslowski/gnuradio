@@ -45,7 +45,7 @@ class Block(CoreBlock, Drawable):
         """
         super(self.__class__, self).__init__(parent, **n)
 
-        self.states.update(_coordinate=(0, 0), _rotation=0)
+        self.states.update(coordinate=(0, 0), rotation=0)
         self.width = self.height = 0
         Drawable.__init__(self)  # needs the states and initial sizes
 
@@ -68,7 +68,7 @@ class Block(CoreBlock, Drawable):
         Returns:
             the coordinate tuple (x, y) or (0, 0) if failure
         """
-        return Utils.scale(self.states['_coordinate'])
+        return Utils.scale(self.states['coordinate'])
 
     @coordinate.setter
     def coordinate(self, coor):
@@ -85,7 +85,7 @@ class Block(CoreBlock, Drawable):
                 Utils.align_to_grid(coor[0] + offset_x) - offset_x,
                 Utils.align_to_grid(coor[1] + offset_y) - offset_y
             )
-        self.states['_coordinate'] = coor
+        self.states['coordinate'] = coor
 
     @property
     def rotation(self):
@@ -95,7 +95,7 @@ class Block(CoreBlock, Drawable):
         Returns:
             the rotation in degrees or 0 if failure
         """
-        return self.states['_rotation']
+        return self.states['rotation']
 
     @rotation.setter
     def rotation(self, rot):
@@ -105,7 +105,7 @@ class Block(CoreBlock, Drawable):
         Args:
             rot: the rotation in degrees
         """
-        self.states['_rotation'] = rot
+        self.states['rotation'] = rot
 
     def _update_colors(self):
         self._bg_color = (

@@ -18,7 +18,6 @@
 from __future__ import print_function
 
 import six
-import types
 
 from .utils import Message, Spec
 

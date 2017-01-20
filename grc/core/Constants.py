@@ -23,12 +23,10 @@ import os
 import stat
 
 import numpy
-import six
+
 
 # Data files
 DATA_DIR = os.path.dirname(__file__)
-FLOW_GRAPH_DTD = os.path.join(DATA_DIR, 'flow_graph.dtd')
-BLOCK_TREE_DTD = os.path.join(DATA_DIR, 'block_tree.dtd')
 BLOCK_DTD = os.path.join(DATA_DIR, 'block.dtd')
 DEFAULT_FLOW_GRAPH = os.path.join(DATA_DIR, 'default_flow_graph.grc')
 DEFAULT_HIER_BLOCK_LIB_DIR = os.path.expanduser('~/.grc_gnuradio')

@@ -16,8 +16,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from os import path
+import sys
 
-from grc.converter import flow_graph, yaml
+from grc.converter import flow_graph
 
 
 def test_flow_graph_converter():
@@ -25,6 +26,14 @@ def test_flow_graph_converter():
 
     data = flow_graph.from_xml(filename)
 
-    out = yaml.dump(data)
+    flow_graph.dump(data, sys.stdout)
 
-    print(out)
+
+def test_flow_graph_converter_with_fp():
+    filename = path.join(path.dirname(__file__), 'resources', 'test_compiler.grc')
+
+    with open(filename) as fp:
+        data = flow_graph.from_xml(fp)
+
+    flow_graph.dump(data, sys.stdout)
+

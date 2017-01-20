@@ -55,18 +55,20 @@ outputs:
 
 templates:
     make: blocks.complex_to_mag_squared(${ vlen })
+    
+file_format: 1
 """
 
 
 def test_min():
     checker = Validator(BLOCK_SCHEME)
-    assert checker.run({'id': 'test'})
-    assert not checker.run({'name': 'test'})
+    assert checker.run({'id': 'test', 'file_format': 1}), checker.messages
+    assert not checker.run({'name': 'test', 'file_format': 1})
 
 
 def test_extra_keys():
     checker = Validator(BLOCK_SCHEME)
-    assert checker.run({'id': 'test', 'abcdefg': 'nonsense'})
+    assert checker.run({'id': 'test', 'abcdefg': 'nonsense', 'file_format': 1})
     assert checker.messages == [('block', 'warn', "Ignoring extra key 'abcdefg'")]
 
 

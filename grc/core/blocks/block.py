@@ -75,7 +75,7 @@ class Block(Element):
         self.active_sources = []  # on rewrite
         self.active_sinks = []  # on rewrite
 
-        self.states = {'_enabled': True}
+        self.states = {'state': True}
 
     def _init_params(self):
         is_dsp_block = not self.flags.not_dsp
@@ -126,9 +126,12 @@ class Block(Element):
         ports = []
         port_factory = self.parent_platform.make_port
         port_ids = set()
-        stream_port_ids = itertools.count()
+
+        def make_stream_port_id(_pool=itertools.count()):
+            return {'sink': 'in', 'source': 'out'}[direction] + str(next(_pool))
+
         for i, port_data in enumerate(ports_n):
-            port_id = port_data.setdefault('id', str(next(stream_port_ids)))
+            port_id = port_data.setdefault('id', make_stream_port_id())
             if port_id in port_ids:
                 raise Exception('Port id "{}" already exists in {}s'.format(port_id, direction))
             port_ids.add(port_id)
@@ -259,19 +262,13 @@ class Block(Element):
     @property
     def state(self):
         """Gets the block's current state."""
-        try:
-            return self.STATE_LABELS[int(self.states['_enabled'])]
-        except ValueError:
-            return 'enabled'
+        state = self.states['state']
+        return state if state in self.STATE_LABELS else 'enabled'
 
     @state.setter
     def state(self, value):
         """Sets the state for the block."""
-        try:
-            encoded = self.STATE_LABELS.index(value)
-        except ValueError:
-            encoded = 1
-        self.states['_enabled'] = encoded
+        self.states['state'] = value
 
     # Enable/Disable Aliases
     @property
@@ -383,43 +380,35 @@ class Block(Element):
         Returns:
             a nested data odict
         """
-        n = collections.OrderedDict()
-        n['key'] = self.key
+        data = collections.OrderedDict()
+        if self.key != 'options':
+            data['name'] = self.name
+            data['id'] = self.key
+        data['parameters'] = collections.OrderedDict(sorted(
+            (param_id, param.value) for param_id, param in self.params.items()
+            if param_id != 'id'
+        ))
+        data['states'] = collections.OrderedDict(sorted(self.states.items()))
+        return data
 
-        params = (param.export_data() for param in six.itervalues(self.params))
-        states = (collections.OrderedDict([('key', key), ('value', repr(value))])
-                  for key, value in six.iteritems(self.states))
-        n['param'] = sorted(itertools.chain(states, params), key=lambda p: p['key'])
-        return n
-
-    def import_data(self, n):
+    def import_data(self, name, states, parameters, **_):
         """
         Import this block's params from nested data.
         Any param keys that do not exist will be ignored.
         Since params can be dynamically created based another param,
         call rewrite, and repeat the load until the params stick.
-        This call to rewrite will also create any dynamic ports
-        that are needed for the connections creation phase.
-
-        Args:
-            n: the nested data odict
         """
-        param_data = {p['key']: p['value'] for p in n.get('param', [])}
-
-        for param_id in self.states:
-            try:
-                self.states[param_id] = ast.literal_eval(param_data.pop(param_id))
-            except (KeyError, SyntaxError, ValueError):
-                pass
+        self.params['id'].value = name
+        self.states.update(states)
 
         def get_hash():
             return hash(tuple(hash(v) for v in self.params.values()))
 
         pre_rewrite_hash = -1
         while pre_rewrite_hash != get_hash():
-            for param_id, value in six.iteritems(param_data):
+            for key, value in six.iteritems(parameters):
                 try:
-                    self.params[param_id].set_value(value)
+                    self.params[key].set_value(value)
                 except KeyError:
                     continue
             # Store hash and call rewrite

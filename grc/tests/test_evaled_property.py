@@ -99,6 +99,6 @@ def test_evaled_enum():
 
 def test_class_access():
     a = A()
-    a.foo = 'meme'
+    a.foo = '${ meme }'
     descriptor = getattr(a.__class__, 'foo')
     assert descriptor.name_raw == '_foo'

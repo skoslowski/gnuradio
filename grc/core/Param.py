@@ -399,18 +399,3 @@ class Param(Element):
                 return '(%s)' % v
         else:
             return v
-
-    ##############################################
-    # Import/Export Methods
-    ##############################################
-    def export_data(self):
-        """
-        Export this param's key/value.
-
-        Returns:
-            a nested data odict
-        """
-        n = collections.OrderedDict()
-        n['key'] = self.key
-        n['value'] = self.get_value()
-        return n

@@ -20,18 +20,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import, print_function
 
+import logging
 import os
 import subprocess
-import logging
 
 from gi.repository import Gtk, GObject
 
-from . import Dialogs, Actions, Executor, FileDialogs, Utils
+from . import Constants, Dialogs, Actions, Executor, FileDialogs, Utils
 from .MainWindow import MainWindow
-from .ParserErrorsDialog import ParserErrorsDialog
+# from .ParserErrorsDialog import ParserErrorsDialog
 from .PropsDialog import PropsDialog
 
-from ..core import ParseXML, Messages
+from ..core import Messages
 
 
 log = logging.getLogger(__name__)
@@ -165,9 +165,9 @@ class Application(Gtk.Application):
                 action.set_sensitive(True)
                 if hasattr(action, 'load_from_preferences'):
                     action.load_from_preferences()
-            if ParseXML.xml_failures:
-                Messages.send_xml_errors_if_any(ParseXML.xml_failures)
-                Actions.XML_PARSER_ERRORS_DISPLAY.set_sensitive(True)
+            # if ParseXML.xml_failures:
+            #     Messages.send_xml_errors_if_any(ParseXML.xml_failures)
+            #     Actions.XML_PARSER_ERRORS_DISPLAY.set_sensitive(True)
             self.init = True
         elif action == Actions.APPLICATION_QUIT:
             if main.close_pages():
@@ -496,7 +496,8 @@ class Application(Gtk.Application):
         # View Parser Errors
         ##################################################
         elif action == Actions.XML_PARSER_ERRORS_DISPLAY:
-            ParserErrorsDialog(ParseXML.xml_failures).run()
+            # ParserErrorsDialog(ParseXML.xml_failures).run()
+            pass
         ##################################################
         # Undo/Redo
         ##################################################
@@ -545,7 +546,7 @@ class Application(Gtk.Application):
             #otherwise try to save
             else:
                 try:
-                    ParseXML.to_file(flow_graph.export_data(), page.file_path)
+                    self.platform.save_flow_graph(page.file_path, flow_graph)
                     flow_graph.grc_file_path = page.file_path
                     page.saved = True
                 except IOError:
@@ -566,14 +567,14 @@ class Application(Gtk.Application):
                 else:
                     dup_file_path = page.get_file_path()
                     dup_file_name = '.'.join(dup_file_path.split('.')[:-1]) + "_copy" # Assuming .grc extension at the end of file_path
-                    dup_file_path_temp = dup_file_name+'.grc'
+                    dup_file_path_temp = dup_file_name + Constants.FILE_EXTENSION
                     count = 1
                     while os.path.exists(dup_file_path_temp):
-                        dup_file_path_temp = dup_file_name+'('+str(count)+').grc'
+                        dup_file_path_temp = '{}({}){}'.format(dup_file_name, count, Constants.FILE_EXTENSION)
                         count += 1
                     dup_file_path_user = FileDialogs.SaveFlowGraph(main, dup_file_path_temp).run()
                     if dup_file_path_user is not None:
-                        ParseXML.to_file(flow_graph.export_data(), dup_file_path_user)
+                        self.platform.save_flow_graph(dup_file_path_user, flow_graph)
                         Messages.send('Saved Copy to: "' + dup_file_path_user + '"\n')
             except IOError:
                 Messages.send_fail_save("Can not create a copy of the flowgraph\n")
@@ -634,9 +635,9 @@ class Application(Gtk.Application):
         elif action == Actions.RELOAD_BLOCKS:
             self.platform.build_library()
             main.btwin.repopulate()
-            Actions.XML_PARSER_ERRORS_DISPLAY.set_sensitive(bool(
-                ParseXML.xml_failures))
-            Messages.send_xml_errors_if_any(ParseXML.xml_failures)
+            #todo: implement parser error dialog for YAML
+            # Actions.XML_PARSER_ERRORS_DISPLAY.set_sensitive(bool(ParseXML.xml_failures))
+            # Messages.send_xml_errors_if_any(ParseXML.xml_failures)
             # Force a redraw of the graph, by getting the current state and re-importing it
             main.update_pages()
 

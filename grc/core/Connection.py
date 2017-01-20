@@ -19,8 +19,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 from __future__ import absolute_import
 
-import collections
-
 from .base import Element
 from .utils.descriptors import lazy_property
 
@@ -119,9 +117,7 @@ class Connection(Element):
         Returns:
             a nested data odict
         """
-        n = collections.OrderedDict()
-        n['source_block_id'] = self.source_block.name
-        n['sink_block_id'] = self.sink_block.name
-        n['source_key'] = self.source_port.key
-        n['sink_key'] = self.sink_port.key
-        return n
+        return (
+            self.source_block.name, self.source_port.key,
+            self.sink_block.name, self.sink_port.key
+        )

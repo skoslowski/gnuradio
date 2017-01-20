@@ -28,12 +28,12 @@ class DummyBlock(Block):
     label = 'Missing Block'
     key = '_dummy'
 
-    def __init__(self, parent, missing_block_id, param_ids):
+    def __init__(self, parent, missing_block_id, parameters, **_):
         self.key = missing_block_id
         super(DummyBlock, self).__init__(parent=parent)
 
         param_factory = self.parent_platform.make_param
-        for param_id in param_ids:
+        for param_id in parameters:
             self.params.setdefault(param_id, param_factory(parent=self, id=param_id, dtype='string'))
 
     def is_valid(self):

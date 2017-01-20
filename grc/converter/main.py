@@ -53,7 +53,8 @@ class Converter(object):
 
         converter_module_path = path.dirname(__file__)
         self._converter_mtime = max(path.getmtime(path.join(converter_module_path, module))
-                                    for module in os.listdir(converter_module_path))
+                                    for module in os.listdir(converter_module_path)
+                                    if not module.endswith('flow_graph.py'))
 
         self.cache_file = os.path.join(self.output_dir, '_cache.json')
         self.cache = {}
