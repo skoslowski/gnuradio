@@ -223,6 +223,13 @@ class Platform(Element):
     # region loaders
     def load_block_description(self, data, file_path):
         log = logger.getChild('block_loader')
+
+        # don't load future block format versions
+        file_format = data['file_format']
+        if file_format < 1 or file_format > Constants.BLOCK_DESCRIPTION_FILE_FORMAT_VERSION:
+            log.error('Unknown format version %d in %s', file_format, file_path)
+            return
+
         block_id = data.pop('id').rstrip('_')
 
         if block_id in self.block_classes_build_in:

@@ -51,7 +51,7 @@ BLOCK_SCHEME = expand(
 
     documentation=str_,
 
+    file_format=Spec(types=int, required=True, item_scheme=None),
+
     block_wrapper_path=str_,  # todo: rename/remove
-    grc_source=str_,  # todo: rename/remove
-    param_tab_order=(list, str_)  # todo: rename/remove
 )
