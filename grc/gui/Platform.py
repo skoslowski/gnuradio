@@ -25,6 +25,7 @@ import os
 from .Config import Config
 from . import canvas
 from ..core.platform import Platform as CorePlatform
+from ..core.utils.backports import ChainMap
 
 
 class Platform(CorePlatform):
@@ -68,6 +69,8 @@ class Platform(CorePlatform):
 
     block_classes_build_in = {key: canvas.Block.make_cls_with_base(cls)
                               for key, cls in CorePlatform.block_classes_build_in.items()}
+    block_classes = ChainMap({}, block_classes_build_in)
+
     port_classes = {key: canvas.Port.make_cls_with_base(cls)
                     for key, cls in CorePlatform.port_classes.items()}
     param_classes = {key: canvas.Param.make_cls_with_base(cls)

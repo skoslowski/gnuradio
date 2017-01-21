@@ -32,3 +32,5 @@ def register_build_in(cls):
     build_ins[cls.key] = cls
     return cls
 
+
+from . import dummy, embedded_python, virtual

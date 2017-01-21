@@ -61,7 +61,9 @@ class MakoTemplates(dict):
             return self.compile(text)
 
     def render(self, item):
-        text = self[item] or ''
+        text = self.get(item)
+        if not text:
+            return ''
         namespace = self.instance.namespace_templates
 
         try:

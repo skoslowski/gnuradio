@@ -19,6 +19,8 @@ from __future__ import absolute_import
 
 from itertools import chain
 
+from .. import blocks
+
 
 class LoopError(Exception):
     pass
@@ -57,7 +59,7 @@ def _sources_from_virtual_source_port(source_port, _traversed=None):
     block = source_port.parent_block
     flow_graph = source_port.parent_flowgraph
 
-    if not block.is_virtual_source():
+    if not isinstance(block, blocks.VirtualSource):
         return [source_port]  # nothing to resolve, we're done
 
     stream_id = block.params['stream_id'].value
@@ -66,7 +68,7 @@ def _sources_from_virtual_source_port(source_port, _traversed=None):
     # but in the future it may...
     connected_virtual_sink_blocks = (
         b for b in flow_graph.iter_enabled_blocks()
-        if b.is_virtual_sink() and b.params['stream_id'].value == stream_id
+        if isinstance(b, blocks.VirtualSink) and b.params['stream_id'].value == stream_id
     )
     source_ports_per_virtual_connection = (
         _sources_from_virtual_sink_port(b.sinks[0], _traversed)  # type: list
@@ -108,14 +110,14 @@ def _sinks_from_virtual_sink_port(sink_port, _traversed=None):
     block = sink_port.parent_block
     flow_graph = sink_port.parent_flowgraph
 
-    if not block.is_virtual_sink():
+    if not isinstance(block, blocks.VirtualSink):
         return [sink_port]
 
     stream_id = block.params['stream_id'].value
 
     connected_virtual_source_blocks = (
         b for b in flow_graph.iter_enabled_blocks()
-        if b.is_virtual_source() and b.params['stream_id'].value == stream_id
+        if isinstance(b, blocks.VirtualSource) and b.params['stream_id'].value == stream_id
     )
     sink_ports_per_virtual_connection = (
         _sinks_from_virtual_source_port(b.sources[0], _traversed)  # type: list

@@ -27,7 +27,7 @@ import collections
 import six
 from six.moves import builtins, filter, map, range, zip
 
-from . import Constants
+from . import Constants, blocks
 from .base import Element
 from .utils.descriptors import Evaluated, EvaluatedEnum, setup_names
 
@@ -361,14 +361,14 @@ class Param(Element):
         stream_ids = [
             block.params['stream_id'].value
             for block in self.parent_flowgraph.iter_enabled_blocks()
-            if block.is_virtual_sink()
+            if isinstance(block, blocks.VirtualSink)
             ]
         # Check that the virtual sink's stream id is unique
-        if self.parent_block.is_virtual_sink() and stream_ids.count(value) >= 2:
+        if isinstance(self.parent_block, blocks.VirtualSink) and stream_ids.count(value) >= 2:
             # Id should only appear once, or zero times if block is disabled
             raise Exception('Stream ID "{}" is not unique.'.format(value))
         # Check that the virtual source's steam id is found
-        elif self.parent_block.is_virtual_source() and value not in stream_ids:
+        elif isinstance(self.parent_block, blocks.VirtualSource) and value not in stream_ids:
             raise Exception('Stream ID "{}" is not found.'.format(value))
 
     def to_code(self):

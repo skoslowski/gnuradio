@@ -7,7 +7,7 @@ import time
 
 from mako.template import Template
 
-from .. import Messages
+from .. import Messages, blocks
 from ..Constants import TOP_BLOCK_FILE_MODE
 from .FlowGraphProxy import FlowGraphProxy
 from ..utils import expr_utils
@@ -235,7 +235,7 @@ class TopBlockGenerator(object):
 
         # Get the virtual blocks and resolve their connections
         connection_factory = fg.parent_platform.Connection
-        virtual = [c for c in connections if c.source_block.is_virtual_source()]
+        virtual = [c for c in connections if isinstance(c.source_block, blocks.VirtualSource)]
         for connection in virtual:
             sink = connection.sink_port
             for source in connection.source_port.resolve_virtual_source():

@@ -35,6 +35,8 @@ excludes = [
     'blks2',
     'wxgui',
     'epy_block.xml',
+    'virtual_sink.xml',
+    'virtual_source.xml',
     'dummy.xml',
     'variable_struct.xml',  # todo: re-implement as class
     'digital_constellation',  # todo: fix template
