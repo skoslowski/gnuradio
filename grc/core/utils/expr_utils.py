@@ -23,7 +23,7 @@ import string
 
 import six
 
-VAR_CHARS = string.letters + string.digits + '_'
+VAR_CHARS = string.ascii_letters + string.digits + '_'
 
 
 class graph(object):

@@ -571,7 +571,7 @@ class Application(Gtk.Application):
                     while os.path.exists(dup_file_path_temp):
                         dup_file_path_temp = dup_file_name+'('+str(count)+').grc'
                         count += 1
-                    dup_file_path_user = SaveFlowGraphFileDialog(dup_file_path_temp).run()
+                    dup_file_path_user = FileDialogs.SaveFlowGraph(main, dup_file_path_temp).run()
                     if dup_file_path_user is not None:
                         ParseXML.to_file(flow_graph.export_data(), dup_file_path_user)
                         Messages.send('Saved Copy to: "' + dup_file_path_user + '"\n')

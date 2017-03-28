@@ -80,7 +80,7 @@ class _ActionBase(object):
         global _used_mods_mask
 
         _all_actions_list.append(self)
-        for i in range(len(keypresses)/2):
+        for i in range(len(keypresses)//2):
             keyval, mod_mask = keypresses[i*2:(i+1)*2]
             # register this keypress
             if (keyval, mod_mask) in _actions_keypress_dict:
