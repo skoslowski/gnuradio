@@ -48,70 +48,80 @@ class HierBlockGenerator(TopBlockGenerator):
             a xml node tree
         """
         # Extract info from the flow graph
-        block_key = self._flow_graph.get_option('id')
+        block_id = self._flow_graph.get_option('id')
         parameters = self._flow_graph.get_parameters()
 
         def var_or_value(name):
             if name in (p.name for p in parameters):
-                return "$" + name
+                return "${" + name + " }"
             return name
 
         # Build the nested data
-        block_n = collections.OrderedDict()
-        block_n['name'] = self._flow_graph.get_option('title') or \
+        data = collections.OrderedDict()
+        data['id'] = block_id
+        data['label'] = (
+            self._flow_graph.get_option('title') or
             self._flow_graph.get_option('id').replace('_', ' ').title()
-        block_n['key'] = block_key
-        block_n['category'] = self._flow_graph.get_option('category')
-        block_n['import'] = "from {0} import {0}  # grc-generated hier_block".format(
+        )
+        data['category'] = self._flow_graph.get_option('category')
+
+        # Parameters
+        data['parameters'] = []
+        for param_block in parameters:
+            p = collections.OrderedDict()
+            p['id'] = param_block.name
+            p['label'] = param_block.params['label'].get_value() or param_block.name
+            p['dtype'] = 'raw'
+            p['value'] = param_block.params['value'].get_value()
+            p['hide'] = param_block.params['hide'].get_value()
+            data['param'].append(p)
+
+        # Ports
+        for direction in ('inputs', 'outputs'):
+            data[direction] = []
+            for port in get_hier_block_io(self._flow_graph, direction):
+                p = collections.OrderedDict()
+                if port.domain == Constants.GR_MESSAGE_DOMAIN:
+                    p['id'] = port.id
+                p['label'] = port.label
+                if port.domain != Constants.DEFAULT_DOMAIN:
+                    p['domain'] = port.domain
+                p['dtype'] = port.dtype
+                if port.domain != Constants.GR_MESSAGE_DOMAIN:
+                    p['vlen'] = var_or_value(port.vlen)
+                if port.optional:
+                    p['optional'] = True
+                data[direction].append(p)
+
+        t = data['templates'] = collections.OrderedDict()
+
+        t['import'] = "from {0} import {0}  # grc-generated hier_block".format(
             self._flow_graph.get_option('id'))
         # Make data
         if parameters:
-            block_n['make'] = '{cls}(\n    {kwargs},\n)'.format(
-                cls=block_key,
+            t['make'] = '{cls}(\n    {kwargs},\n)'.format(
+                cls=block_id,
                 kwargs=',\n    '.join(
                     '{key}=${key}'.format(key=param.name) for param in parameters
                 ),
             )
         else:
-            block_n['make'] = '{cls}()'.format(cls=block_key)
+            t['make'] = '{cls}()'.format(cls=block_id)
         # Callback data
-        block_n['callback'] = [
-            'set_{key}(${key})'.format(key=param.name) for param in parameters
+        t['callback'] = [
+            'set_{key}(${key})'.format(key=param_block.name) for param_block in parameters
         ]
 
-        # Parameters
-        block_n['param'] = list()
-        for param in parameters:
-            param_n = collections.OrderedDict()
-            param_n['name'] = param.params['label'].get_value() or param.name
-            param_n['key'] = param.name
-            param_n['value'] = param.params['value'].get_value()
-            param_n['type'] = 'raw'
-            param_n['hide'] = param.params['hide'].get_value()
-            block_n['param'].append(param_n)
-
-        # Sink/source ports
-        for direction in ('sink', 'source'):
-            block_n[direction] = list()
-            for port in self._flow_graph.get_hier_block_io(direction):
-                port_n = collections.OrderedDict()
-                port_n['name'] = port['label']
-                port_n['type'] = port['type']
-                if port['type'] != "message":
-                    port_n['vlen'] = var_or_value(port['vlen'])
-                if port['optional']:
-                    port_n['optional'] = '1'
-                block_n[direction].append(port_n)
 
         # Documentation
-        block_n['doc'] = "\n".join(field for field in (
+        data['doc'] = "\n".join(field for field in (
             self._flow_graph.get_option('author'),
             self._flow_graph.get_option('description'),
             self.file_path
         ) if field)
-        block_n['grc_source'] = str(self._flow_graph.grc_file_path)
+        data['grc_source'] = str(self._flow_graph.grc_file_path)
 
-        n = {'block': block_n}
+        n = {'block': data}
         return n
 
 
@@ -144,3 +154,43 @@ class QtHierBlockGenerator(HierBlockGenerator):
         )
 
         return {'block': block_n}
+
+
+def get_hier_block_io(flow_graph, direction, domain=None):
+    """
+    Get a list of io ports for this flow graph.
+
+    Returns a list of dicts with: type, label, vlen, size, optional
+    """
+    pads = flow_graph.get_pad_sources() if direction == 'inputs' else flow_graph.get_pad_sinks()
+
+    ports = []
+    for pad in pads:
+        for port in (pad.sources if direction == 'inputs' else pad.sinks):
+            if domain and port.domain != domain:
+                continue
+            yield port
+
+        type_param = pad.params['type']
+        master = {
+            'label': str(pad.params['label'].get_evaluated()),
+            'type': str(pad.params['type'].get_evaluated()),
+            'vlen': str(pad.params['vlen'].get_value()),
+            'size':  type_param.options.attributes[type_param.get_value()]['size'],
+            'optional': bool(pad.params['optional'].get_evaluated()),
+        }
+        if domain and pad.
+
+        num_ports = pad.params['num_streams'].get_evaluated()
+        if num_ports <= 1:
+            yield master
+        else:
+            for i in range(num_ports):
+                clone = master.copy()
+                clone['label'] += str(i)
+                ports.append(clone)
+        else:
+            ports.append(master)
+    if domain is not None:
+        ports = [p for p in ports if p.domain == domain]
+    return ports

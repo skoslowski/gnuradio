@@ -23,9 +23,6 @@ import tempfile
 from grc.core.platform import Platform
 
 
-from gnuradio import gr
-
-
 def test_generator():
     # c&p form compiler code.
     # todo: make this independent from installed GR
@@ -34,14 +31,12 @@ def test_generator():
 
     platform = Platform(
         name='GNU Radio Companion Compiler',
-        prefs=gr.prefs(),
-        version=gr.version(),
+        prefs=None,
+        version='0.0.0',
     )
     platform.build_library()
 
-    flow_graph = platform.make_flow_graph()
-    flow_graph.grc_file_path = grc_file
-    flow_graph.import_data(platform.parse_flow_graph(grc_file))
+    flow_graph = platform.make_flow_graph(grc_file)
     flow_graph.rewrite()
     flow_graph.validate()
 

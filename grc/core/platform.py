@@ -410,6 +410,7 @@ class Platform(Element):
         fg = self.FlowGraph(parent=self)
         if from_filename:
             data = self.parse_flow_graph(from_filename)
+            fg.grc_file_path = from_filename
             fg.import_data(data)
         return fg
 
