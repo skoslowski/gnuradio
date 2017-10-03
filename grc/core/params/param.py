@@ -19,24 +19,17 @@ from __future__ import absolute_import
 
 import ast
 import numbers
-import re
 import collections
 import textwrap
 
 import six
-from six.moves import builtins, range
+from six.moves import range
 
-from .. import Constants, blocks
+from . import dtypes
+
+from .. import Constants
 from ..base import Element
 from ..utils.descriptors import Evaluated, EvaluatedEnum, setup_names
-
-# Blacklist certain ids, its not complete, but should help
-ID_BLACKLIST = ['self', 'options', 'gr', 'math', 'firdes'] + dir(builtins)
-try:
-    from gnuradio import gr
-    ID_BLACKLIST.extend(attr for attr in dir(gr.top_block()) if not attr.startswith('_'))
-except (ImportError, AttributeError):
-    pass
 
 
 class TemplateArg(str):
@@ -177,6 +170,10 @@ class Param(Element):
         except Exception as e:
             self.add_error_message(str(e))
 
+        rewriter = getattr(dtypes, 'rewrite_' + self.dtype, None)
+        if rewriter:
+            rewriter(self)
+
     def validate(self):
         """
         Validate the param.
@@ -185,6 +182,10 @@ class Param(Element):
         Element.validate(self)
         if self.dtype not in Constants.PARAM_TYPE_NAMES:
             self.add_error_message('Type "{}" is not a possible type.'.format(self.dtype))
+
+        validator = dtypes.validators.get(self.dtype, None)
+        if validator:
+            validator(self)
 
     def get_evaluated(self):
         return self._evaluated
@@ -215,31 +216,14 @@ class Param(Element):
             # Raise exception if python cannot evaluate this value
             try:
                 value = self.parent_flowgraph.evaluate(expr)
-            except Exception as value:
-                raise Exception('Value "{}" cannot be evaluated:\n{}'.format(expr, value))
-            # Raise an exception if the data is invalid
-            if dtype == 'raw':
-                return value
-            elif dtype == 'complex':
-                if not isinstance(value, Constants.COMPLEX_TYPES):
-                    raise Exception('Expression "{}" is invalid for type complex.'.format(str(value)))
-                return value
-            elif dtype in ('real', 'float'):
-                if not isinstance(value, Constants.REAL_TYPES):
-                    raise Exception('Expression "{}" is invalid for type float.'.format(str(value)))
-                return value
-            elif dtype == 'int':
-                if not isinstance(value, Constants.INT_TYPES):
-                    raise Exception('Expression "{}" is invalid for type integer.'.format(str(value)))
-                return value
-            elif dtype == 'hex':
-                return hex(value)
+            except Exception as e:
+                raise Exception('Value "{}" cannot be evaluated:\n{}'.format(expr, e))
+            if dtype == 'hex':
+                value = hex(value)
             elif dtype == 'bool':
-                if not isinstance(value, bool):
-                    raise Exception('Expression "{}" is invalid for type bool.'.format(str(value)))
-                return value
-            else:
-                raise TypeError('Type "{}" not handled'.format(dtype))
+                value = bool(value)
+            return value
+
         #########################
         # Numeric Vector Types
         #########################
@@ -258,13 +242,6 @@ class Param(Element):
                 self._lisitify_flag = True
                 value = [value]
 
-            # Raise an exception if the data is invalid
-            if dtype == 'complex_vector' and not all(isinstance(item, numbers.Complex) for item in value):
-                raise Exception('Expression "{}" is invalid for type complex vector.'.format(value))
-            elif dtype in ('real_vector', 'float_vector') and not all(isinstance(item, numbers.Real) for item in value):
-                raise Exception('Expression "{}" is invalid for type float vector.'.format(value))
-            elif dtype == 'int_vector' and not all(isinstance(item, Constants.INT_TYPES) for item in value):
-                raise Exception('Expression "{}" is invalid for type integer vector.'.format(str(value)))
             return value
         #########################
         # String Types
@@ -272,7 +249,7 @@ class Param(Element):
         elif dtype in ('string', 'file_open', 'file_save', '_multiline', '_multiline_python_external'):
             # Do not check if file/directory exists, that is a runtime issue
             try:
-                value = self.parent.parent.evaluate(expr)
+                value = self.parent_flowgraph.evaluate(expr)
                 if not isinstance(value, str):
                     raise Exception()
             except:
@@ -284,25 +261,14 @@ class Param(Element):
         #########################
         # Unique ID Type
         #########################
-        elif dtype == 'id':
-            self.validate_block_id()
-            return expr
-
-        #########################
-        # Stream ID Type
-        #########################
-        elif dtype == 'stream_id':
-            self.validate_stream_id()
+        elif dtype in ('id', 'stream_id'):
             return expr
 
         #########################
         # GUI Position/Hint
         #########################
         elif dtype == 'gui_hint':
-            if self.parent_block.state == 'disabled':
-                return ''
-            else:
-                return self.parse_gui_hint(expr)
+            return self.parse_gui_hint(expr) if self.parent_block.state == 'enabled' else ''
 
         #########################
         # Import Type
@@ -321,37 +287,6 @@ class Param(Element):
         #########################
         else:
             raise TypeError('Type "{}" not handled'.format(dtype))
-
-    def validate_block_id(self):
-        value = self.value
-        # Can python use this as a variable?
-        if not re.match(r'^[a-z|A-Z]\w*$', value):
-            raise Exception('ID "{}" must begin with a letter and may contain letters, numbers, '
-                            'and underscores.'.format(value))
-        if value in ID_BLACKLIST:
-            raise Exception('ID "{}" is blacklisted.'.format(value))
-        block_names = [block.name for block in self.parent_flowgraph.iter_enabled_blocks()]
-        # Id should only appear once, or zero times if block is disabled
-        if self.key == 'id' and block_names.count(value) > 1:
-            raise Exception('ID "{}" is not unique.'.format(value))
-        elif value not in block_names:
-            raise Exception('ID "{}" does not exist.'.format(value))
-        return value
-
-    def validate_stream_id(self):
-        value = self.value
-        stream_ids = [
-            block.params['stream_id'].value
-            for block in self.parent_flowgraph.iter_enabled_blocks()
-            if isinstance(block, blocks.VirtualSink)
-            ]
-        # Check that the virtual sink's stream id is unique
-        if isinstance(self.parent_block, blocks.VirtualSink) and stream_ids.count(value) >= 2:
-            # Id should only appear once, or zero times if block is disabled
-            raise Exception('Stream ID "{}" is not unique.'.format(value))
-        # Check that the virtual source's steam id is found
-        elif isinstance(self.parent_block, blocks.VirtualSource) and value not in stream_ids:
-            raise Exception('Stream ID "{}" is not found.'.format(value))
 
     def to_code(self):
         """
@@ -500,7 +435,7 @@ class Param(Element):
         optionally a given key
 
         Args:
-            type: the specified type
+            dtype: the specified type
             key: the key to match against
 
         Returns:
