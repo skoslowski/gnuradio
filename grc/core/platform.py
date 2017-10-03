@@ -17,11 +17,11 @@
 
 from __future__ import absolute_import, print_function
 
+import glob
+import logging
+import os
 from codecs import open
 from collections import namedtuple
-import glob
-import os
-import logging
 from itertools import chain
 
 import six
@@ -29,16 +29,14 @@ from six.moves import range
 
 from . import (
     Messages, Constants,
-    blocks, ports, errors, utils, schema_checker
+    blocks, params, ports, errors, utils, schema_checker
 )
-
 from .Config import Config
-from .base import Element
-from .io import yaml
-from .generator import Generator
-from .FlowGraph import FlowGraph
 from .Connection import Connection
-from .Param import Param
+from .FlowGraph import FlowGraph
+from .base import Element
+from .generator import Generator
+from .io import yaml
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -404,7 +402,7 @@ class Platform(Element):
         'clone': ports.PortClone,  # clone of ports with multiplicity > 1
     }
     param_classes = {
-        None: Param,  # default
+        None: params.Param,  # default
     }
 
     def make_flow_graph(self, from_filename=None):
