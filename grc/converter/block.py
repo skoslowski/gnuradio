@@ -54,6 +54,7 @@ def dump(data, stream):
         ('parameters:', '\nparameters:'),
         ('inputs:', '\ninputs:'),
         ('outputs:', '\noutputs:'),
+        ('asserts:', '\nasserts:'),
         ('templates:', '\ntemplates:'),
         ('documentation:', '\ndocumentation:'),
         ('file_format:', '\nfile_format:'),
