@@ -34,22 +34,24 @@ class Connection(Element):
         if not source.is_source:
             source, sink = sink, source
         if not source.is_source:
-            raise ValueError('Connection could not isolate source')
+            raise ValueError("Connection could not isolate source")
         if not sink.is_sink:
-            raise ValueError('Connection could not isolate sink')
+            raise ValueError("Connection could not isolate sink")
 
         self.source_port = source
         self.sink_port = sink
 
     def __str__(self):
-        return 'Connection (\n\t{}\n\t\t{}\n\t{}\n\t\t{}\n)'.format(
+        return "Connection (\n\t{}\n\t\t{}\n\t{}\n\t\t{}\n)".format(
             self.source_block, self.source_port, self.sink_block, self.sink_port,
         )
 
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return NotImplemented
-        return self.source_port == other.source_port and self.sink_port == other.sink_port
+        return (
+            self.source_port == other.source_port and self.sink_port == other.sink_port
+        )
 
     def __hash__(self):
         return hash((self.source_port, self.sink_port))
@@ -88,13 +90,19 @@ class Connection(Element):
         platform = self.parent_platform
 
         if self.type not in platform.connection_templates:
-            self.add_error_message('No connection known between domains "{}" and "{}"'
-                                   ''.format(*self.type))
+            self.add_error_message(
+                'No connection known between domains "{}" and "{}"'
+                "".format(*self.type)
+            )
 
         source_size = self.source_port.item_size
         sink_size = self.sink_port.item_size
         if source_size != sink_size:
-            self.add_error_message('Source IO size "{}" does not match sink IO size "{}".'.format(source_size, sink_size))
+            self.add_error_message(
+                'Source IO size "{}" does not match sink IO size "{}".'.format(
+                    source_size, sink_size
+                )
+            )
 
     ##############################################
     # Import/Export Methods
@@ -107,6 +115,8 @@ class Connection(Element):
             a nested data odict
         """
         return (
-            self.source_block.name, self.source_port.key,
-            self.sink_block.name, self.sink_port.key
+            self.source_block.name,
+            self.source_port.key,
+            self.sink_block.name,
+            self.sink_port.key,
         )

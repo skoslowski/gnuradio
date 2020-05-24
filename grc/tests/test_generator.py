@@ -16,13 +16,11 @@ from grc.core.platform import Platform
 def test_generator():
     # c&p form compiler code.
     # todo: make this independent from installed GR
-    grc_file = path.join(path.dirname(__file__), 'resources', 'test_compiler.grc')
+    grc_file = path.join(path.dirname(__file__), "resources", "test_compiler.grc")
     out_dir = tempfile.gettempdir()
 
     platform = Platform(
-        name='GNU Radio Companion Compiler',
-        prefs=None,
-        version='0.0.0',
+        name="GNU Radio Companion Compiler", prefs=None, version="0.0.0",
     )
     platform.build_library()
 
@@ -32,5 +30,7 @@ def test_generator():
 
     assert flow_graph.is_valid()
 
-    generator = platform.Generator(flow_graph, path.join(path.dirname(__file__), 'resources'))
+    generator = platform.Generator(
+        flow_graph, path.join(path.dirname(__file__), "resources")
+    )
     generator.write()

@@ -47,7 +47,11 @@ class Port(CorePort, Drawable):
 
     @property
     def width(self):
-        return self.width_with_label if self._show_label else Constants.PORT_LABEL_HIDDEN_WIDTH
+        return (
+            self.width_with_label
+            if self._show_label
+            else Constants.PORT_LABEL_HIDDEN_WIDTH
+        )
 
     @width.setter
     def width(self, value):
@@ -66,10 +70,12 @@ class Port(CorePort, Drawable):
             self._font_color[-1] = 0.4
             color = colors.BLOCK_DISABLED_COLOR
         elif self.domain == Constants.GR_MESSAGE_DOMAIN:
-            color = colors.PORT_TYPE_TO_COLOR.get('message')
+            color = colors.PORT_TYPE_TO_COLOR.get("message")
         else:
             self._font_color[-1] = 1.0
-            color = colors.PORT_TYPE_TO_COLOR.get(self.dtype) or colors.PORT_TYPE_TO_COLOR.get('')
+            color = colors.PORT_TYPE_TO_COLOR.get(
+                self.dtype
+            ) or colors.PORT_TYPE_TO_COLOR.get("")
             if self.vlen > 1:
                 dark = (0, 0, 30 / 255.0, 50 / 255.0, 70 / 255.0)[min(4, self.vlen)]
                 color = tuple(max(c - dark, 0) for c in color)
@@ -85,15 +91,15 @@ class Port(CorePort, Drawable):
         self.bounds_from_area(self._area)
 
         self._connector_coordinate = {
-            0:   (self.width, self.height / 2),
-            90:  (self.height / 2, 0),
+            0: (self.width, self.height / 2),
+            90: (self.height / 2, 0),
             180: (0, self.height / 2),
-            270: (self.height / 2, self.width)
+            270: (self.height / 2, self.width),
         }[self.connector_direction]
 
     def create_labels(self, cr=None):
         """Create the labels for the socket."""
-        self.label_layout = Gtk.DrawingArea().create_pango_layout('')
+        self.label_layout = Gtk.DrawingArea().create_pango_layout("")
         self.label_layout.set_alignment(Pango.Alignment.CENTER)
 
         if cr:
@@ -107,13 +113,18 @@ class Port(CorePort, Drawable):
         self._update_colors()
 
         layout = self.label_layout
-        layout.set_markup('<span font_desc="{font}">{name}</span>'.format(
-            name=Utils.encode(self.name), font=Constants.PORT_FONT
-        ))
+        layout.set_markup(
+            '<span font_desc="{font}">{name}</span>'.format(
+                name=Utils.encode(self.name), font=Constants.PORT_FONT
+            )
+        )
         label_width, label_height = self.label_layout.get_size()
 
         self.width = 2 * Constants.PORT_LABEL_PADDING + label_width / Pango.SCALE
-        self.height = (2 * Constants.PORT_LABEL_PADDING + label_height*(3 if self.dtype == 'bus' else 1) ) / Pango.SCALE
+        self.height = (
+            2 * Constants.PORT_LABEL_PADDING
+            + label_height * (3 if self.dtype == "bus" else 1)
+        ) / Pango.SCALE
         self._label_layout_offsets = [0, Constants.PORT_LABEL_PADDING]
 
         self.height += self.height % 2  # uneven height
@@ -150,11 +161,14 @@ class Port(CorePort, Drawable):
     @property
     def connector_coordinate_absolute(self):
         """the coordinate where connections may attach to"""
-        return [sum(c) for c in zip(
-            self._connector_coordinate,   # relative to port
-            self.coordinate,              # relative to block
-            self.parent_block.coordinate  # abs
-        )]
+        return [
+            sum(c)
+            for c in zip(
+                self._connector_coordinate,  # relative to port
+                self.coordinate,  # relative to block
+                self.parent_block.coordinate,  # abs
+            )
+        ]
 
     @property
     def connector_direction(self):
@@ -198,7 +212,11 @@ class Port(CorePort, Drawable):
         Returns:
             true if the label should not be shown
         """
-        return self._hovering or self.force_show_label or not Actions.TOGGLE_AUTO_HIDE_PORT_LABELS.get_active()
+        return (
+            self._hovering
+            or self.force_show_label
+            or not Actions.TOGGLE_AUTO_HIDE_PORT_LABELS.get_active()
+        )
 
     def mouse_over(self):
         """

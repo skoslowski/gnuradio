@@ -2,7 +2,7 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 """
 This dict class holds a (shared) cache of compiled mako templates.
 These
@@ -28,8 +28,8 @@ class MakoTemplates(dict):
         if instance is None or self.instance is not None:
             return self
         copy = self.__class__(_bind_to=instance, **self)
-        if getattr(instance.__class__, 'templates', None) is self:
-            setattr(instance, 'templates', copy)
+        if getattr(instance.__class__, "templates", None) is self:
+            setattr(instance, "templates", copy)
         return copy
 
     @classmethod
@@ -52,7 +52,7 @@ class MakoTemplates(dict):
     def render(self, item):
         text = self.get(item)
         if not text:
-            return ''
+            return ""
         namespace = self.instance.namespace_templates
 
         try:

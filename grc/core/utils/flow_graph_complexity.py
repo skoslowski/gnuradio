@@ -1,4 +1,3 @@
-
 def calculate(flowgraph):
     """ Determines the complexity of a flowgraph """
 
@@ -43,11 +42,16 @@ def calculate(flowgraph):
 
         # Connection multiplier (How many connections )
         if (connections - disabled_connections) > 0:
-            conn_multi = 1 / (max(1 - (disabled_connections / max(connections, 1)), 0.05))
+            conn_multi = 1 / (
+                max(1 - (disabled_connections / max(connections, 1)), 0.05)
+            )
         else:
             conn_multi = 1
 
-        final = round(max((dbal - 1) * disabled_multi * conn_multi * connections, 0.0) / 1000000, 6)
+        final = round(
+            max((dbal - 1) * disabled_multi * conn_multi * connections, 0.0) / 1000000,
+            6,
+        )
         return final
 
     except Exception:

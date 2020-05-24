@@ -2,7 +2,7 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 
 from __future__ import absolute_import
 
@@ -14,12 +14,12 @@ class Evaluated(object):
         self.expected_type = expected_type
         self.default = default
 
-        self.name = name or 'evaled_property_{}'.format(id(self))
+        self.name = name or "evaled_property_{}".format(id(self))
         self.eval_function = self.default_eval_func
 
     @property
     def name_raw(self):
-        return '_' + self.name
+        return "_" + self.name
 
     def default_eval_func(self, instance):
         raw = getattr(instance, self.name_raw)
@@ -31,8 +31,10 @@ class Evaluated(object):
             return self.default
 
         if not isinstance(value, self.expected_type):
-            instance.add_error_message("Can not cast evaluated value '{}' to type {}"
-                                       "".format(value, self.expected_type))
+            instance.add_error_message(
+                "Can not cast evaluated value '{}' to type {}"
+                "".format(value, self.expected_type)
+            )
             return self.default
         # print(instance, self.name, raw, value)
         return value
@@ -55,7 +57,11 @@ class Evaluated(object):
     def __set__(self, instance, value):
         attribs = instance.__dict__
         value = value or self.default
-        if isinstance(value, six.string_types) and value.startswith('${') and value.endswith('}'):
+        if (
+            isinstance(value, six.string_types)
+            and value.startswith("${")
+            and value.endswith("}")
+        ):
             attribs[self.name_raw] = value[2:-1].strip()
             attribs.pop(self.name, None)  # reset previous eval result
         else:

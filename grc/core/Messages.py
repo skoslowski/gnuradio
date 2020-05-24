@@ -2,7 +2,7 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 
 
 from __future__ import absolute_import
@@ -12,7 +12,7 @@ import sys
 
 #  A list of functions that can receive a message.
 MESSENGERS_LIST = list()
-_indent = ''
+_indent = ""
 
 # Global FlowGraph Error and the file that caused it
 flowgraph_error = None
@@ -31,7 +31,7 @@ def register_messenger(messenger):
 
 def set_indent(level=0):
     global _indent
-    _indent = '    ' * level
+    _indent = "    " * level
 
 
 def send(message):
@@ -44,6 +44,7 @@ def send(message):
     for messenger in MESSENGERS_LIST:
         messenger(_indent + message)
 
+
 # register stdout by default
 register_messenger(sys.stdout.write)
 
@@ -52,19 +53,25 @@ register_messenger(sys.stdout.write)
 # Special functions for specific program functionalities
 ###########################################################################
 def send_init(platform):
-    msg = "<<< Welcome to {config.name} {config.version} >>>\n\n" \
-          "Block paths:\n\t{paths}\n"
-    send(msg.format(
-        config=platform.config,
-        paths="\n\t".join(platform.config.block_paths))
+    msg = (
+        "<<< Welcome to {config.name} {config.version} >>>\n\n"
+        "Block paths:\n\t{paths}\n"
+    )
+    send(
+        msg.format(
+            config=platform.config, paths="\n\t".join(platform.config.block_paths)
+        )
     )
 
 
 def send_xml_errors_if_any(xml_failures):
     if xml_failures:
-        send('\nXML parser: Found {0} erroneous XML file{1} while loading the '
-             'block tree (see "Help/Parser errors" for details)\n'.format(
-                    len(xml_failures), 's' if len(xml_failures) > 1 else ''))
+        send(
+            "\nXML parser: Found {0} erroneous XML file{1} while loading the "
+            'block tree (see "Help/Parser errors" for details)\n'.format(
+                len(xml_failures), "s" if len(xml_failures) > 1 else ""
+            )
+        )
 
 
 def send_start_load(file_path):
@@ -72,7 +79,7 @@ def send_start_load(file_path):
 
 
 def send_error_msg_load(error):
-    send('>>> Error: %s\n' % error)
+    send(">>> Error: %s\n" % error)
 
 
 def send_error_load(error):
@@ -81,29 +88,29 @@ def send_error_load(error):
 
 
 def send_end_load():
-    send('>>> Done\n')
+    send(">>> Done\n")
 
 
 def send_fail_load(error):
-    send('Error: %s\n>>> Failure\n' % error)
+    send("Error: %s\n>>> Failure\n" % error)
     traceback.print_exc()
 
 
 def send_start_gen(file_path):
-    send('\nGenerating: %r\n' % file_path)
+    send("\nGenerating: %r\n" % file_path)
 
 
 def send_auto_gen(file_path):
-    send('>>> Generating: %r\n' % file_path)
+    send(">>> Generating: %r\n" % file_path)
 
 
 def send_fail_gen(error):
-    send('Generate Error: %s\n>>> Failure\n' % error)
+    send("Generate Error: %s\n>>> Failure\n" % error)
     traceback.print_exc()
 
 
 def send_start_exec(file_path):
-    send('\nExecuting: %s\n' % file_path)
+    send("\nExecuting: %s\n" % file_path)
 
 
 def send_verbose_exec(verbose):
@@ -111,15 +118,17 @@ def send_verbose_exec(verbose):
 
 
 def send_end_exec(code=0):
-    send('\n>>> Done%s\n' % (" (return code %s)" % code if code else ""))
+    send("\n>>> Done%s\n" % (" (return code %s)" % code if code else ""))
 
 
 def send_fail_save(file_path):
-    send('>>> Error: Cannot save: %s\n' % file_path)
+    send(">>> Error: Cannot save: %s\n" % file_path)
 
 
-def send_fail_connection(msg=''):
-    send('>>> Error: Cannot create connection.\n' + ('\t{}\n'.format(msg) if msg else ''))
+def send_fail_connection(msg=""):
+    send(
+        ">>> Error: Cannot create connection.\n" + ("\t{}\n".format(msg) if msg else "")
+    )
 
 
 def send_fail_load_preferences(prefs_file_path):
@@ -131,7 +140,7 @@ def send_fail_save_preferences(prefs_file_path):
 
 
 def send_warning(warning):
-    send('>>> Warning: %s\n' % warning)
+    send(">>> Warning: %s\n" % warning)
 
 
 def send_flowgraph_error_report(flowgraph):
@@ -140,9 +149,9 @@ def send_flowgraph_error_report(flowgraph):
     if not error_list:
         return
 
-    send('*' * 50 + '\n')
-    summary_msg = '{} errors from flowgraph:\n'.format(len(error_list))
+    send("*" * 50 + "\n")
+    summary_msg = "{} errors from flowgraph:\n".format(len(error_list))
     send(summary_msg)
     for err in error_list:
         send(err)
-    send('\n' + '*' * 50 + '\n')
+    send("\n" + "*" * 50 + "\n")

@@ -15,35 +15,43 @@ from . import Constants
 
 
 class Config(object):
-    name = 'GNU Radio Companion (no gui)'
+    name = "GNU Radio Companion (no gui)"
     license = __doc__.strip()
-    website = 'https://www.gnuradio.org/'
+    website = "https://www.gnuradio.org/"
 
-    hier_block_lib_dir = os.environ.get('GRC_HIER_PATH', Constants.DEFAULT_HIER_BLOCK_LIB_DIR)
+    hier_block_lib_dir = os.environ.get(
+        "GRC_HIER_PATH", Constants.DEFAULT_HIER_BLOCK_LIB_DIR
+    )
 
     def __init__(self, version, version_parts=None, name=None, prefs=None):
         self._gr_prefs = prefs if prefs else DummyPrefs()
         self.version = version
-        self.version_parts = version_parts or version[1:].split('-', 1)[0].split('.')[:3]
+        self.version_parts = (
+            version_parts or version[1:].split("-", 1)[0].split(".")[:3]
+        )
         if name:
             self.name = name
 
     @property
     def block_paths(self):
-        path_list_sep = {'/': ':', '\\': ';'}[os.path.sep]
+        path_list_sep = {"/": ":", "\\": ";"}[os.path.sep]
 
         paths_sources = (
             self.hier_block_lib_dir,
-            os.environ.get('GRC_BLOCKS_PATH', ''),
-            self._gr_prefs.get_string('grc', 'local_blocks_path', ''),
-            self._gr_prefs.get_string('grc', 'global_blocks_path', ''),
+            os.environ.get("GRC_BLOCKS_PATH", ""),
+            self._gr_prefs.get_string("grc", "local_blocks_path", ""),
+            self._gr_prefs.get_string("grc", "global_blocks_path", ""),
         )
 
-        collected_paths = sum((paths.split(path_list_sep)
-                               for paths in paths_sources), [])
+        collected_paths = sum(
+            (paths.split(path_list_sep) for paths in paths_sources), []
+        )
 
-        valid_paths = [normpath(expanduser(expandvars(path)))
-                       for path in collected_paths if exists(path)]
+        valid_paths = [
+            normpath(expanduser(expandvars(path)))
+            for path in collected_paths
+            if exists(path)
+        ]
         # Deduplicate paths to avoid warnings about finding blocks twice, but
         # preserve order of paths
         valid_paths = list(OrderedDict.fromkeys(valid_paths))
@@ -53,15 +61,14 @@ class Config(object):
     @property
     def default_flow_graph(self):
         user_default = (
-            os.environ.get('GRC_DEFAULT_FLOW_GRAPH') or
-            self._gr_prefs.get_string('grc', 'default_flow_graph', '') or
-            os.path.join(self.hier_block_lib_dir, 'default_flow_graph.grc')
+            os.environ.get("GRC_DEFAULT_FLOW_GRAPH")
+            or self._gr_prefs.get_string("grc", "default_flow_graph", "")
+            or os.path.join(self.hier_block_lib_dir, "default_flow_graph.grc")
         )
         return user_default if exists(user_default) else Constants.DEFAULT_FLOW_GRAPH
 
 
 class DummyPrefs(object):
-
     def get_string(self, category, item, default):
         return str(default)
 

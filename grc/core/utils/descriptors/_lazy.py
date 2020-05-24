@@ -2,13 +2,12 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 
 import functools
 
 
 class lazy_property(object):
-
     def __init__(self, func):
         self.func = func
         functools.update_wrapper(self, func)
@@ -23,6 +22,8 @@ class lazy_property(object):
 
 def nop_write(prop):
     """Make this a property with a nop setter"""
+
     def nop(self, value):
         pass
+
     return prop.setter(nop)

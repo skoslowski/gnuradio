@@ -30,10 +30,10 @@ class Notebook(Gtk.Notebook):
 
         self.set_show_border(False)
         self.set_scrollable(True)
-        self.connect('switch-page', self._handle_page_change)
+        self.connect("switch-page", self._handle_page_change)
 
         self.add_events(Gdk.EventMask.SCROLL_MASK)
-        self.connect('scroll-event', self._handle_scroll)
+        self.connect("scroll-event", self._handle_scroll)
         self._ignore_consecutive_scrolls = 0
 
     def _handle_page_change(self, notebook, page, page_num):
@@ -60,7 +60,10 @@ class Notebook(Gtk.Notebook):
                     self.prev_page()
                 else:
                     self.next_page()
-            elif event.direction in (Gdk.ScrollDirection.DOWN, Gdk.ScrollDirection.RIGHT):
+            elif event.direction in (
+                Gdk.ScrollDirection.DOWN,
+                Gdk.ScrollDirection.RIGHT,
+            ):
                 if natural:
                     self.next_page()
                 else:
@@ -74,7 +77,7 @@ class Notebook(Gtk.Notebook):
 class Page(Gtk.HBox):
     """A page in the notebook."""
 
-    def __init__(self, main_window, flow_graph, file_path=''):
+    def __init__(self, main_window, flow_graph, file_path=""):
         """
         Page constructor.
 
@@ -98,7 +101,7 @@ class Page(Gtk.HBox):
 
         # tab box to hold label and close button
         self.label = Gtk.Label()
-        image = Gtk.Image.new_from_icon_name('window-close', Gtk.IconSize.MENU)
+        image = Gtk.Image.new_from_icon_name("window-close", Gtk.IconSize.MENU)
         image_box = Gtk.HBox(homogeneous=False, spacing=0)
         image_box.pack_start(image, True, False, 0)
         button = Gtk.Button()
@@ -118,16 +121,18 @@ class Page(Gtk.HBox):
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_size_request(MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT)
         self.scrolled_window.set_policy(Gtk.PolicyType.ALWAYS, Gtk.PolicyType.ALWAYS)
-        self.scrolled_window.connect('key-press-event', self._handle_scroll_window_key_press)
+        self.scrolled_window.connect(
+            "key-press-event", self._handle_scroll_window_key_press
+        )
 
         self.scrolled_window.add(self.drawing_area)
         self.pack_start(self.scrolled_window, True, True, 0)
         self.show_all()
 
     def _handle_scroll_window_key_press(self, widget, event):
-        is_ctrl_pg = (
-            event.state & Gdk.ModifierType.CONTROL_MASK and
-            event.keyval in (Gdk.KEY_Page_Up, Gdk.KEY_Page_Down)
+        is_ctrl_pg = event.state & Gdk.ModifierType.CONTROL_MASK and event.keyval in (
+            Gdk.KEY_Page_Up,
+            Gdk.KEY_Page_Down,
         )
         if is_ctrl_pg:
             return self.get_parent().event(event)
@@ -181,5 +186,4 @@ class Page(Gtk.HBox):
         """
         if not self.file_path:
             return False
-        return (os.path.exists(self.file_path) and
-                not os.access(self.file_path, os.W_OK))
+        return os.path.exists(self.file_path) and not os.access(self.file_path, os.W_OK)

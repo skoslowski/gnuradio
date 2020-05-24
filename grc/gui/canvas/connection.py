@@ -74,7 +74,9 @@ class Connection(CoreConnection, Drawable):
 
         # first two components relative to source connector, rest relative to sink connector
         self._rel_points = [
-            rotate((15, 0), source.rotation),  # line from 0,0 to here, bezier curve start
+            rotate(
+                (15, 0), source.rotation
+            ),  # line from 0,0 to here, bezier curve start
             rotate((50, 0), source.rotation),  # bezier curve control point 1
             rotate((-50, 0), sink.rotation),  # bezier curve control point 2
             rotate((-15, 0), sink.rotation),  # bezier curve end
@@ -84,7 +86,11 @@ class Connection(CoreConnection, Drawable):
 
         def get_domain_color(domain_id):
             domain = self.parent_platform.domains.get(domain_id, None)
-            return colors.get_color(domain.color) if domain else colors.DEFAULT_DOMAIN_COLOR
+            return (
+                colors.get_color(domain.color)
+                if domain
+                else colors.DEFAULT_DOMAIN_COLOR
+            )
 
         if source.domain == GR_MESSAGE_DOMAIN:
             self._line_width_factor = 1.0
@@ -144,11 +150,15 @@ class Connection(CoreConnection, Drawable):
             self._current_coordinates = new_coordinates
 
         color1, color2 = (
-            None if color is None else
-            colors.HIGHLIGHT_COLOR if self.highlighted else
-            colors.CONNECTION_DISABLED_COLOR if not self.enabled else
-            colors.CONNECTION_ERROR_COLOR if not self.is_valid() else
-            color
+            None
+            if color is None
+            else colors.HIGHLIGHT_COLOR
+            if self.highlighted
+            else colors.CONNECTION_DISABLED_COLOR
+            if not self.enabled
+            else colors.CONNECTION_ERROR_COLOR
+            if not self.is_valid()
+            else color
             for color in (self._color1, self._color2)
         )
 
@@ -176,7 +186,7 @@ class Connection(CoreConnection, Drawable):
         cr.set_source_rgba(*color2)
         cr.rotate(self._arrow_rotation)
         cr.rel_move_to(CONNECTOR_ARROW_HEIGHT, 0)
-        cr.rel_line_to(-CONNECTOR_ARROW_HEIGHT, -CONNECTOR_ARROW_BASE/2)
+        cr.rel_line_to(-CONNECTOR_ARROW_HEIGHT, -CONNECTOR_ARROW_BASE / 2)
         cr.rel_line_to(0, CONNECTOR_ARROW_BASE)
         cr.close_path()
         cr.fill()
@@ -220,7 +230,7 @@ class DummyCoreConnection(object):
         )
 
         self.enabled = True
-        self.highlighted = False,
+        self.highlighted = (False,)
         self.is_valid = lambda: True
         self.update(**kwargs)
 
@@ -238,5 +248,6 @@ class DummyCoreConnection(object):
     @property
     def has_real_sink(self):
         return self.sink_port is not self._dummy_port
+
 
 DummyConnection = Connection.make_cls_with_base(DummyCoreConnection)

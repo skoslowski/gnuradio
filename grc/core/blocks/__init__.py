@@ -2,7 +2,7 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 
 from __future__ import absolute_import
 
@@ -18,9 +18,10 @@ build_ins = {}
 
 
 def register_build_in(cls):
-    cls.loaded_from = '(build-in)'
+    cls.loaded_from = "(build-in)"
     build_ins[cls.key] = cls
     return cls
+
 
 from .dummy import DummyBlock
 from .embedded_python import EPyBlock, EPyModule

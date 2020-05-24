@@ -2,7 +2,7 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 
 from __future__ import absolute_import
 
@@ -21,7 +21,7 @@ class SimpleTextDisplay(Gtk.TextView):
     A non user-editable gtk text view.
     """
 
-    def __init__(self, text=''):
+    def __init__(self, text=""):
         """
         TextDisplay constructor.
 
@@ -41,7 +41,7 @@ class TextDisplay(SimpleTextDisplay):
     A non user-editable scrollable text view with popup menu.
     """
 
-    def __init__(self, text=''):
+    def __init__(self, text=""):
         """
         TextDisplay constructor.
 
@@ -79,7 +79,7 @@ class TextDisplay(SimpleTextDisplay):
         # for each \b delete one char from the buffer
         back_count = 0
         start_iter = self.get_buffer().get_end_iter()
-        while len(line) > back_count and line[back_count] == '\b':
+        while len(line) > back_count and line[back_count] == "\b":
             # stop at the beginning of a line
             if not start_iter.starts_line():
                 start_iter.backward_char()
@@ -108,10 +108,9 @@ class TextDisplay(SimpleTextDisplay):
         Args:
             file_path: location to save buffer contents
         """
-        with open(file_path, 'w') as logfile:
+        with open(file_path, "w") as logfile:
             buf = self.get_buffer()
-            logfile.write(buf.get_text(buf.get_start_iter(),
-                                       buf.get_end_iter(), True))
+            logfile.write(buf.get_text(buf.get_start_iter(), buf.get_end_iter(), True))
 
     # Action functions are set by the Application's init function
     def clear_cb(self, menu_item, web_view):
@@ -130,18 +129,18 @@ class TextDisplay(SimpleTextDisplay):
         """Create a popup menu for the scroll lock and clear functions"""
         menu.append(Gtk.SeparatorMenuItem())
 
-        lock = Gtk.CheckMenuItem(label = "Scroll Lock")
+        lock = Gtk.CheckMenuItem(label="Scroll Lock")
         menu.append(lock)
         lock.set_active(self.scroll_lock)
-        lock.connect('activate', self.scroll_back_cb, view)
+        lock.connect("activate", self.scroll_back_cb, view)
 
-        save = Gtk.ImageMenuItem(label = "Save Console")
+        save = Gtk.ImageMenuItem(label="Save Console")
         menu.append(save)
-        save.connect('activate', self.save_cb, view)
+        save.connect("activate", self.save_cb, view)
 
-        clear = Gtk.ImageMenuItem(label = "Clear Console")
+        clear = Gtk.ImageMenuItem(label="Clear Console")
         menu.append(clear)
-        clear.connect('activate', self.clear_cb, view)
+        clear.connect("activate", self.clear_cb, view)
         menu.show_all()
         return False
 
@@ -149,8 +148,16 @@ class TextDisplay(SimpleTextDisplay):
 class MessageDialogWrapper(Gtk.MessageDialog):
     """ Run a message dialog. """
 
-    def __init__(self, parent, message_type, buttons, title=None, markup=None,
-                 default_response=None, extra_buttons=None):
+    def __init__(
+        self,
+        parent,
+        message_type,
+        buttons,
+        title=None,
+        markup=None,
+        default_response=None,
+        extra_buttons=None,
+    ):
         """
         Create a modal message dialog.
 
@@ -174,8 +181,12 @@ class MessageDialogWrapper(Gtk.MessageDialog):
 
         """
         Gtk.MessageDialog.__init__(
-            self, transient_for=parent, modal=True, destroy_with_parent=True,
-            message_type=message_type, buttons=buttons
+            self,
+            transient_for=parent,
+            modal=True,
+            destroy_with_parent=True,
+            message_type=message_type,
+            buttons=buttons,
         )
         if title:
             self.set_title(title)
@@ -199,7 +210,7 @@ class ErrorsDialog(Gtk.Dialog):
         """Create a listview of errors"""
         Gtk.Dialog.__init__(
             self,
-            title='Errors and Warnings',
+            title="Errors and Warnings",
             transient_for=parent,
             modal=True,
             destroy_with_parent=True,
@@ -230,18 +241,20 @@ class ErrorsDialog(Gtk.Dialog):
         self.store.clear()
         for element, message in flowgraph.iter_error_messages():
             if element.is_block:
-                src, aspect = element.name, ''
+                src, aspect = element.name, ""
             elif element.is_connection:
                 src = element.source_block.name
                 aspect = "Connection to '{}'".format(element.sink_block.name)
             elif element.is_port:
                 src = element.parent_block.name
-                aspect = "{} '{}'".format('Sink' if element.is_sink else 'Source', element.name)
+                aspect = "{} '{}'".format(
+                    "Sink" if element.is_sink else "Source", element.name
+                )
             elif element.is_param:
                 src = element.parent_block.name
                 aspect = "Param '{}'".format(element.name)
             else:
-                src = aspect = ''
+                src = aspect = ""
             self.store.append([src, aspect, message])
 
     def run_and_destroy(self):
@@ -253,18 +266,18 @@ class ErrorsDialog(Gtk.Dialog):
 def show_about(parent, config):
     ad = Gtk.AboutDialog(transient_for=parent)
     ad.set_program_name(config.name)
-    ad.set_name('')
+    ad.set_name("")
     ad.set_license(config.license)
 
     py_version = sys.version.split()[0]
     ad.set_version("{} (Python {})".format(config.version, py_version))
 
     try:
-        ad.set_logo(Gtk.IconTheme().load_icon('gnuradio-grc', 64, 0))
+        ad.set_logo(Gtk.IconTheme().load_icon("gnuradio-grc", 64, 0))
     except GLib.Error:
         Messages.send("Failed to set window logo\n")
 
-    #ad.set_comments("")
+    # ad.set_comments("")
     ad.set_copyright(config.license.splitlines()[0])
     ad.set_website(config.website)
 
@@ -274,7 +287,8 @@ def show_about(parent, config):
 
 def show_help(parent):
     """ Display basic usage tips. """
-    markup = textwrap.dedent("""\
+    markup = textwrap.dedent(
+        """\
         <b>Usage Tips</b>
         \n\
         <u>Add block</u>: drag and drop or double click a block in the block 
@@ -289,16 +303,19 @@ def show_help(parent):
         \n\
         *Press Ctrl+K or see menu for Keyboard - Shortcuts
         \
-    """)
+    """
+    )
     markup = markup.replace("Ctrl", Utils.get_modifier_key())
 
     MessageDialogWrapper(
-        parent, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, title='Help', markup=markup
+        parent, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, title="Help", markup=markup
     ).run_and_destroy()
+
 
 def show_keyboard_shortcuts(parent):
     """ Display keyboard shortcut-keys. """
-    markup = textwrap.dedent("""\
+    markup = textwrap.dedent(
+        """\
     <b>Keyboard Shortcuts</b>
     \n\
     <u>Ctrl+N</u>: Create a new flowgraph.
@@ -328,28 +345,39 @@ def show_keyboard_shortcuts(parent):
             Horizontal Align Left/Center/Right respectively of the 
             selected block.
     \
-    """)
+    """
+    )
     markup = markup.replace("Ctrl", Utils.get_modifier_key())
-    
+
     MessageDialogWrapper(
-        parent, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, title='Keyboard - Shortcuts', markup=markup
+        parent,
+        Gtk.MessageType.INFO,
+        Gtk.ButtonsType.CLOSE,
+        title="Keyboard - Shortcuts",
+        markup=markup,
     ).run_and_destroy()
 
 
 def show_get_involved(parent):
     """Get Involved Instructions"""
-    markup = textwrap.dedent("""\
+    markup = textwrap.dedent(
+        """\
     <tt><b>Welcome to GNU Radio Community!</b></tt>
     \n\
     <tt>For more details on contributing to GNU Radio and getting engaged with our great community visit </tt><a href="https://www.gnuradio.org/get-involved">here</a>.     
     \n\
     <tt>You can also join our <a href="https://slack.gnuradio.org/">Slack Channel</a>, IRC Channel (#gnuradio) or contact through our <a href="https://lists.gnu.org/mailman/listinfo/discuss-gnuradio">mailing list(discuss-gnuradio)</a></tt>. 
     \
-    """)
-    
+    """
+    )
+
     MessageDialogWrapper(
-        parent, Gtk.MessageType.QUESTION, Gtk.ButtonsType.CLOSE, title='Get - Involved', markup=markup
-    ).run_and_destroy()   
+        parent,
+        Gtk.MessageType.QUESTION,
+        Gtk.ButtonsType.CLOSE,
+        title="Get - Involved",
+        markup=markup,
+    ).run_and_destroy()
 
 
 def show_types(parent):
@@ -357,28 +385,37 @@ def show_types(parent):
     colors = [(name, color) for name, key, sizeof, color in Constants.CORE_TYPES]
     max_len = 10 + max(len(name) for name, code in colors)
 
-    message = '\n'.join(
+    message = "\n".join(
         '<span background="{color}"><tt>{name}</tt></span>'
-        ''.format(color=color, name=Utils.encode(name).center(max_len))
+        "".format(color=color, name=Utils.encode(name).center(max_len))
         for name, color in colors
     )
 
     MessageDialogWrapper(
-        parent, Gtk.MessageType.INFO, Gtk.ButtonsType.CLOSE, title='Types - Color Mapping', markup=message
-    ).run_and_destroy() 
+        parent,
+        Gtk.MessageType.INFO,
+        Gtk.ButtonsType.CLOSE,
+        title="Types - Color Mapping",
+        markup=message,
+    ).run_and_destroy()
 
 
 def show_missing_xterm(parent, xterm):
-    markup = textwrap.dedent("""\
+    markup = textwrap.dedent(
+        """\
         The xterm executable {0!r} is missing.
         You can change this setting in your gnuradio.conf, in section [grc], 'xterm_executable'.
         \n\
         (This message is shown only once)\
-    """).format(xterm)
+    """
+    ).format(xterm)
 
     MessageDialogWrapper(
-        parent, message_type=Gtk.MessageType.WARNING, buttons=Gtk.ButtonsType.OK,
-        title='Warning: missing xterm executable', markup=markup
+        parent,
+        message_type=Gtk.MessageType.WARNING,
+        buttons=Gtk.ButtonsType.OK,
+        title="Warning: missing xterm executable",
+        markup=markup,
     ).run_and_destroy()
 
 
@@ -390,29 +427,37 @@ def choose_editor(parent, config):
         return config.editor
 
     buttons = (
-        'Choose Editor', Gtk.ResponseType.YES,
-        'Use Default', Gtk.ResponseType.NO,
-        Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL
+        "Choose Editor",
+        Gtk.ResponseType.YES,
+        "Use Default",
+        Gtk.ResponseType.NO,
+        Gtk.STOCK_CANCEL,
+        Gtk.ResponseType.CANCEL,
     )
     response = MessageDialogWrapper(
-        parent, message_type=Gtk.MessageType.QUESTION, buttons=Gtk.ButtonsType.NONE,
-        title='Choose Editor', markup='Would you like to choose the editor to use?',
-        default_response=Gtk.ResponseType.YES, extra_buttons=buttons
+        parent,
+        message_type=Gtk.MessageType.QUESTION,
+        buttons=Gtk.ButtonsType.NONE,
+        title="Choose Editor",
+        markup="Would you like to choose the editor to use?",
+        default_response=Gtk.ResponseType.YES,
+        extra_buttons=buttons,
     ).run_and_destroy()
 
     # Handle the initial default/choose/cancel response
     # User wants to choose the editor to use
-    editor = ''
+    editor = ""
     if response == Gtk.ResponseType.YES:
         file_dialog = Gtk.FileChooserDialog(
-            'Select an Editor...', None,
+            "Select an Editor...",
+            None,
             Gtk.FileChooserAction.OPEN,
-            ('gtk-cancel', Gtk.ResponseType.CANCEL, 'gtk-open', Gtk.ResponseType.OK),
-            transient_for=parent
+            ("gtk-cancel", Gtk.ResponseType.CANCEL, "gtk-open", Gtk.ResponseType.OK),
+            transient_for=parent,
         )
         file_dialog.set_select_multiple(False)
         file_dialog.set_local_only(True)
-        file_dialog.set_current_folder('/usr/bin')
+        file_dialog.set_current_folder("/usr/bin")
         try:
             if file_dialog.run() == Gtk.ResponseType.OK:
                 editor = file_dialog.get_filename()
@@ -423,17 +468,19 @@ def choose_editor(parent, config):
     elif response == Gtk.ResponseType.NO:
         try:
             process = None
-            if sys.platform.startswith('linux'):
-                process = find_executable('xdg-open')
-            elif sys.platform.startswith('darwin'):
-                process = find_executable('open')
+            if sys.platform.startswith("linux"):
+                process = find_executable("xdg-open")
+            elif sys.platform.startswith("darwin"):
+                process = find_executable("open")
             if process is None:
                 raise ValueError("Can't find default editor executable")
             # Save
             editor = config.editor = process
         except Exception:
-            Messages.send('>>> Unable to load the default editor. Please choose an editor.\n')
+            Messages.send(
+                ">>> Unable to load the default editor. Please choose an editor.\n"
+            )
 
-    if editor == '':
-        Messages.send('>>> No editor selected.\n')
+    if editor == "":
+        Messages.send(">>> No editor selected.\n")
     return editor

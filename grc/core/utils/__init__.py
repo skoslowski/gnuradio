@@ -2,14 +2,16 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 
 from __future__ import absolute_import
 
 import six
 
 from . import epy_block_io, expr_utils, extract_docs, flow_graph_complexity
-from .hide_bokeh_gui_options_if_not_installed import hide_bokeh_gui_options_if_not_installed
+from .hide_bokeh_gui_options_if_not_installed import (
+    hide_bokeh_gui_options_if_not_installed,
+)
 
 
 def to_list(value):
@@ -19,4 +21,3 @@ def to_list(value):
         return [value]
     else:
         return list(value)
-

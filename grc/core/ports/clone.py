@@ -2,13 +2,12 @@
 # This file is part of GNU Radio
 #
 # SPDX-License-Identifier: GPL-2.0-or-later
-# 
+#
 
 from .port import Port, Element
 
 
 class PortClone(Port):
-
     def __init__(self, parent, direction, master, name, key):
         Element.__init__(self, parent)
         self.master_port = master

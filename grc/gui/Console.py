@@ -12,7 +12,8 @@ import os
 import logging
 
 import gi
-gi.require_version('Gtk', '3.0')
+
+gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GObject
 
 from .Constants import DEFAULT_CONSOLE_WINDOW_WIDTH
